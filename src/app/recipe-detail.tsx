@@ -1,6 +1,6 @@
-import { Pressable, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
-import { AppText, Button, Screen } from '@/components/ui';
+import { AppText, Button, Screen, SectionTitle, Tag } from '@/components/ui';
 
 const INGREDIENTS: [string, string][] = [
   ['양파', '1개'],
@@ -14,38 +14,6 @@ const STEPS = [
   '중불로 20분간 자작하게 끓여주세요',
   '삼겹살이 익으면 대파를 올리고 마무리해요',
 ];
-
-function SectionTitle({ children, onEdit }: { children: string; onEdit?: () => void }) {
-  return (
-    <View className="flex-row items-center justify-between">
-      <AppText variant="chip" className="font-semibold text-muted">
-        {children}
-      </AppText>
-      {onEdit ? (
-        <Pressable onPress={onEdit} hitSlop={6} accessibilityRole="button">
-          <AppText variant="chip" className="text-muted">
-            ✏️ 수정
-          </AppText>
-        </Pressable>
-      ) : null}
-    </View>
-  );
-}
-
-function Tag({ label, active }: { label: string; active?: boolean }) {
-  return (
-    <View
-      className={`flex-row items-center gap-1.5 rounded-[10px] px-2.5 py-1.5 ${
-        active ? 'bg-primary' : 'bg-field'
-      }`}
-    >
-      <Text className={`text-chip font-semibold ${active ? 'text-ink' : 'text-foreground'}`}>
-        {label}
-      </Text>
-      <Text className={`text-[13px] ${active ? 'text-ink/60' : 'text-muted'}`}>×</Text>
-    </View>
-  );
-}
 
 export default function RecipeDetailScreen() {
   return (

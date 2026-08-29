@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Text, View } from 'react-native';
 
-import { AppText, Button, Chip, ListRow, Screen, SearchBar } from '@/components/ui';
+import { AppText, Button, Chip, ListRow, Screen, SearchBar, Section } from '@/components/ui';
 import { palette, type PaletteColor } from '@/constants/tokens';
 
 const SWATCHES: PaletteColor[] = [
@@ -18,15 +18,6 @@ const SWATCHES: PaletteColor[] = [
 ];
 
 const CHIPS = ['전체', '한식', '김치', '돼지고기', '간편식'];
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <View className="gap-3">
-      <AppText variant="subheading">{title}</AppText>
-      <View className="gap-3">{children}</View>
-    </View>
-  );
-}
 
 export default function DesignSystemScreen() {
   const [search, setSearch] = useState('');

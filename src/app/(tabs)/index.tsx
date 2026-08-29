@@ -10,9 +10,12 @@ import { ListRow, Screen } from '@/components/ui';
  *   2. add a { href, label } line below
  */
 const PAGES: { href: Href; label: string }[] = [
-  { href: '/design-system', label: '디자인 시스템' },
-  { href: '/recipe-detail', label: '레시피 내용 확인' },
-  { href: '/my-trade', label: '나의 거래' },
+  { href: '/home', label: '홈' },
+  { href: '/fridge', label: '재료관리 (내 냉장고)' },
+  { href: '/recipes', label: '나의 레시피' },
+  { href: '/my', label: '마이' },
+  { href: '/add-recipe', label: '＋ 레시피 등록 (플로우 시작)' },
+  { href: '/design-system', label: '디자인 시스템 (개발용)' },
 ];
 
 export default function HomeHub() {

@@ -1,4 +1,5 @@
 import { Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
 
 import { AppText, Button, Screen, SectionTitle, Tag } from '@/components/ui';
 
@@ -16,6 +17,7 @@ const STEPS = [
 ];
 
 export default function RecipeDetailScreen() {
+  const router = useRouter();
   return (
     <Screen title="내용 확인" back scroll>
       {/* AI 안내 배지 */}
@@ -86,10 +88,10 @@ export default function RecipeDetailScreen() {
       {/* 하단 버튼 */}
       <View className="mt-2 flex-row gap-3 pb-6">
         <View className="flex-1">
-          <Button label="다시 확인할게요" variant="secondary" onPress={() => {}} />
+          <Button label="다시 확인할게요" variant="secondary" onPress={() => router.back()} />
         </View>
         <View className="flex-1">
-          <Button label="저장하기" onPress={() => {}} />
+          <Button label="저장하기" onPress={() => router.push('/cook-complete')} />
         </View>
       </View>
     </Screen>

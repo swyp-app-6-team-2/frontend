@@ -10,6 +10,8 @@ import { ListRow, Screen } from '@/components/ui';
  *   2. add a { href, label } line below
  */
 const PAGES: { href: Href; label: string }[] = [
+  { href: '/login', label: '로그인' },
+  { href: '/onboarding', label: '온보딩 튜토리얼' },
   { href: '/home', label: '홈' },
   { href: '/fridge', label: '재료관리 (내 냉장고)' },
   { href: '/recipes', label: '나의 레시피' },

@@ -14,6 +14,8 @@ export type ListRowProps = Omit<PressableProps, 'children'> & {
   right?: ReactNode;
   /** Show the default `›` chevron. Ignored when `right` is provided. Default true. */
   showChevron?: boolean;
+  /** Extra classes on the label text — e.g. `text-error` for destructive rows. */
+  labelClassName?: string;
 };
 
 // Figma: 서비스 이용약관 등 리스트 행 — label Medium 16, chevron at right.
@@ -25,6 +27,7 @@ export function ListRow({
   right,
   showChevron = true,
   className,
+  labelClassName,
   ...rest
 }: ListRowProps) {
   const trailing =
@@ -38,7 +41,9 @@ export function ListRow({
     >
       {leftIcon}
       <View className="flex-1">
-        <AppText variant="body">{label}</AppText>
+        <AppText variant="body" className={labelClassName}>
+          {label}
+        </AppText>
         {subtitle ? (
           <AppText variant="chip" className="mt-0.5 text-muted">
             {subtitle}

@@ -13,27 +13,28 @@ const TABS: { key: TabKey; icon: ImageSource; label: string; href: Href }[] = [
   { key: 'my', icon: require('../assets/images/ic-tab-my.png'), label: '마이', href: '/my' },
 ];
 
-// 떠 있는 둥근 탭바. 실제 Material Symbols 아이콘을 tintColor로 색 입힘 (활성=골드, 비활성=muted).
+// 떠 있는 pill 탭바 (Figma 619:9650 공통 푸터). 아이콘은 tintColor로 색 입힘
+// — 활성=골드(primary), 비활성=tab-inactive(#505050). 라벨도 동일 색.
 export function TabBar({ active }: { active: TabKey }) {
   return (
     <View
-      className="mx-4 mb-2 flex-row rounded-3xl px-2 py-2.5"
-      style={{ backgroundColor: 'rgba(18,26,48,0.92)' }}
+      className="mx-4 mb-2 flex-row rounded-pill bg-field px-5 py-[13px]"
+      style={{ boxShadow: '0px 20px 40px rgba(0, 0, 0, 0.35)' }}
     >
       {TABS.map((t) => {
         const on = t.key === active;
         return (
           <Link key={t.key} href={t.href} asChild>
-            <Pressable className="flex-1 items-center gap-1 py-1" accessibilityRole="button">
+            <Pressable className="flex-1 items-center gap-1" accessibilityRole="button">
               <Image
                 source={t.icon}
                 style={{ width: 24, height: 24 }}
-                tintColor={on ? palette.primary : palette.muted}
+                tintColor={on ? palette.primary : palette.tabInactive}
                 contentFit="contain"
               />
               <Text
                 numberOfLines={1}
-                className={`text-[11px] ${on ? 'font-semibold text-primary' : 'text-muted'}`}
+                className={`text-[12px] leading-[14px] ${on ? 'font-medium text-primary' : 'font-normal text-tab-inactive'}`}
               >
                 {t.label}
               </Text>

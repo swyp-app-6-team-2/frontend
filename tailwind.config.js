@@ -19,6 +19,7 @@ module.exports = {
         foreground: token('--color-foreground'),
         ink: token('--color-ink'),
         muted: token('--color-muted'),
+        'tab-inactive': token('--color-tab-inactive'),
         'body-muted': token('--color-body-muted'),
         disabled: token('--color-disabled'),
         'popup-button': token('--color-popup-button'),

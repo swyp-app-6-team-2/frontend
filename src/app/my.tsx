@@ -9,10 +9,10 @@ import { AppText, Chevron, ListRow } from '@/components/ui';
 // 하단 메뉴 (Figma 리스트, gap 32).
 const MENU: { label: string; href?: Href }[] = [
   { label: '알림 설정' },
-  { label: '로그인 관리' },
+  { label: '로그인 관리', href: '/login-manage' },
   { label: '이용 내역' },
   { label: '약관', href: '/terms' },
-  { label: '문의하기' },
+  { label: '문의하기', href: '/inquiry' },
 ];
 
 export default function MyScreen() {

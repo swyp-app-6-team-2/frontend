@@ -27,9 +27,9 @@ export default function LoginScreen() {
         </View>
       </View>
 
-      {/* SNS 간편 가입 — 문구↔버튼 20px, 클러스터↔하단 140px */}
-      <View className="items-center gap-5 px-screen pb-[140px]">
-        <AppText variant="body" className="text-muted">
+      {/* SNS 간편 가입 (Figma 402×874) — 문구 top 611 / 버튼 top 652·bottom 708 → 하단 166px */}
+      <View className="items-center gap-5 px-screen pb-[166px]">
+        <AppText variant="body" className="text-center font-normal leading-[21px] text-muted">
           SNS 계정으로 간편 가입하기
         </AppText>
         <View className="flex-row gap-4">

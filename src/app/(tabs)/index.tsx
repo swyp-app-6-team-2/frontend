@@ -17,6 +17,8 @@ const PAGES: { href: Href; label: string }[] = [
   { href: '/recipes', label: '나의 레시피' },
   { href: '/my', label: '마이' },
   { href: '/profile-edit', label: '↳ 프로필 수정' },
+  { href: '/login-manage', label: '↳ 로그인 관리' },
+  { href: '/inquiry', label: '↳ 문의하기' },
   { href: '/add-recipe', label: '＋ 레시피 등록 (플로우 시작)' },
   { href: '/add-recipe-url', label: '↳ URL로 등록' },
   { href: '/add-recipe-image', label: '↳ 이미지로 등록' },

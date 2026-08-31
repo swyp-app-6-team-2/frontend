@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppText, Button } from '@/components/ui';
+import { palette } from '@/constants/tokens';
 
 const TABS = [
   { key: 'home', icon: require('../assets/images/ic-tab-home.png'), label: '홈' },
@@ -139,16 +140,28 @@ export default function OnboardingScreen() {
           </View>
         </View>
 
-        {/* 코치 안내 — 상하 hairline 사이 텍스트 */}
+        {/* 코치 안내 — 상하 페이드 선 사이 텍스트 */}
         <View className="flex-1 justify-center" pointerEvents="none">
           {step === 3 ? <Text className="mb-5 text-center text-[40px]">☄️</Text> : null}
-          <View className="border-y border-foreground/15 py-7">
-            <AppText variant="title" className="text-center">
-              {s.title}
-            </AppText>
-            <AppText variant="body" className="mt-2 text-center text-muted">
-              {s.sub}
-            </AppText>
+          <View className="gap-6">
+            <Image
+              source={require('../assets/images/line-fade.png')}
+              style={{ width: '100%', height: 1.5 }}
+              contentFit="fill"
+            />
+            <View>
+              <AppText variant="title" className="text-center text-primary-subtle">
+                {s.title}
+              </AppText>
+              <AppText variant="body" className="mt-2 text-center text-muted">
+                {s.sub}
+              </AppText>
+            </View>
+            <Image
+              source={require('../assets/images/line-fade.png')}
+              style={{ width: '100%', height: 1.5 }}
+              contentFit="fill"
+            />
           </View>
         </View>
 
@@ -186,14 +199,31 @@ export default function OnboardingScreen() {
             if (on) {
               return (
                 <View key={t.key} className="flex-1 items-center">
-                  <View className="items-center gap-1 rounded-2xl border border-white/70 bg-white/5 px-4 py-2">
+                  {/* Figma: 80×68, r12, fill Primary2(#060A19), stroke Primary1(gold) 1px, 흰색 글로우 */}
+                  <View
+                    className="items-center justify-center gap-1"
+                    style={{
+                      width: 80,
+                      height: 68,
+                      borderRadius: 12,
+                      backgroundColor: palette.background,
+                      borderWidth: 1,
+                      borderColor: palette.primary,
+                      shadowColor: '#FFFFFF',
+                      shadowOpacity: 0.2,
+                      shadowRadius: 34,
+                      shadowOffset: { width: 0, height: 0 },
+                    }}
+                  >
                     <Image
                       source={t.icon}
                       style={{ width: 24, height: 24 }}
                       tintColor="#FFFFFF"
                       contentFit="contain"
                     />
-                    <Text className="text-[11px] font-semibold text-white">{t.label}</Text>
+                    <Text numberOfLines={1} className="text-[11px] font-semibold text-white">
+                      {t.label}
+                    </Text>
                   </View>
                 </View>
               );
@@ -206,7 +236,9 @@ export default function OnboardingScreen() {
                   tintColor="rgba(154,163,182,0.45)"
                   contentFit="contain"
                 />
-                <Text className="text-[11px] text-foreground/35">{t.label}</Text>
+                <Text numberOfLines={1} className="text-[11px] text-foreground/35">
+                  {t.label}
+                </Text>
               </View>
             );
           })}

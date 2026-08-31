@@ -31,7 +31,10 @@ export function TabBar({ active }: { active: TabKey }) {
                 tintColor={on ? palette.primary : palette.muted}
                 contentFit="contain"
               />
-              <Text className={`text-[11px] ${on ? 'font-semibold text-primary' : 'text-muted'}`}>
+              <Text
+                numberOfLines={1}
+                className={`text-[11px] ${on ? 'font-semibold text-primary' : 'text-muted'}`}
+              >
                 {t.label}
               </Text>
             </Pressable>

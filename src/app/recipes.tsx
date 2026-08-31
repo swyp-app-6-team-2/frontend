@@ -28,27 +28,34 @@ const ADD_MENU: { icon: string; label: string; href: Href }[] = [
   { icon: '✏️', label: '직접 등록', href: '/add-recipe-manual' },
 ];
 
+// Figma 필터칩 — h36, pill, 투명 bg + 1px border #1E2230(field), gap4, px16.
+// 라벨 14px 흰색 + 우측 16px 드롭다운 아이콘. 화살표는 다크 배경에서 보이도록
+// muted (Figma 익스포트의 #18181B는 배경과 겹쳐 안 보임).
 function FilterChip({ label }: { label: string }) {
   return (
     <Pressable
       accessibilityRole="button"
-      className="flex-row items-center gap-1 rounded-pill bg-field px-4 py-2.5 active:opacity-80"
+      className="h-9 flex-row items-center justify-center gap-1 rounded-pill border border-field px-4 active:opacity-80"
     >
       <Text className="text-chip text-foreground">{label}</Text>
-      <Text className="text-[10px] text-muted">▾</Text>
+      <View className="h-4 w-4 items-center justify-center">
+        <Text className="text-[11px] leading-none text-muted">▾</Text>
+      </View>
     </Pressable>
   );
 }
 
+// Figma 카드 — 이미지 173×127(aspect 173/127), radius 12. 좌상단 4px 인셋에
+// 미니칩(field bg, pill, px12 py4, 12px bold). 제목은 이미지 아래 12px, 16px bold.
 function RecipeCard({ recipe, onPress }: { recipe: Recipe; onPress: () => void }) {
   return (
     <Pressable className="w-[48%] active:opacity-90" onPress={onPress} accessibilityRole="button">
-      <View className="aspect-square w-full overflow-hidden rounded-[14px] bg-field">
-        <View className="absolute left-2 top-2 rounded-full bg-black/55 px-2.5 py-1">
-          <Text className="text-[12px] font-semibold text-white">{recipe.category}</Text>
+      <View className="aspect-[173/127] w-full overflow-hidden rounded-[12px] bg-field">
+        <View className="absolute left-1 top-1 rounded-pill bg-field px-3 py-1">
+          <Text className="text-[12px] font-bold text-foreground">{recipe.category}</Text>
         </View>
       </View>
-      <AppText variant="body" className="mt-2 font-semibold" numberOfLines={1}>
+      <AppText variant="body" className="mt-3 font-bold" numberOfLines={1}>
         {recipe.title}
       </AppText>
     </Pressable>
@@ -73,8 +80,8 @@ export default function RecipesScreen() {
               <FilterChip key={f} label={f} />
             ))}
           </View>
-          {/* 2열 그리드 */}
-          <View className="flex-row flex-wrap justify-between gap-y-5">
+          {/* 2열 그리드 — 열 간격 16(justify-between), 행 간격 24(Figma 역산) */}
+          <View className="flex-row flex-wrap justify-between gap-y-6">
             {RECIPES.map((r) => (
               <RecipeCard key={r.title} recipe={r} onPress={() => router.push('/recipe-view')} />
             ))}

@@ -9,13 +9,16 @@ export type SearchBarProps = TextInputProps & {
   containerClassName?: string;
 };
 
-// Figma: 검색바 — field bg #1E2230, pill, px16 py10, icon gap10 (24px icon),
-// placeholder #A4A4A4 16px. Default icon is a glyph (~24px) until a real icon
+// Figma: 검색바 — field bg #1E2230, pill, px16 py10, icon gap10, placeholder
+// #A4A4A4 16px. Height 44px = 24px icon frame + py10×2. The icon is a fixed
+// 24×24 box so it (not the text) sets the bar height. Glyph until a real icon
 // system lands.
 const defaultIcon = (
-  <Text className="text-muted" style={{ fontSize: 22 }}>
-    🔍
-  </Text>
+  <View className="h-6 w-6 items-center justify-center">
+    <Text className="text-muted" style={{ fontSize: 20 }}>
+      🔍
+    </Text>
+  </View>
 );
 
 export function SearchBar({
@@ -32,7 +35,9 @@ export function SearchBar({
     >
       {leftIcon}
       <TextInput
-        className="flex-1 text-body text-foreground"
+        className="flex-1 text-foreground"
+        // Figma: 16px / 130% (21px). Kept ≤24 so text never outgrows the icon frame.
+        style={{ fontSize: 16, lineHeight: 21 }}
         placeholder={placeholder}
         placeholderTextColor={palette.muted}
         {...rest}

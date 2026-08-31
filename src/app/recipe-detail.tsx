@@ -91,7 +91,8 @@ export default function RecipeDetailScreen() {
           <Button label="다시 확인할게요" variant="secondary" onPress={() => router.back()} />
         </View>
         <View className="flex-1">
-          <Button label="저장하기" onPress={() => router.push('/cook-complete')} />
+          {/* 저장 → 레시피 상세. ⭐요리완료는 상세의 "요리 완료" 액션에서 */}
+          <Button label="저장하기" onPress={() => router.replace('/recipe-view')} />
         </View>
       </View>
     </Screen>

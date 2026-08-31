@@ -22,7 +22,15 @@ export default function AddRecipeManualScreen() {
           단계별 조리 순서 입력이 들어갈 자리
         </AppText>
       </View>
-      <Button label="다음" onPress={() => router.push('/recipe-detail')} />
+      {/* 직접 입력은 AI 정리(내용 확인)를 거치지 않고 바로 저장 → 상세 */}
+      <View className="gap-3">
+        <Button label="저장하기" onPress={() => router.replace('/recipe-view')} />
+        <Button
+          label="(저장 슬롯 꽉 참 시뮬)"
+          variant="secondary"
+          onPress={() => router.push('/slot-full')}
+        />
+      </View>
     </Screen>
   );
 }

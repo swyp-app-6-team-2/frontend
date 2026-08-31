@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "orca",
+    "name": "별따먹자",
     "slug": "orca",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -9,11 +9,11 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "icon": "./assets/expo.icon",
-      "bundleIdentifier": "com.orca.app",
+      "bundleIdentifier": "com.byeolddameokja.app",
       "supportsTablet": true
     },
     "android": {
-      "package": "com.orca.app",
+      "package": "com.byeolddameokja.app",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -40,6 +40,13 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "79f3b953-0651-4384-91dd-bc878b19dc19"
+      }
+    },
+    "owner": "leeseunghwan123"
   }
 }

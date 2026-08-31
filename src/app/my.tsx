@@ -10,7 +10,7 @@ import { AppText, Chevron, ListRow } from '@/components/ui';
 const MENU: { label: string; href?: Href }[] = [
   { label: '알림 설정' },
   { label: '로그인 관리', href: '/login-manage' },
-  { label: '이용 내역' },
+  { label: '구매내역', href: '/purchase-history' },
   { label: '약관', href: '/terms' },
   { label: '문의하기', href: '/inquiry' },
 ];

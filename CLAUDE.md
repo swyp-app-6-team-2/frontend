@@ -43,6 +43,7 @@ pnpm lint:fix       # expo lint --fix (prettier 포함)
 ## Git
 
 - 팀 저장소(`swyp-app-6-team-2/frontend`). **커밋/푸시는 사용자가 요청할 때만.** main 직접 vs PR 브랜치는 팀 규칙 확인.
+- **커밋 메시지 컨벤션: `type: 설명` — 스코프 괄호 금지.** `feat(login):` ❌ → `feat: 로그인 …` ✅. type은 `feat`·`fix`·`chore`·`docs`·`refactor`·`style`·`test`.
 - 커밋 메시지 끝에:
   `Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>`
 

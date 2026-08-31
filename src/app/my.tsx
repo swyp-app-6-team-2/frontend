@@ -32,7 +32,7 @@ export default function MyScreen() {
           <Pressable
             className="flex-row items-center justify-between active:opacity-80"
             accessibilityRole="button"
-            onPress={() => {}}
+            onPress={() => router.push('/profile-edit')}
           >
             <View className="flex-row items-center gap-4">
               {/* 아바타 자리 (실제 이미지 자산 없음 → 비활성 색 원) */}

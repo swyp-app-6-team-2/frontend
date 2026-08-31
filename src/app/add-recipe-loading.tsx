@@ -1,29 +1,39 @@
 import { Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
-import { AppText, Button, Screen } from '@/components/ui';
+import { AppText, Screen } from '@/components/ui';
 
-// [stub] 16-2 콘텐츠 확인 중 — AI가 영상/이미지를 레시피로 정리하는 로딩.
-const STEPS = ['영상 정보 불러오기', '재료 · 수량 인식하기', '조리 순서 정리하기'];
-
+// 16-2 콘텐츠 확인 중 — AI가 영상/이미지를 레시피로 정리하는 로딩.
 export default function AddRecipeLoadingScreen() {
   const router = useRouter();
   return (
-    <Screen title="콘텐츠를 확인하고 있어요" back scroll>
-      <View className="items-center gap-2 py-8">
-        <Text className="text-[40px]">✨</Text>
-        <AppText variant="body" className="text-center text-muted">
-          AI가 재료와 조리 순서를 레시피로 정리하고 있어요
-        </AppText>
-      </View>
-      <View className="gap-3">
-        {STEPS.map((s) => (
-          <AppText key={s} variant="body">
-            ○ {s}
+    <Screen title="URL로 등록" back>
+      <View className="flex-1 items-center justify-center gap-8">
+        <View className="h-56 w-full items-center justify-center rounded-card border border-dashed border-foreground/15">
+          <AppText variant="chip" className="text-muted">
+            (gif or img)
           </AppText>
-        ))}
+        </View>
+
+        <AppText variant="body" className="text-center text-muted">
+          AI가 영상 속 재료와 조리 순서를{'\n'}레시피로 정리하고 있어요
+        </AppText>
+
+        {/* 진행 바 */}
+        <View className="h-2 w-full overflow-hidden rounded-full bg-field">
+          <View className="h-full w-3/5 rounded-full bg-primary" />
+        </View>
       </View>
-      <Button label="완료 (내용 확인으로)" onPress={() => router.replace('/recipe-detail')} />
+
+      <View className="items-end pb-4">
+        <Text
+          className="text-chip text-muted"
+          onPress={() => router.replace('/recipe-detail')}
+          accessibilityRole="button"
+        >
+          0/1
+        </Text>
+      </View>
     </Screen>
   );
 }

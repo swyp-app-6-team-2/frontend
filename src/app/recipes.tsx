@@ -1,22 +1,127 @@
-import { useRouter } from 'expo-router';
+import { useState } from 'react';
+import { Pressable, ScrollView, Text, View } from 'react-native';
+import { useRouter, type Href } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { AppText, Button, ListRow, Screen, SearchBar } from '@/components/ui';
+import { TabBar } from '@/components/tab-bar';
+import { AppText, SearchBar } from '@/components/ui';
 
-// [stub] 나의 레시피 — 목록/검색/필터, +버튼으로 등록 플로우 진입.
-const RECIPES = ['들기름 막국수', '연어 포케', '방울토마토 파스타', '마파두부', '김치볶음밥'];
+type Category = '한식' | '양식' | '중식';
+type Recipe = { title: string; category: Category };
+
+// 나의레시피_main — 목업 데이터 (실제 이미지 자산 없음 → field 플레이스홀더).
+const RECIPES: Recipe[] = [
+  { title: '들기름 막국수', category: '한식' },
+  { title: '애호박 새우젓 볶음', category: '한식' },
+  { title: '연어 포케', category: '양식' },
+  { title: '마파두부', category: '중식' },
+  { title: '방울토마토 파스타', category: '양식' },
+  { title: '김치볶음밥', category: '한식' },
+];
+
+const FILTERS = ['카테고리', '재료', '최신순'];
+
+// FAB 팝오버 메뉴 — URL / 이미지 / 직접 등록.
+const ADD_MENU: { icon: string; label: string; href: Href }[] = [
+  { icon: '🔗', label: 'URL로 등록', href: '/add-recipe-url' },
+  { icon: '🖼️', label: '이미지로 등록', href: '/add-recipe-image' },
+  { icon: '✏️', label: '직접 등록', href: '/add-recipe-manual' },
+];
+
+function FilterChip({ label }: { label: string }) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      className="flex-row items-center gap-1 rounded-pill bg-field px-4 py-2.5 active:opacity-80"
+    >
+      <Text className="text-chip text-foreground">{label}</Text>
+      <Text className="text-[10px] text-muted">▾</Text>
+    </Pressable>
+  );
+}
+
+function RecipeCard({ recipe, onPress }: { recipe: Recipe; onPress: () => void }) {
+  return (
+    <Pressable className="w-[48%] active:opacity-90" onPress={onPress} accessibilityRole="button">
+      <View className="aspect-square w-full overflow-hidden rounded-[14px] bg-field">
+        <View className="absolute left-2 top-2 rounded-full bg-black/55 px-2.5 py-1">
+          <Text className="text-[12px] font-semibold text-white">{recipe.category}</Text>
+        </View>
+      </View>
+      <AppText variant="body" className="mt-2 font-semibold" numberOfLines={1}>
+        {recipe.title}
+      </AppText>
+    </Pressable>
+  );
+}
 
 export default function RecipesScreen() {
   const router = useRouter();
+  const [menuOpen, setMenuOpen] = useState(false);
+
   return (
-    <Screen title="나의 레시피" scroll>
-      <SearchBar placeholder="요리명, 재료 검색" />
-      <AppText variant="chip" className="text-muted">
-        카테고리 ▾ · 재료 ▾ · 최신순 ▾ (필터 자리)
-      </AppText>
-      {RECIPES.map((label) => (
-        <ListRow key={label} label={label} onPress={() => router.push('/recipe-view')} />
-      ))}
-      <Button label="+ 레시피 등록" onPress={() => router.push('/add-recipe')} />
-    </Screen>
+    <View className="flex-1 bg-background">
+      <SafeAreaView className="flex-1" edges={['top']}>
+        <ScrollView
+          contentContainerClassName="gap-4 px-screen pb-[120px] pt-2"
+          showsVerticalScrollIndicator={false}
+        >
+          <AppText variant="title">나의 레시피</AppText>
+          <SearchBar placeholder="레시피명을 검색해보세요" />
+          <View className="flex-row gap-2">
+            {FILTERS.map((f) => (
+              <FilterChip key={f} label={f} />
+            ))}
+          </View>
+          {/* 2열 그리드 */}
+          <View className="flex-row flex-wrap justify-between gap-y-5">
+            {RECIPES.map((r) => (
+              <RecipeCard key={r.title} recipe={r} onPress={() => router.push('/recipe-view')} />
+            ))}
+          </View>
+        </ScrollView>
+
+        <TabBar active="recipes" />
+      </SafeAreaView>
+
+      {/* 팝오버 열림 시 바깥 탭하면 닫힘 */}
+      {menuOpen ? (
+        <Pressable
+          className="absolute inset-0"
+          onPress={() => setMenuOpen(false)}
+          accessibilityLabel="메뉴 닫기"
+        />
+      ) : null}
+
+      {/* 플로팅 + 버튼 + 등록 메뉴 */}
+      <View className="absolute bottom-[96px] right-5 items-end" pointerEvents="box-none">
+        {menuOpen ? (
+          <View className="mb-3 w-52 rounded-card border border-foreground/10 bg-surface p-2">
+            {ADD_MENU.map((m) => (
+              <Pressable
+                key={m.label}
+                onPress={() => {
+                  setMenuOpen(false);
+                  router.push(m.href);
+                }}
+                className="flex-row items-center gap-3 rounded-xl px-3 py-3 active:bg-field"
+                accessibilityRole="button"
+              >
+                <Text className="text-[20px]">{m.icon}</Text>
+                <Text className="text-body text-foreground">{m.label}</Text>
+              </Pressable>
+            ))}
+          </View>
+        ) : null}
+        <Pressable
+          onPress={() => setMenuOpen((o) => !o)}
+          className="h-14 w-14 items-center justify-center rounded-full bg-primary active:opacity-90"
+          accessibilityRole="button"
+          accessibilityLabel="레시피 등록"
+        >
+          <Text className="text-[30px] leading-none text-ink">{menuOpen ? '×' : '＋'}</Text>
+        </Pressable>
+      </View>
+    </View>
   );
 }

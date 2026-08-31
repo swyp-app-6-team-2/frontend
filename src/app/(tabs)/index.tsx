@@ -17,6 +17,12 @@ const PAGES: { href: Href; label: string }[] = [
   { href: '/recipes', label: '나의 레시피' },
   { href: '/my', label: '마이' },
   { href: '/add-recipe', label: '＋ 레시피 등록 (플로우 시작)' },
+  { href: '/add-recipe-url', label: '↳ URL로 등록' },
+  { href: '/add-recipe-image', label: '↳ 이미지로 등록' },
+  { href: '/add-recipe-loading', label: '↳ 등록 로딩' },
+  { href: '/url-failed', label: '↳ 실패: 지원하지 않는 링크' },
+  { href: '/ocr-failed', label: '↳ 실패: 텍스트 인식 실패' },
+  { href: '/slot-full', label: '↳ 실패: 저장 슬롯 가득' },
   { href: '/design-system', label: '디자인 시스템 (개발용)' },
 ];
 

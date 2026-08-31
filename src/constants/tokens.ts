@@ -16,7 +16,10 @@ export const palette = {
   foreground: '#FFFFFF',
   ink: '#111111',
   muted: '#A4A4A4',
+  bodyMuted: '#82848C',
   disabled: '#3F4250',
+  popupButton: '#34394B',
+  popupButtonText: '#A5A7AD',
   success: '#2FA96B',
   error: '#FF6B5E',
 } as const;

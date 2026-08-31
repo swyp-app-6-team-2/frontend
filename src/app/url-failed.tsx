@@ -20,13 +20,8 @@ export default function UrlFailedScreen() {
       title="지원하지 않는 링크입니다"
       message={'다른 링크로 다시 시도하거나\n직접 입력해주세요'}
       actions={[
-        {
-          label: '직접 입력',
-          variant: 'secondary',
-          className: 'border-transparent bg-field',
-          onPress: () => router.replace('/add-recipe-manual'),
-        },
-        { label: '다시 시도', className: 'bg-error', onPress: () => router.back() },
+        { label: '직접 입력', onPress: () => router.replace('/add-recipe-manual') },
+        { label: '다시 시도', tone: 'danger', onPress: () => router.back() },
       ]}
     />
   );

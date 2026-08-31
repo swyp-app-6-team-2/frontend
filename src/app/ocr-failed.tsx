@@ -20,13 +20,8 @@ export default function OcrFailedScreen() {
       title="텍스트 인식에 실패했어요"
       message={'다른 이미지로 다시 시도하거나\n직접 입력해주세요'}
       actions={[
-        {
-          label: '직접 입력',
-          variant: 'secondary',
-          className: 'border-transparent bg-field',
-          onPress: () => router.replace('/add-recipe-manual'),
-        },
-        { label: '다시 시도', className: 'bg-error', onPress: () => router.back() },
+        { label: '직접 입력', onPress: () => router.replace('/add-recipe-manual') },
+        { label: '다시 시도', tone: 'danger', onPress: () => router.back() },
       ]}
     />
   );

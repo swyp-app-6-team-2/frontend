@@ -26,12 +26,15 @@ export default function ProfileEditScreen() {
           </Pressable>
         </View>
 
-        {/* 닉네임 입력 (글자 수 카운터 포함) */}
-        <View className="mt-11 gap-2">
-          <AppText variant="body">닉네임</AppText>
-          <View className="flex-row items-center justify-between rounded-pill bg-field px-4 py-2.5">
+        {/* 닉네임 — Frame 298 라벨행(padding 8/16/8/8) + input(h44, 세로중앙, 글자수 카운터) */}
+        <View className="mt-11">
+          <View className="flex-row items-center gap-[10px] py-2 pl-2 pr-4">
+            <AppText variant="body">닉네임</AppText>
+          </View>
+          <View className="h-11 flex-row items-center justify-between rounded-pill bg-field px-4">
             <TextInput
-              className="flex-1 text-body font-normal text-foreground"
+              className="flex-1 text-foreground"
+              style={{ fontSize: 16, lineHeight: 21, paddingVertical: 0 }}
               value={nick}
               onChangeText={setNick}
               maxLength={NICK_MAX}

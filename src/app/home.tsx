@@ -91,11 +91,7 @@ export default function HomeScreen() {
                       }}
                       className="h-[47px] items-center justify-center active:opacity-80"
                     >
-                      <Text
-                        className={`text-[16px] leading-[19px] ${reco === r ? 'text-foreground' : 'text-popup-button-text'}`}
-                      >
-                        {r}
-                      </Text>
+                      <Text className="text-[16px] leading-[19px] text-foreground">{r}</Text>
                     </Pressable>
                   ))}
                 </View>
@@ -112,7 +108,7 @@ export default function HomeScreen() {
                     height: 24,
                     transform: [{ rotate: open ? '180deg' : '0deg' }],
                   }}
-                  tintColor={palette.disabled}
+                  tintColor={open ? palette.disabled : palette.foreground}
                   contentFit="contain"
                 />
               </Pressable>

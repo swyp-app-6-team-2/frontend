@@ -1,6 +1,7 @@
 import { Pressable, Text, View } from 'react-native';
 import { Image, type ImageSource } from 'expo-image';
 import { Link, type Href } from 'expo-router';
+import { Feather } from '@expo/vector-icons';
 
 import { palette } from '@/constants/tokens';
 
@@ -26,12 +27,17 @@ export function TabBar({ active }: { active: TabKey }) {
         return (
           <Link key={t.key} href={t.href} asChild>
             <Pressable className="flex-1 items-center gap-1" accessibilityRole="button">
-              <Image
-                source={t.icon}
-                style={{ width: 24, height: 24 }}
-                tintColor={on ? palette.primary : palette.tabInactive}
-                contentFit="contain"
-              />
+              {t.key === 'home' && !on ? (
+                // 홈 비활성 = 아웃라인 집 (활성은 채워진 아이콘)
+                <Feather name="home" size={24} color={palette.tabInactive} />
+              ) : (
+                <Image
+                  source={t.icon}
+                  style={{ width: 24, height: 24 }}
+                  tintColor={on ? palette.primary : palette.tabInactive}
+                  contentFit="contain"
+                />
+              )}
               <Text
                 numberOfLines={1}
                 className={`text-[12px] leading-[14px] ${on ? 'font-medium text-primary' : 'font-normal text-tab-inactive'}`}

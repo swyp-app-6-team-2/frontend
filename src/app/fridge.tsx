@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { useRef, useState } from 'react';
+import { Pressable, ScrollView, Text, useWindowDimensions, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
 import { Button, Screen, SearchBar } from '@/components/ui';
@@ -33,7 +33,21 @@ const ITEMS = [
 
 export default function FridgeScreen() {
   const router = useRouter();
+  const { width } = useWindowDimensions();
+  const chipScrollRef = useRef<ScrollView>(null);
+  const chipLayouts = useRef<Record<number, { x: number; w: number }>>({});
   const [active, setActive] = useState(0);
+
+  // 선택한 칩이 가로 스크롤 가운데로 오도록
+  const selectChip = (i: number) => {
+    setActive(i);
+    const l = chipLayouts.current[i];
+    if (l)
+      chipScrollRef.current?.scrollTo({
+        x: Math.max(0, l.x + l.w / 2 - width / 2),
+        animated: true,
+      });
+  };
 
   return (
     <Screen title="재료관리" close>
@@ -46,6 +60,7 @@ export default function FridgeScreen() {
 
           {/* 카테고리 칩 — 가로 스크롤, 선택=골드 */}
           <ScrollView
+            ref={chipScrollRef}
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerClassName="gap-2"
@@ -55,7 +70,13 @@ export default function FridgeScreen() {
               return (
                 <Pressable
                   key={c.label}
-                  onPress={() => setActive(i)}
+                  onPress={() => selectChip(i)}
+                  onLayout={(e) => {
+                    chipLayouts.current[i] = {
+                      x: e.nativeEvent.layout.x,
+                      w: e.nativeEvent.layout.width,
+                    };
+                  }}
                   accessibilityRole="button"
                   className={`h-9 items-center justify-center rounded-pill border border-field px-4 active:opacity-80 ${
                     on ? 'bg-primary' : ''
@@ -96,8 +117,8 @@ export default function FridgeScreen() {
         </ScrollView>
       </View>
 
-      <View className="pb-4">
-        <Button label="완료하기" onPress={() => router.back()} />
+      <View className="pb-8">
+        <Button label="등록하기" onPress={() => router.back()} />
       </View>
     </Screen>
   );

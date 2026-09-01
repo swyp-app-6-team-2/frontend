@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Pressable, Text, TextInput, View } from 'react-native';
+import { useRef, useState } from 'react';
+import { Pressable, Text, TextInput, View, type ScrollView } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
@@ -14,12 +14,22 @@ const OWNED = ['브로콜리', '새우', '대파', '계란', '다진 마늘', '�
 type Ingredient = { name: string; qty: string };
 
 // 점선 추가 버튼 (재료 추가 / 단계 추가 공용)
-function DashedAddButton({ label, onPress }: { label: string; onPress: () => void }) {
+function DashedAddButton({
+  label,
+  onPress,
+  className,
+}: {
+  label: string;
+  onPress: () => void;
+  className?: string;
+}) {
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      className="h-[52px] flex-row items-center justify-center gap-1 rounded-[30px] border border-dashed border-muted bg-field active:opacity-80"
+      className={`h-[52px] flex-row items-center justify-center gap-1 rounded-[30px] border border-dashed border-muted bg-field active:opacity-80 ${
+        className ?? ''
+      }`}
     >
       <Feather name="plus" size={24} color={palette.muted} />
       <Text className="text-[16px] text-muted">{label}</Text>
@@ -30,7 +40,9 @@ function DashedAddButton({ label, onPress }: { label: string; onPress: () => voi
 // 18 레시피 직접 입력 — 사진·이름·카테고리·재료·방법 (Figma 619:9650).
 export default function AddRecipeManualScreen() {
   const router = useRouter();
+  const scrollRef = useRef<ScrollView>(null);
   const [category, setCategory] = useState('한식');
+  const [servings, setServings] = useState('');
   const [ingredients, setIngredients] = useState<Ingredient[]>([{ name: '', qty: '' }]);
   const [steps, setSteps] = useState<string[]>(['']);
 
@@ -42,7 +54,11 @@ export default function AddRecipeManualScreen() {
 
   const setStep = (i: number, val: string) =>
     setSteps((prev) => prev.map((s, idx) => (idx === i ? val : s)));
-  const addStep = () => setSteps((prev) => [...prev, '']);
+  const addStep = () => {
+    setSteps((prev) => [...prev, '']);
+    // 새 단계가 레이아웃된 다음 프레임에 맨 아래로 스무스 스크롤
+    requestAnimationFrame(() => scrollRef.current?.scrollToEnd({ animated: true }));
+  };
   const removeStep = (i: number) =>
     setSteps((prev) => (prev.length > 1 ? prev.filter((_, idx) => idx !== i) : prev));
   const moveStepUp = (i: number) =>
@@ -54,7 +70,13 @@ export default function AddRecipeManualScreen() {
     });
 
   return (
-    <Screen title="레시피 직접 입력" back scroll>
+    <Screen
+      title="레시피 직접 입력"
+      close
+      onClose={() => router.replace('/home')}
+      scroll
+      scrollRef={scrollRef}
+    >
       {/* 대표 사진 추가 (선택) — 정사각 field 박스, 중앙 카메라+안내 */}
       <Pressable
         className="aspect-square w-full items-center justify-center rounded-[12px] bg-field active:opacity-80"
@@ -74,16 +96,18 @@ export default function AddRecipeManualScreen() {
         </View>
       </Pressable>
 
-      {/* 이름 */}
-      <View className="gap-2">
-        <AppText variant="body" className="text-foreground">
-          이름
-        </AppText>
-        <SearchBar placeholder="레시피명" leftIcon={null} />
+      {/* 이름 — Frame 298 라벨행(padding 8/16/8/8, gap0→input) · 위 마진 20 = screen gap16 + mt-1 */}
+      <View className="mt-1">
+        <View className="flex-row items-center gap-[10px] py-2 pl-2 pr-4">
+          <AppText variant="body" className="text-foreground">
+            레시피명
+          </AppText>
+        </View>
+        <SearchBar placeholder="예)김치찜" leftIcon={null} />
       </View>
 
-      {/* 카테고리 — 선택 칩(골드)·나머지 outline */}
-      <View className="gap-2">
+      {/* 카테고리 — 선택 칩(골드)·나머지 outline · 위 마진 24 = screen gap16 + mt-2 */}
+      <View className="mt-2 gap-2">
         <AppText variant="body" className="text-foreground">
           카테고리
         </AppText>
@@ -110,8 +134,32 @@ export default function AddRecipeManualScreen() {
         </View>
       </View>
 
-      {/* 재료 — 재료명/수량 입력 행 + 삭제, 보유 재료 추천, 재료 추가 */}
-      <View className="gap-2">
+      {/* 제공량 — Frame 298 라벨행(padding 8/16/8/8, gap0→input) · 우측정렬 흰색 입력 · 위 마진 24 = screen gap16 + mt-2 */}
+      <View className="mt-2">
+        <View className="flex-row items-center gap-[10px] py-2 pl-2 pr-4">
+          <AppText variant="body" className="text-foreground">
+            제공량
+          </AppText>
+        </View>
+        {/* 우측정렬 숫자 입력 + 고정 접미사 '인분' (input: h44·px16·gap10·bg field·pill) */}
+        <View className="h-11 flex-row items-center gap-[10px] rounded-pill bg-field px-4">
+          <TextInput
+            className="flex-1 text-foreground"
+            style={{ fontSize: 16, lineHeight: 21, textAlign: 'right' }}
+            placeholder="0"
+            placeholderTextColor={palette.muted}
+            keyboardType="number-pad"
+            value={servings}
+            onChangeText={(t) => setServings(t.replace(/[^0-9]/g, ''))}
+          />
+          <AppText variant="body" className="font-normal text-foreground">
+            인분
+          </AppText>
+        </View>
+      </View>
+
+      {/* 재료 — 재료명/수량 입력 행 + 삭제, 보유 재료 추천, 재료 추가 · 위 마진 24 = screen gap16 + mt-2 */}
+      <View className="mt-2 gap-2">
         <AppText variant="body" className="text-foreground">
           재료
         </AppText>
@@ -127,7 +175,7 @@ export default function AddRecipeManualScreen() {
             <SearchBar
               leftIcon={null}
               placeholder="수량"
-              containerClassName="w-[96px]"
+              containerClassName="h-11 w-[122px]"
               value={ing.qty}
               onChangeText={(t) => setIngredient(i, 'qty', t)}
             />
@@ -146,6 +194,9 @@ export default function AddRecipeManualScreen() {
             </Pressable>
           </View>
         ))}
+
+        {/* 위 12 = gap8+mt-1, 아래 16 = gap8+mb-2 */}
+        <DashedAddButton label="재료 추가" onPress={() => addIngredient()} className="mb-2 mt-1" />
 
         {/* 갖고 있는 재료 — 탭하면 재료 행 추가 */}
         <View className="gap-[10px] rounded-[12px] bg-field p-3">
@@ -173,12 +224,10 @@ export default function AddRecipeManualScreen() {
             })}
           </View>
         </View>
-
-        <DashedAddButton label="재료 추가" onPress={() => addIngredient()} />
       </View>
 
-      {/* 방법 — 번호+순서이동 단계 입력 + 삭제, 단계 추가 */}
-      <View className="gap-2">
+      {/* 방법 — 번호+순서이동 단계 입력 + 삭제, 단계 추가 · 위 마진 20 = screen gap16 + mt-1 */}
+      <View className="mt-1 gap-2">
         <AppText variant="body" className="text-foreground">
           방법
         </AppText>
@@ -213,7 +262,8 @@ export default function AddRecipeManualScreen() {
             </View>
           </View>
         ))}
-        <DashedAddButton label="단계 추가" onPress={addStep} />
+        {/* 위 12 = gap8+mt-1 */}
+        <DashedAddButton label="단계 추가" onPress={addStep} className="mt-1" />
       </View>
 
       <Button label="저장하기" onPress={() => router.replace('/recipe-view')} />

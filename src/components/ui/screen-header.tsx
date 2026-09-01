@@ -1,32 +1,58 @@
 import type { ReactNode } from 'react';
 import { Pressable, View } from 'react-native';
+import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 
+import { palette } from '@/constants/tokens';
+
 import { AppText } from './app-text';
-import { Chevron } from './chevron';
 
 export type ScreenHeaderProps = {
   title: string;
   /** Show a back chevron that pops the navigation stack. */
   back?: boolean;
+  /** Show an X (close) icon that pops the stack — for modal-like pages. Ignored if `back`. */
+  close?: boolean;
+  /** Override the close(X)/back action. Defaults to router.back(). */
+  onClose?: () => void;
   /** Optional trailing action (icon button, text). */
   right?: ReactNode;
 };
 
-// Figma: 헤더 — Bold 24 (title), h72, margin 20. Back chevron optional.
-export function ScreenHeader({ title, back, right }: ScreenHeaderProps) {
+// Figma: 헤더 — Bold 24 (title), h72, margin 20. Leading back chevron or close(X) optional.
+export function ScreenHeader({ title, back, close, onClose, right }: ScreenHeaderProps) {
   const router = useRouter();
+  const dismiss = onClose ?? (() => router.back());
 
   return (
     <View className="h-[72px] flex-row items-center gap-2 px-screen">
       {back ? (
         <Pressable
-          onPress={() => router.back()}
+          onPress={dismiss}
           hitSlop={8}
           accessibilityRole="button"
           accessibilityLabel="뒤로"
         >
-          <Chevron direction="left" className="text-foreground" />
+          <Image
+            source={require('../../assets/images/ic-arrow-left.png')}
+            style={{ width: 24, height: 24 }}
+            tintColor={palette.foreground}
+            contentFit="contain"
+          />
+        </Pressable>
+      ) : close ? (
+        <Pressable
+          onPress={dismiss}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="닫기"
+        >
+          <Image
+            source={require('../../assets/images/ic-close.png')}
+            style={{ width: 24, height: 24 }}
+            tintColor={palette.foreground}
+            contentFit="contain"
+          />
         </Pressable>
       ) : null}
       <AppText variant="title" className="flex-1">

@@ -3,7 +3,7 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AddRecipeMenu } from '@/components/add-recipe-menu';
 import { TabBar } from '@/components/tab-bar';
@@ -64,6 +64,7 @@ function RecipeCard({ recipe, onPress }: { recipe: Recipe; onPress: () => void }
 
 export default function RecipesScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
@@ -101,7 +102,11 @@ export default function RecipesScreen() {
       ) : null}
 
       {/* 플로팅 + 버튼 + 등록 메뉴 */}
-      <View className="absolute bottom-[96px] right-5 items-end" pointerEvents="box-none">
+      <View
+        className="absolute right-5 items-end"
+        style={{ bottom: insets.bottom + 90 }}
+        pointerEvents="box-none"
+      >
         {menuOpen ? (
           <View className="mb-[18px]">
             <AddRecipeMenu

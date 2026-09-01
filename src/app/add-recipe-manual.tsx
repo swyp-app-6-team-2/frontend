@@ -154,16 +154,23 @@ export default function AddRecipeManualScreen() {
             <Text className="text-[14px] text-primary">갖고 있는 재료</Text>
           </View>
           <View className="flex-row flex-wrap gap-1.5">
-            {OWNED.map((o) => (
-              <Pressable
-                key={o}
-                onPress={() => addIngredient(o)}
-                accessibilityRole="button"
-                className="rounded-pill border border-primary/50 bg-primary/10 px-3 py-1.5 active:opacity-80"
-              >
-                <Text className="text-[12px] leading-[14px] text-primary">{o}</Text>
-              </Pressable>
-            ))}
+            {OWNED.map((o) => {
+              const added = ingredients.some((ing) => ing.name === o);
+              return (
+                <Pressable
+                  key={o}
+                  onPress={() => addIngredient(o)}
+                  disabled={added}
+                  accessibilityRole="button"
+                  accessibilityState={{ disabled: added }}
+                  className={`rounded-pill border border-primary/50 bg-primary/10 px-3 py-1.5 ${
+                    added ? 'opacity-40' : 'active:opacity-80'
+                  }`}
+                >
+                  <Text className="text-[12px] leading-[14px] text-primary">{o}</Text>
+                </Pressable>
+              );
+            })}
           </View>
         </View>
 

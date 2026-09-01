@@ -19,17 +19,15 @@ export default function LoginScreen() {
   return (
     <View className="flex-1 bg-background">
       <View className="flex-1 items-center justify-center gap-5 px-screen">
-        {/* 히어로: 마스코트 + 로고 워드마크 (추후 인트로 gif/영상으로 교체) */}
+        {/* 히어로: 마스코트 + 앱 이름 (추후 인트로 gif/영상으로 교체) */}
         <Image
           source={require('../assets/images/character.png')}
           style={{ width: 132, height: 124 }}
           contentFit="contain"
         />
-        <Image
-          source={require('../assets/images/logo.png')}
-          style={{ width: 176, height: 50 }}
-          contentFit="contain"
-        />
+        <AppText variant="title" className="text-[32px] leading-[40px] text-foreground">
+          별따먹자
+        </AppText>
       </View>
 
       {/* SNS 간편 가입 (Figma 402×874) — 문구 top 611 / 버튼 top 652·bottom 708 → 하단 166px */}

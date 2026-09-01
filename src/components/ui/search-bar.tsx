@@ -1,24 +1,25 @@
 import type { ReactNode } from 'react';
-import { Text, TextInput, View, type TextInputProps } from 'react-native';
+import { TextInput, View, type TextInputProps } from 'react-native';
+import { Image } from 'expo-image';
 
 import { palette } from '@/constants/tokens';
 
 export type SearchBarProps = TextInputProps & {
-  /** Leading icon element. Defaults to a 🔍 glyph; pass `null` to hide it. */
+  /** Leading icon element. Defaults to the 돋보기 icon; pass `null` to hide it. */
   leftIcon?: ReactNode;
   containerClassName?: string;
 };
 
 // Figma: 검색바 — field bg #1E2230, pill, px16 py10, icon gap10, placeholder
 // #A4A4A4 16px. Height 44px = 24px icon frame + py10×2. The icon is a fixed
-// 24×24 box so it (not the text) sets the bar height. Glyph until a real icon
-// system lands.
+// 24×24 box so it (not the text) sets the bar height.
 const defaultIcon = (
-  <View className="h-6 w-6 items-center justify-center">
-    <Text className="text-muted" style={{ fontSize: 20 }}>
-      🔍
-    </Text>
-  </View>
+  <Image
+    source={require('../../assets/images/ic-search.png')}
+    style={{ width: 24, height: 24 }}
+    tintColor={palette.muted}
+    contentFit="contain"
+  />
 );
 
 export function SearchBar({

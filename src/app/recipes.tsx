@@ -1,10 +1,14 @@
 import { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
-import { useRouter, type Href } from 'expo-router';
+import { Image } from 'expo-image';
+import { useRouter } from 'expo-router';
+import { Feather } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AddRecipeMenu } from '@/components/add-recipe-menu';
 import { TabBar } from '@/components/tab-bar';
 import { AppText, SearchBar } from '@/components/ui';
+import { palette } from '@/constants/tokens';
 
 type Category = '한식' | '양식' | '중식';
 type Recipe = { title: string; category: Category };
@@ -21,13 +25,6 @@ const RECIPES: Recipe[] = [
 
 const FILTERS = ['카테고리', '재료', '최신순'];
 
-// FAB 팝오버 메뉴 — URL / 이미지 / 직접 등록.
-const ADD_MENU: { icon: string; label: string; href: Href }[] = [
-  { icon: '🔗', label: 'URL로 등록', href: '/add-recipe-url' },
-  { icon: '🖼️', label: '이미지로 등록', href: '/add-recipe-image' },
-  { icon: '✏️', label: '직접 등록', href: '/add-recipe-manual' },
-];
-
 // Figma 필터칩 — h36, pill, 투명 bg + 1px border #1E2230(field), gap4, px16.
 // 라벨 14px 흰색 + 우측 16px 드롭다운 아이콘. 화살표는 다크 배경에서 보이도록
 // muted (Figma 익스포트의 #18181B는 배경과 겹쳐 안 보임).
@@ -38,9 +35,12 @@ function FilterChip({ label }: { label: string }) {
       className="h-9 flex-row items-center justify-center gap-1 rounded-pill border border-field px-4 active:opacity-80"
     >
       <Text className="text-chip text-foreground">{label}</Text>
-      <View className="h-4 w-4 items-center justify-center">
-        <Text className="text-[11px] leading-none text-muted">▾</Text>
-      </View>
+      <Image
+        source={require('../assets/images/ic-chevron-down.png')}
+        style={{ width: 16, height: 16 }}
+        tintColor={palette.muted}
+        contentFit="contain"
+      />
     </Pressable>
   );
 }
@@ -103,21 +103,13 @@ export default function RecipesScreen() {
       {/* 플로팅 + 버튼 + 등록 메뉴 */}
       <View className="absolute bottom-[96px] right-5 items-end" pointerEvents="box-none">
         {menuOpen ? (
-          <View className="mb-3 w-52 rounded-card border border-foreground/10 bg-surface p-2">
-            {ADD_MENU.map((m) => (
-              <Pressable
-                key={m.label}
-                onPress={() => {
-                  setMenuOpen(false);
-                  router.push(m.href);
-                }}
-                className="flex-row items-center gap-3 rounded-xl px-3 py-3 active:bg-field"
-                accessibilityRole="button"
-              >
-                <Text className="text-[20px]">{m.icon}</Text>
-                <Text className="text-body text-foreground">{m.label}</Text>
-              </Pressable>
-            ))}
+          <View className="mb-[18px]">
+            <AddRecipeMenu
+              onSelect={(m) => {
+                setMenuOpen(false);
+                router.push(m.href);
+              }}
+            />
           </View>
         ) : null}
         <Pressable
@@ -126,7 +118,7 @@ export default function RecipesScreen() {
           accessibilityRole="button"
           accessibilityLabel="레시피 등록"
         >
-          <Text className="text-[30px] leading-none text-ink">{menuOpen ? '×' : '＋'}</Text>
+          <Feather name={menuOpen ? 'x' : 'plus'} size={24} color={palette.ink} />
         </Pressable>
       </View>
     </View>

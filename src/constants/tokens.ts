@@ -16,7 +16,7 @@ export const palette = {
   foreground: '#FFFFFF',
   ink: '#111111',
   muted: '#A4A4A4',
-  tabInactive: '#727272',
+  tabInactive: '#505050',
   bodyMuted: '#82848C',
   disabled: '#3F4250',
   popupButton: '#34394B',

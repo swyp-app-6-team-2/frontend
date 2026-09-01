@@ -24,23 +24,25 @@ export default function HomeScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      {/* 밤하늘 산 (뒤쪽 밝은 산 + 앞쪽 파란 산) */}
-      <View pointerEvents="none" className="absolute inset-0 justify-end">
-        <Image
-          source={require('../assets/images/mountain2.png')}
-          style={{
-            position: 'absolute',
-            bottom: 128,
-            left: -12,
-            width: '58%',
-            aspectRatio: 253 / 119,
-          }}
-          contentFit="contain"
-        />
+      {/* 산 배경 + 캐릭터 — Figma 402×874 절대좌표를 bottom 기준으로 환산 (bottom = 874 − top − h) */}
+      <View pointerEvents="none" className="absolute inset-0">
+        {/* 왼쪽 산 — mountain.png (left -74, top 698 → bottom -1, 402×177) */}
         <Image
           source={require('../assets/images/mountain.png')}
-          style={{ width: '100%', aspectRatio: 328 / 176 }}
+          style={{ position: 'absolute', left: -74, bottom: -1, width: 402, height: 177 }}
           contentFit="cover"
+        />
+        {/* 오른쪽 산 — mountain2.png (left 149, top 755 → bottom -58, 402×177) */}
+        <Image
+          source={require('../assets/images/mountain2.png')}
+          style={{ position: 'absolute', left: 149, bottom: -58, width: 402, height: 177 }}
+          contentFit="cover"
+        />
+        {/* 캐릭터 (left 72, top 658, 49×46) */}
+        <Image
+          source={require('../assets/images/character.png')}
+          style={{ position: 'absolute', left: 72, bottom: 170, width: 49, height: 46 }}
+          contentFit="contain"
         />
       </View>
 
@@ -71,14 +73,9 @@ export default function HomeScreen() {
           ) : null}
         </View>
 
-        {/* 하단: 캐릭터 + 추천 드롭다운 */}
+        {/* 하단: 추천 드롭다운 (캐릭터는 배경 오버레이로 이동) */}
         <View className="px-screen pb-3" pointerEvents="box-none">
-          <View className="flex-row items-end justify-between" pointerEvents="box-none">
-            <Image
-              source={require('../assets/images/character.png')}
-              style={{ width: 68, height: 64 }}
-              contentFit="contain"
-            />
+          <View className="flex-row items-end justify-end" pointerEvents="box-none">
             <View className="mb-10 items-end gap-2" pointerEvents="box-none">
               {open ? (
                 <View className="w-[173px] gap-[10px] rounded-[20px] bg-reco-panel px-1 py-2">

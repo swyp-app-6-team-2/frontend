@@ -2,8 +2,10 @@ import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
+import { Feather } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AddRecipeMenu } from '@/components/add-recipe-menu';
 import { AppText, Button } from '@/components/ui';
 import { palette } from '@/constants/tokens';
 
@@ -26,7 +28,7 @@ const STEPS = [
     title: '간편하게 레시피를 등록할 수 있어요',
     sub: 'URI, 캡처이미지로 한 번에 쉽게!',
     header: '나의 레시피',
-    spot: 'recipes',
+    spot: 'add-menu',
   },
   {
     title: '첫 레시피가 담겼어요',
@@ -123,8 +125,9 @@ export default function OnboardingScreen() {
       <NightSky />
       <View pointerEvents="none" className="absolute inset-0 bg-black/45" />
       {/* 어디든 탭하면 다음 (버튼·요소 아래 레이어).
-          단, 1챕터(step 0)는 하이라이트된 "나의 레시피" 탭을 눌러야만 넘어간다. */}
-      {step !== 0 ? (
+          단, 1챕터(step 0)는 "나의 레시피" 탭을, 2챕터(step 1)는 등록 팝오버를
+          눌러야만 넘어간다. */}
+      {step !== 0 && step !== 1 ? (
         <Pressable className="absolute inset-0" onPress={next} accessibilityLabel="다음" />
       ) : null}
 
@@ -168,28 +171,52 @@ export default function OnboardingScreen() {
           </View>
         </View>
 
-        {/* 하단: 추천 드롭다운 (spot이면 밝게) */}
-        <View className="pb-3" pointerEvents="none">
-          <View className="flex-row items-end justify-between">
-            <Image
-              source={require('../assets/images/character.png')}
-              style={{ width: 68, height: 64, opacity: s.spot === 'dropdown' ? 1 : 0.4 }}
-              contentFit="contain"
-            />
-            <View
-              className={`mb-10 flex-row items-center gap-2 rounded-pill border border-foreground/15 px-4 py-3 ${
-                s.spot === 'dropdown' ? 'bg-surface' : 'bg-surface/50'
-              }`}
+        {/* 하단: 2챕터는 강조된 등록 팝오버+FAB(눌러야 진행), 그 외엔 추천 드롭다운 */}
+        {s.spot === 'add-menu' ? (
+          <View className="items-end pb-3" pointerEvents="box-none">
+            <View className="mb-[18px]">
+              <AddRecipeMenu highlighted onSelect={next} />
+            </View>
+            <Pressable
+              onPress={next}
+              accessibilityRole="button"
+              accessibilityLabel="레시피 등록"
+              className="h-14 w-14 items-center justify-center rounded-full bg-primary active:opacity-90"
+              style={{
+                borderWidth: 1,
+                borderColor: palette.ink,
+                shadowColor: '#FFFFFF',
+                shadowOpacity: 0.25,
+                shadowRadius: 34,
+                shadowOffset: { width: 0, height: 0 },
+              }}
             >
-              <Text
-                className={`font-medium ${s.spot === 'dropdown' ? 'text-foreground' : 'text-foreground/50'}`}
+              <Feather name="plus" size={24} color={palette.ink} />
+            </Pressable>
+          </View>
+        ) : (
+          <View className="pb-3" pointerEvents="none">
+            <View className="flex-row items-end justify-between">
+              <Image
+                source={require('../assets/images/character.png')}
+                style={{ width: 68, height: 64, opacity: s.spot === 'dropdown' ? 1 : 0.4 }}
+                contentFit="contain"
+              />
+              <View
+                className={`mb-10 flex-row items-center gap-2 rounded-pill border border-foreground/15 px-4 py-3 ${
+                  s.spot === 'dropdown' ? 'bg-surface' : 'bg-surface/50'
+                }`}
               >
-                랜덤으로 골라줘
-              </Text>
-              <Text className={s.spot === 'dropdown' ? 'text-muted' : 'text-muted/50'}>▼</Text>
+                <Text
+                  className={`font-medium ${s.spot === 'dropdown' ? 'text-foreground' : 'text-foreground/50'}`}
+                >
+                  랜덤으로 골라줘
+                </Text>
+                <Text className={s.spot === 'dropdown' ? 'text-muted' : 'text-muted/50'}>▼</Text>
+              </View>
             </View>
           </View>
-        </View>
+        )}
 
         {/* 탭바 — 떠 있는 바(dim) + 강조 대상은 밝은 테두리 하이라이트 */}
         <View

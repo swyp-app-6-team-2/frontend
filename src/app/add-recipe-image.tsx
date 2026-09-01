@@ -56,7 +56,11 @@ export default function AddRecipeImageScreen() {
                     if (id === undefined) return <View key={c} className="flex-1" />;
                     return (
                       <View key={c} className="aspect-square flex-1">
-                        <View className="h-full w-full rounded-[12px] bg-field" />
+                        <Image
+                          source={require('../assets/images/food-sample.png')}
+                          style={{ width: '100%', height: '100%', borderRadius: 12 }}
+                          contentFit="cover"
+                        />
                         {/* 삭제 배지 — 우상단 8px 인셋, 20원 border primary, X primary */}
                         <Pressable
                           onPress={() => removeImage(id)}

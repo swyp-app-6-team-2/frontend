@@ -167,9 +167,13 @@ export default function OnboardingScreen() {
                 shadowOffset: { width: 0, height: 0 },
               }}
             >
-              {/* 이미지 영역 (실제 자산 없어 플레이스홀더) */}
-              <View className="h-[216px] w-full items-center justify-center bg-field">
-                <Text className="text-[40px]">🍜</Text>
+              {/* 음식 이미지 */}
+              <View className="h-[216px] w-full overflow-hidden bg-field">
+                <Image
+                  source={require('../assets/images/food-sample.png')}
+                  style={{ width: '100%', height: '100%' }}
+                  contentFit="cover"
+                />
               </View>
               {/* 하단 팝업 — 제목·재료·버튼 */}
               <View className="items-center gap-[26px] bg-field px-[18px] pb-5 pt-8">
@@ -262,6 +266,11 @@ export default function OnboardingScreen() {
               shadowOffset: { width: 0, height: 0 },
             }}
           >
+            <Image
+              source={require('../assets/images/food-sample.png')}
+              style={{ position: 'absolute', width: '100%', height: '100%' }}
+              contentFit="cover"
+            />
             <View className="absolute left-1 top-1 rounded-pill bg-surface px-3 py-1">
               <Text className="text-[12px] font-bold text-foreground">BEST</Text>
             </View>

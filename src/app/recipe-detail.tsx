@@ -1,4 +1,5 @@
 import { Text, View } from 'react-native';
+import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 
 import { AppText, Button, Screen, SectionTitle, Tag } from '@/components/ui';
@@ -27,9 +28,13 @@ export default function RecipeDetailScreen() {
         </Text>
       </View>
 
-      {/* 요리 이미지 placeholder */}
-      <View className="h-40 items-center justify-center rounded-card bg-field">
-        <Text className="text-[36px]">🍲</Text>
+      {/* 요리 이미지 */}
+      <View className="h-40 overflow-hidden rounded-card bg-field">
+        <Image
+          source={require('../assets/images/food-sample.png')}
+          style={{ width: '100%', height: '100%' }}
+          contentFit="cover"
+        />
       </View>
 
       {/* 요리명 */}

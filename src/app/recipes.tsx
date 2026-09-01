@@ -51,6 +51,11 @@ function RecipeCard({ recipe, onPress }: { recipe: Recipe; onPress: () => void }
   return (
     <Pressable className="w-[48%] active:opacity-90" onPress={onPress} accessibilityRole="button">
       <View className="aspect-[173/127] w-full overflow-hidden rounded-[12px] bg-field">
+        <Image
+          source={require('../assets/images/food-sample.png')}
+          style={{ position: 'absolute', width: '100%', height: '100%' }}
+          contentFit="cover"
+        />
         <View className="absolute left-1 top-1 rounded-pill bg-field px-3 py-1">
           <Text className="text-[12px] font-bold text-foreground">{recipe.category}</Text>
         </View>

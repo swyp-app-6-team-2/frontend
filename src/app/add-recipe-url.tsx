@@ -22,13 +22,14 @@ export default function AddRecipeUrlScreen() {
       <View className="flex-1">
         <View className="gap-2 pt-2">
           <AppText variant="title">레시피 링크를 넣어주세요</AppText>
-          <AppText variant="body" className="text-muted">
+          <AppText variant="body" className="font-normal text-muted">
             유튜브·인스타 요리 영상은 Ai가 레시피로 만들고,{'\n'}일반 URL 링크는 원본 그대로
             보관해요
           </AppText>
         </View>
 
-        <View className="mt-6 gap-3">
+        {/* 부제→검색바 40, 검색바 아래(→붙여넣기 카드) 9 */}
+        <View className="mt-10 gap-[9px]">
           <SearchBar
             placeholder="예) https://"
             value={url}
@@ -44,12 +45,12 @@ export default function AddRecipeUrlScreen() {
                 setUrl(CLIPBOARD_URL);
                 setShowPaste(false);
               }}
-              className="flex-row items-center gap-3 rounded-2xl border border-primary/70 bg-field/40 px-4 py-3 active:opacity-90"
+              className="h-[72px] flex-row items-center gap-2 rounded-[12px] border border-primary/50 bg-primary/10 px-4 active:opacity-90"
               accessibilityRole="button"
             >
               <Image
                 source={require('../assets/images/clipboard.png')}
-                style={{ width: 20, height: 20 }}
+                style={{ width: 24, height: 24 }}
                 tintColor={palette.primary}
                 contentFit="contain"
               />
@@ -62,7 +63,7 @@ export default function AddRecipeUrlScreen() {
                 </Text>
               </View>
               <Pressable onPress={() => setShowPaste(false)} hitSlop={8} accessibilityLabel="닫기">
-                <Text className="text-[18px] text-muted">✕</Text>
+                <Text className="text-[16px] leading-none text-muted">✕</Text>
               </Pressable>
             </Pressable>
           ) : null}

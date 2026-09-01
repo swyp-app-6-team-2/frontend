@@ -25,6 +25,9 @@ const RECIPES: Recipe[] = [
 
 const FILTERS = ['카테고리', '재료', '최신순'];
 
+// 저장 슬롯 최대 50개 — 초과 시 slot-full 팝업
+const MAX_SLOTS = 50;
+
 // Figma 필터칩 — h36, pill, 투명 bg + 1px border #1E2230(field), gap4, px16.
 // 라벨 14px 흰색 + 우측 16px 드롭다운 아이콘. 화살표는 다크 배경에서 보이도록
 // muted (Figma 익스포트의 #18181B는 배경과 겹쳐 안 보임).
@@ -71,6 +74,10 @@ export default function RecipesScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [menuOpen, setMenuOpen] = useState(false);
+  const isFull = RECIPES.length >= MAX_SLOTS;
+
+  // + 탭 — 슬롯 가득 차면 안내 팝업, 아니면 등록 메뉴 토글
+  const onFabPress = () => (isFull ? router.push('/slot-full') : setMenuOpen((o) => !o));
 
   return (
     <View className="flex-1 bg-background">
@@ -97,10 +104,10 @@ export default function RecipesScreen() {
         <TabBar active="recipes" />
       </SafeAreaView>
 
-      {/* 팝오버 열림 시 바깥 탭하면 닫힘 */}
+      {/* 팝오버 열림 시 배경 어둡게 + 바깥 탭하면 닫힘 (Figma: #060A19 85%) */}
       {menuOpen ? (
         <Pressable
-          className="absolute inset-0"
+          className="absolute inset-0 bg-background/85"
           onPress={() => setMenuOpen(false)}
           accessibilityLabel="메뉴 닫기"
         />
@@ -123,7 +130,7 @@ export default function RecipesScreen() {
           </View>
         ) : null}
         <Pressable
-          onPress={() => setMenuOpen((o) => !o)}
+          onPress={onFabPress}
           className="h-14 w-14 items-center justify-center rounded-full bg-primary active:opacity-90"
           accessibilityRole="button"
           accessibilityLabel="레시피 등록"

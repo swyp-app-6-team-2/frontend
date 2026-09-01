@@ -50,7 +50,7 @@ export default function FridgeScreen() {
   };
 
   return (
-    <Screen title="재료관리" close>
+    <Screen title="재료 추가하기" close>
       <View className="flex-1">
         <ScrollView
           showsVerticalScrollIndicator={false}

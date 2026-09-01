@@ -123,7 +123,7 @@ export default function RecipesScreen() {
           accessibilityRole="button"
           accessibilityLabel="레시피 등록"
         >
-          <Feather name={menuOpen ? 'x' : 'plus'} size={24} color={palette.ink} />
+          <Feather name="plus" size={24} color={palette.ink} />
         </Pressable>
       </View>
     </View>

@@ -20,7 +20,7 @@ export default function MyScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      <SafeAreaView className="flex-1" edges={['top']}>
+      <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
         <ScrollView
           contentContainerClassName="gap-4 px-screen pb-[120px] pt-2"
           showsVerticalScrollIndicator={false}

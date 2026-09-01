@@ -244,6 +244,9 @@ export default function OnboardingScreen() {
       {s.header === '나의 레시피' ? <RecipesBackground /> : <NightSky />}
       <View pointerEvents="none" className="absolute inset-0 bg-black/45" />
 
+      {/* 아무 데나 탭해도 다음 (강조 요소·헤더 버튼은 각자 처리) */}
+      <Pressable className="absolute inset-0" onPress={next} accessibilityLabel="다음" />
+
       {/* 강조된 첫 레시피 카드 — dim 위로 밝게 (Figma: 173×127, primary 테두리+글로우) */}
       {s.spot === 'recipe-card' ? (
         <View
@@ -394,9 +397,9 @@ export default function OnboardingScreen() {
           </View>
         ) : s.spot === 'recipe-card' ? (
           <View className="items-end pb-3" pointerEvents="box-none">
-            {/* 플레인 FAB — 강조 대상은 레시피 카드라 진행은 카드 탭으로만 (FAB는 비활성) */}
+            {/* 플레인 FAB (글로우 없음) */}
             <Pressable
-              onPress={() => {}}
+              onPress={next}
               accessibilityRole="button"
               accessibilityLabel="레시피 등록"
               className="h-14 w-14 items-center justify-center rounded-full bg-primary active:opacity-90"

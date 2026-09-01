@@ -122,8 +122,11 @@ export default function OnboardingScreen() {
       {/* 어두워진 홈 배경 */}
       <NightSky />
       <View pointerEvents="none" className="absolute inset-0 bg-black/45" />
-      {/* 어디든 탭하면 다음 (버튼·요소 아래 레이어) */}
-      <Pressable className="absolute inset-0" onPress={next} accessibilityLabel="다음" />
+      {/* 어디든 탭하면 다음 (버튼·요소 아래 레이어).
+          단, 1챕터(step 0)는 하이라이트된 "나의 레시피" 탭을 눌러야만 넘어간다. */}
+      {step !== 0 ? (
+        <Pressable className="absolute inset-0" onPress={next} accessibilityLabel="다음" />
+      ) : null}
 
       <SafeAreaView className="flex-1 px-screen" edges={['top', 'bottom']} pointerEvents="box-none">
         {/* 헤더: 대상 화면명(dim) + 별(dim) + ✕(밝게) */}
@@ -192,13 +195,19 @@ export default function OnboardingScreen() {
         <View
           className="mx-4 mb-2 flex-row items-center rounded-3xl px-2 py-2.5"
           style={{ backgroundColor: 'rgba(18,26,48,0.7)' }}
-          pointerEvents="none"
+          pointerEvents="box-none"
         >
           {TABS.map((t) => {
             const on = t.key === s.spot;
             if (on) {
               return (
-                <View key={t.key} className="flex-1 items-center">
+                <Pressable
+                  key={t.key}
+                  className="flex-1 items-center active:opacity-80"
+                  onPress={next}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${t.label} 탭`}
+                >
                   {/* Figma: 80×68, r12, fill Primary2(#060A19), stroke Primary1(gold) 1px, 흰색 글로우 */}
                   <View
                     className="items-center justify-center gap-1"
@@ -225,11 +234,11 @@ export default function OnboardingScreen() {
                       {t.label}
                     </Text>
                   </View>
-                </View>
+                </Pressable>
               );
             }
             return (
-              <View key={t.key} className="flex-1 items-center gap-1">
+              <View key={t.key} className="flex-1 items-center gap-1" pointerEvents="none">
                 <Image
                   source={t.icon}
                   style={{ width: 24, height: 24 }}

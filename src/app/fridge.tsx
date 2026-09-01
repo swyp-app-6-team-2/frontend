@@ -1,23 +1,104 @@
+import { useState } from 'react';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
-import { AppText, Button, ListRow, Screen, Section } from '@/components/ui';
+import { Button, Screen, SearchBar } from '@/components/ui';
 
-// [stub] 재료관리 / 내 냉장고 — 유통기한 임박 재료, 전체 재료 목록.
-const SOON = ['두부 · D-1 · 1개', '배추 · D-3', '양파 · D-5'];
+// 재료관리 — 검색 + 카테고리 칩 + 재료 그리드 (Figma). 목업 데이터.
+const CATEGORIES = [
+  { label: '전체', count: 533 },
+  { label: '채소', count: 91 },
+  { label: '양념', count: 62 },
+  { label: '육류', count: 3 },
+  { label: '기타', count: 5 },
+];
+
+const ITEMS = [
+  { name: '계란', icon: '🥚' },
+  { name: '대파', icon: '🌿' },
+  { name: '양파', icon: '🧅' },
+  { name: '두부', icon: '🧈' },
+  { name: '배추', icon: '🥬' },
+  { name: '당근', icon: '🥕' },
+  { name: '감자', icon: '🥔' },
+  { name: '토마토', icon: '🍅' },
+  { name: '우유', icon: '🥛' },
+  { name: '버섯', icon: '🍄' },
+  { name: '마늘', icon: '🧄' },
+  { name: '고추', icon: '🌶️' },
+  { name: '새우', icon: '🦐' },
+  { name: '치즈', icon: '🧀' },
+  { name: '옥수수', icon: '🌽' },
+];
 
 export default function FridgeScreen() {
   const router = useRouter();
+  const [active, setActive] = useState(0);
+
   return (
-    <Screen title="내 냉장고" scroll>
-      <Section title="임박 재료">
-        {SOON.map((label) => (
-          <ListRow key={label} label={label} showChevron={false} />
-        ))}
-      </Section>
-      <AppText variant="body" className="text-muted">
-        전체 재료(카테고리별 · 유통기한)가 들어갈 자리
-      </AppText>
-      <Button label="+ 재료 추가" onPress={() => router.push('/add-ingredient')} />
+    <Screen title="재료관리" close>
+      <View className="flex-1">
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerClassName="gap-4 pb-4 pt-2"
+        >
+          <SearchBar placeholder="재료명을 검색해보세요" />
+
+          {/* 카테고리 칩 — 가로 스크롤, 선택=골드 */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerClassName="gap-2"
+          >
+            {CATEGORIES.map((c, i) => {
+              const on = i === active;
+              return (
+                <Pressable
+                  key={c.label}
+                  onPress={() => setActive(i)}
+                  accessibilityRole="button"
+                  className={`h-9 items-center justify-center rounded-pill border border-field px-4 active:opacity-80 ${
+                    on ? 'bg-primary' : ''
+                  }`}
+                >
+                  <Text
+                    className={`text-[14px] leading-[17px] ${on ? 'text-ink' : 'text-foreground'}`}
+                  >
+                    {c.label} ({c.count})
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+
+          {/* 재료 그리드 — 3열 청킹, 110×83 카드 (bg #34394B, r12) */}
+          <View className="gap-4">
+            {Array.from({ length: Math.ceil(ITEMS.length / 3) }, (_, r) => (
+              <View key={r} className="flex-row gap-4">
+                {[0, 1, 2].map((c) => {
+                  const item = ITEMS[r * 3 + c];
+                  if (!item) return <View key={c} className="flex-1" />;
+                  return (
+                    <View
+                      key={c}
+                      className="aspect-[110/83] flex-1 items-center justify-center gap-1 rounded-[12px] bg-popup-button"
+                    >
+                      <Text className="text-[20px]">{item.icon}</Text>
+                      <Text className="text-[16px] font-medium leading-[21px] text-foreground">
+                        {item.name}
+                      </Text>
+                    </View>
+                  );
+                })}
+              </View>
+            ))}
+          </View>
+        </ScrollView>
+      </View>
+
+      <View className="pb-4">
+        <Button label="완료하기" onPress={() => router.back()} />
+      </View>
     </Screen>
   );
 }

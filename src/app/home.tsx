@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { TabBar } from '@/components/tab-bar';
 import { AppText } from '@/components/ui';
+import { palette } from '@/constants/tokens';
 
 const RECO = ['랜덤으로 골라줘', '내재료로 골라줘'];
 
@@ -80,7 +81,7 @@ export default function HomeScreen() {
             />
             <View className="mb-10 items-end gap-2" pointerEvents="box-none">
               {open ? (
-                <View className="w-52 overflow-hidden rounded-card bg-surface p-1">
+                <View className="w-[173px] gap-[10px] rounded-[20px] bg-reco-panel px-1 py-2">
                   {RECO.map((r) => (
                     <Pressable
                       key={r}
@@ -88,11 +89,10 @@ export default function HomeScreen() {
                         setReco(r);
                         setOpen(false);
                       }}
-                      className="flex-row items-center gap-2 rounded-xl px-3 py-3 active:bg-field"
+                      className="h-[47px] items-center justify-center active:opacity-80"
                     >
-                      <Text className={reco === r ? 'text-primary' : 'text-transparent'}>●</Text>
                       <Text
-                        className={`text-body ${reco === r ? 'text-foreground' : 'text-muted'}`}
+                        className={`text-[16px] leading-[19px] ${reco === r ? 'text-foreground' : 'text-popup-button-text'}`}
                       >
                         {r}
                       </Text>
@@ -102,10 +102,19 @@ export default function HomeScreen() {
               ) : null}
               <Pressable
                 onPress={() => setOpen((o) => !o)}
-                className="flex-row items-center gap-2 rounded-pill border border-foreground/15 bg-surface/80 px-4 py-3 active:opacity-80"
+                className="h-[50px] w-[173px] flex-row items-center justify-center gap-1.5 rounded-[99px] border border-disabled bg-reco-button active:opacity-80"
               >
-                <Text className="font-medium text-foreground">{reco}</Text>
-                <Text className="text-muted">{open ? '▲' : '▼'}</Text>
+                <Text className="text-[16px] leading-[19px] text-foreground">{reco}</Text>
+                <Image
+                  source={require('../assets/images/ic-chevron-down.png')}
+                  style={{
+                    width: 24,
+                    height: 24,
+                    transform: [{ rotate: open ? '180deg' : '0deg' }],
+                  }}
+                  tintColor={palette.disabled}
+                  contentFit="contain"
+                />
               </Pressable>
             </View>
           </View>

@@ -17,11 +17,13 @@
   --color-foreground: 255 255 255; /* #FFFFFF text */
   --color-ink: 17 17 17; /* #111111 dark text ON light surfaces (primary btn, active chip) */
   --color-muted: 164 164 164; /* #A4A4A4 secondary / placeholder */
-  --color-tab-inactive: 80 80 80; /* #505050 탭바 비활성 아이콘/라벨 */
+  --color-tab-inactive: 114 114 114; /* #727272 탭바 비활성 아이콘/라벨 */
   --color-body-muted: 130 132 140; /* #82848C 팝업 본문 등 약한 본문 */
   --color-disabled: 63 66 80; /* #3F4250 */
   --color-popup-button: 52 57 75; /* #34394B 팝업 중립 버튼 배경 */
   --color-popup-button-text: 165 167 173; /* #A5A7AD 팝업 중립 버튼 글자 */
+  --color-reco-panel: 24 31 66; /* #181F42 홈 추천 드롭다운 옵션 패널 */
+  --color-reco-button: 12 16 51; /* #0C1033 홈 추천 드롭다운 트리거 버튼 */
   --color-success: 47 169 107; /* #2FA96B */
   --color-error: 255 107 94; /* #FF6B5E */
 

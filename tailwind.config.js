@@ -24,6 +24,8 @@ module.exports = {
         disabled: token('--color-disabled'),
         'popup-button': token('--color-popup-button'),
         'popup-button-text': token('--color-popup-button-text'),
+        'reco-panel': token('--color-reco-panel'),
+        'reco-button': token('--color-reco-button'),
         success: token('--color-success'),
         error: token('--color-error'),
       },

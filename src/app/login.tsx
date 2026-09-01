@@ -18,13 +18,18 @@ export default function LoginScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      <View className="flex-1 items-center justify-center px-screen">
-        {/* 히어로 미디어 자리 */}
-        <View className="h-60 w-full max-w-[300px] items-center justify-center rounded-card border border-dashed border-foreground/15">
-          <AppText variant="chip" className="text-muted">
-            (gif or img)
-          </AppText>
-        </View>
+      <View className="flex-1 items-center justify-center gap-5 px-screen">
+        {/* 히어로: 마스코트 + 로고 워드마크 (추후 인트로 gif/영상으로 교체) */}
+        <Image
+          source={require('../assets/images/character.png')}
+          style={{ width: 132, height: 124 }}
+          contentFit="contain"
+        />
+        <Image
+          source={require('../assets/images/logo.png')}
+          style={{ width: 176, height: 50 }}
+          contentFit="contain"
+        />
       </View>
 
       {/* SNS 간편 가입 (Figma 402×874) — 문구 top 611 / 버튼 top 652·bottom 708 → 하단 166px */}

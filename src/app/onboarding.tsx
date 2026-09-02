@@ -154,7 +154,9 @@ export default function OnboardingScreen() {
             </Pressable>
           </View>
 
-          <View className="flex-1 justify-center px-screen">
+          <View className="flex-1 px-screen">
+            {/* 상단 여백 — 카드+코치문구를 버튼 위쪽으로 내림 (Figma: 헤더~카드 사이에 여백) */}
+            <View className="flex-1" pointerEvents="none" />
             {/* 강조 추천 카드 — primary 테두리 + 글로우 */}
             <View
               className="overflow-hidden rounded-[20px]"
@@ -225,9 +227,9 @@ export default function OnboardingScreen() {
             </View>
           </View>
 
-          {/* 완료하기 */}
+          {/* 시작하기 */}
           <View className="px-screen pb-8 pt-4">
-            <Button label="완료하기" onPress={finish} />
+            <Button label="시작하기" onPress={finish} />
           </View>
         </SafeAreaView>
       </View>
@@ -237,6 +239,30 @@ export default function OnboardingScreen() {
   // 튜토리얼 1~4 — 홈 위 코치마크 오버레이
   const s = STEPS[step];
   const next = () => setStep((v) => v + 1);
+
+  // 코치 문구 (상하 페이드 선 사이) — Figma Frame …044. 여러 위치에서 재사용.
+  const coachText = (
+    <View className="w-full gap-6">
+      <Image
+        source={require('../assets/images/line-fade.png')}
+        style={{ width: '100%', height: 1.5 }}
+        contentFit="fill"
+      />
+      <View>
+        <AppText variant="title" className="text-center text-primary-subtle">
+          {s.title}
+        </AppText>
+        <AppText variant="body" className="mt-2 text-center text-muted">
+          {s.sub}
+        </AppText>
+      </View>
+      <Image
+        source={require('../assets/images/line-fade.png')}
+        style={{ width: '100%', height: 1.5 }}
+        contentFit="fill"
+      />
+    </View>
+  );
 
   return (
     <View className="flex-1 bg-background">
@@ -282,20 +308,18 @@ export default function OnboardingScreen() {
         </View>
       ) : null}
 
-      {/* 밤하늘 별 스포트라이트 — 80 원(글로우) + 빛나는 별, 아래 더블탭 손 아이콘 */}
+      {/* 밤하늘 별 스포트라이트 — 별 원(글로우)과 더블탭 손 아이콘은 위치가 독립적 */}
       {s.spot === 'sky' ? (
-        <View
-          className="absolute inset-x-0 items-center"
-          style={{ top: insets.top + 100 }}
-          pointerEvents="box-none"
-        >
-          {/* 별을 눌러야 다음 챕터로 */}
+        <>
+          {/* 별 원 — Figma Overlay+Shadow: 80×80, left 210 / top 160 (중앙 아님). 눌러야 다음 챕터로 */}
           <Pressable
             onPress={next}
             accessibilityRole="button"
             accessibilityLabel="별"
-            className="h-20 w-20 items-center justify-center rounded-full bg-background active:opacity-90"
+            className="absolute h-20 w-20 items-center justify-center rounded-full bg-background active:opacity-90"
             style={{
+              top: 160,
+              left: 210,
               borderWidth: 1,
               borderColor: palette.primary,
               shadowColor: '#FFFFFF',
@@ -310,13 +334,19 @@ export default function OnboardingScreen() {
               contentFit="contain"
             />
           </Pressable>
-          <Image
-            source={require('../assets/images/tap.png')}
-            style={{ width: 96, height: 64, marginTop: 20 }}
-            contentFit="contain"
+          {/* 더블탭 손 — Figma image806: 96×64, 가로 중앙 / top 245 */}
+          <View
+            className="absolute inset-x-0 items-center"
+            style={{ top: 245 }}
             pointerEvents="none"
-          />
-        </View>
+          >
+            <Image
+              source={require('../assets/images/tap.png')}
+              style={{ width: 96, height: 64 }}
+              contentFit="contain"
+            />
+          </View>
+        </>
       ) : null}
 
       <SafeAreaView className="flex-1 px-screen" edges={['top', 'bottom']} pointerEvents="box-none">
@@ -344,33 +374,25 @@ export default function OnboardingScreen() {
           </Pressable>
         </View>
 
-        {/* 코치 안내 — 상하 페이드 선 사이 텍스트 (레시피 카드 단계는 카드 아래로 내림) */}
-        <View
-          className="flex-1 justify-center"
-          style={{ paddingTop: s.spot === 'recipe-card' ? 200 : 0 }}
-          pointerEvents="none"
-        >
-          <View className="gap-6">
-            <Image
-              source={require('../assets/images/line-fade.png')}
-              style={{ width: '100%', height: 1.5 }}
-              contentFit="fill"
-            />
-            <View>
-              <AppText variant="title" className="text-center text-primary-subtle">
-                {s.title}
-              </AppText>
-              <AppText variant="body" className="mt-2 text-center text-muted">
-                {s.sub}
-              </AppText>
-            </View>
-            <Image
-              source={require('../assets/images/line-fade.png')}
-              style={{ width: '100%', height: 1.5 }}
-              contentFit="fill"
-            />
+        {/* 코치 안내 — 레시피 카드 단계는 카드 아래로, 그 외엔 화면 세로 중앙 −35px 고정
+            (하단 블록 높이와 무관하게 챕터 간 위치 통일 — Figma: top 50% − 104/2 − 35). */}
+        {s.spot === 'recipe-card' ? (
+          <View className="flex-1 justify-center" style={{ paddingTop: 200 }} pointerEvents="none">
+            {coachText}
           </View>
-        </View>
+        ) : (
+          <>
+            {/* 하단 블록을 바닥에 고정하는 스페이서 */}
+            <View className="flex-1" pointerEvents="none" />
+            <View
+              pointerEvents="none"
+              className="absolute inset-x-0 items-center justify-center px-screen"
+              style={{ top: 0, bottom: 0, paddingBottom: 70 }}
+            >
+              {coachText}
+            </View>
+          </>
+        )}
 
         {/* 하단: 2챕터는 강조된 등록 팝오버+FAB(눌러야 진행), 그 외엔 추천 드롭다운 */}
         {s.spot === 'add-menu' ? (
@@ -481,73 +503,80 @@ export default function OnboardingScreen() {
           </View>
         )}
 
-        {/* 탭바 — 떠 있는 바(dim) + 강조 대상은 밝은 테두리 하이라이트 */}
-        <View
-          className="mx-4 mb-2 flex-row items-center rounded-3xl px-2 py-2.5"
-          style={{ backgroundColor: 'rgba(18,26,48,0.7)' }}
-          pointerEvents="box-none"
-        >
-          {TABS.map((t) => {
-            const on = t.key === s.spot;
-            // 현재 화면 탭은 골드 활성 (글로우 강조는 spot만). 나의 레시피 단계=레시피, 그 외=홈
-            const currentKey = s.header === '나의 레시피' ? 'recipes' : 'home';
-            const isCurrent = !on && t.key === currentKey;
-            if (on) {
+        {/* 탭바 — Figma 네비게이션바: pill(field) + 현재 화면 탭=primary, 나머지=tab-inactive.
+            padding 13/20/13/19, h68, 그림자 0 20 40 rgba(0,0,0,.35). 아무 데나 탭=다음이라 non-interactive. */}
+        <View className="mb-2" pointerEvents="none">
+          <View
+            className="flex-row items-center justify-between rounded-pill bg-field"
+            style={{
+              height: 68,
+              paddingTop: 13,
+              paddingBottom: 13,
+              paddingLeft: 20,
+              paddingRight: 19,
+              shadowColor: '#000000',
+              shadowOpacity: 0.35,
+              shadowRadius: 40,
+              shadowOffset: { width: 0, height: 20 },
+            }}
+          >
+            {TABS.map((t) => {
+              // 현재 화면 탭만 골드. 나의 레시피 단계=레시피, 그 외=홈.
+              const currentKey = s.header === '나의 레시피' ? 'recipes' : 'home';
+              const active = t.key === currentKey;
+              // 온보딩 강조 대상 — 흰색 아이콘/글자 + 골드 테두리 글로우 칩. 활성(홈)만 골드.
+              const spot = t.key === s.spot;
+              const color = active
+                ? palette.primary
+                : spot
+                  ? palette.foreground
+                  : palette.tabInactive;
+              const textClass = active
+                ? 'font-medium text-primary'
+                : spot
+                  ? 'font-medium text-foreground'
+                  : 'text-tab-inactive';
               return (
-                <Pressable
+                <View
                   key={t.key}
-                  className="h-14 flex-1 items-center justify-center active:opacity-80"
-                  onPress={next}
-                  accessibilityRole="button"
-                  accessibilityLabel={`${t.label} 탭`}
+                  className={
+                    spot ? 'items-center justify-center gap-1' : 'w-[65px] items-center gap-1'
+                  }
+                  // 강조 박스는 Figma Overlay+Shadow: 80×68(바 높이 꽉 채움), bg=background, primary 테두리, 화이트 글로우
+                  style={
+                    spot
+                      ? {
+                          width: 80,
+                          height: 68,
+                          backgroundColor: palette.background,
+                          borderRadius: 12,
+                          borderWidth: 1,
+                          borderColor: palette.primary,
+                          shadowColor: '#FFFFFF',
+                          shadowOpacity: 0.2,
+                          shadowRadius: 34,
+                          shadowOffset: { width: 0, height: 0 },
+                        }
+                      : undefined
+                  }
                 >
-                  {/* 강조 칩 — 바 높이(h-14) 안에 들어가도록 컴팩트, primary 테두리+글로우 */}
-                  <View
-                    className="items-center justify-center gap-1 self-stretch rounded-xl py-1"
-                    style={{
-                      backgroundColor: palette.background,
-                      borderWidth: 1,
-                      borderColor: palette.primary,
-                      shadowColor: '#FFFFFF',
-                      shadowOpacity: 0.2,
-                      shadowRadius: 34,
-                      shadowOffset: { width: 0, height: 0 },
-                    }}
-                  >
-                    <Image
-                      source={t.icon}
-                      style={{ width: 24, height: 24 }}
-                      tintColor={palette.primary}
-                      contentFit="contain"
-                    />
-                    <Text numberOfLines={1} className="text-[11px] font-semibold text-primary">
-                      {t.label}
-                    </Text>
-                  </View>
-                </Pressable>
+                  <Image
+                    source={t.icon}
+                    style={{ width: 24, height: 24 }}
+                    tintColor={color}
+                    contentFit="contain"
+                  />
+                  <Text numberOfLines={1} className={`text-[12px] leading-[14px] ${textClass}`}>
+                    {t.label}
+                  </Text>
+                </View>
               );
-            }
-            return (
-              <View
-                key={t.key}
-                className="h-14 flex-1 items-center justify-center gap-1"
-                pointerEvents="none"
-              >
-                <Image
-                  source={t.icon}
-                  style={{ width: 24, height: 24 }}
-                  tintColor={isCurrent ? palette.primary : 'rgba(154,163,182,0.45)'}
-                  contentFit="contain"
-                />
-                <Text
-                  numberOfLines={1}
-                  className={`text-[11px] ${isCurrent ? 'font-medium text-primary' : 'text-foreground/35'}`}
-                >
-                  {t.label}
-                </Text>
-              </View>
-            );
-          })}
+            })}
+          </View>
+          {/* spot이 네비 탭이 아니면(2~5챕터) 네비바도 딤 아래로 — Figma Rectangle 625(딤 0.75) */}
+          {!TABS.some((t) => t.key === s.spot) ? (
+            <View className="absolute inset-0 rounded-pill bg-background/65" pointerEvents="none" />
+          ) : null}
         </View>
       </SafeAreaView>
     </View>

@@ -4,6 +4,7 @@ export { Chevron, type ChevronProps } from './chevron';
 export { Chip, type ChipProps } from './chip';
 export { AlertDialog, type AlertDialogProps, type DialogAction } from './dialog';
 export { ListRow, type ListRowProps } from './list-row';
+export { PressableScale, type PressableScaleProps } from './pressable-scale';
 export { Screen, type ScreenProps } from './screen';
 export { ScreenHeader, type ScreenHeaderProps } from './screen-header';
 export { SearchBar, type SearchBarProps } from './search-bar';

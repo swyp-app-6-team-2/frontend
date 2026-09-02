@@ -1,10 +1,7 @@
 import { Pressable, Text, View, type PressableProps } from 'react-native';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-  withTiming,
-} from 'react-native-reanimated';
+import Animated from 'react-native-reanimated';
+
+import { usePressScale } from '@/hooks/use-press-scale';
 
 export type ButtonVariant = 'primary' | 'secondary';
 
@@ -36,10 +33,8 @@ export function Button({
   onPressOut,
   ...rest
 }: ButtonProps) {
-  const scale = useSharedValue(1);
-  // .get()/.set() (Reanimated 4) instead of `.value =` — the latter trips the
-  // React Compiler immutability lint (reactCompiler is enabled in app.json).
-  const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.get() }] }));
+  // press-scale은 공통 훅으로. primary CTA는 누를 때 가벼운 촉각 피드백.
+  const press = usePressScale({ haptic: variant === 'primary' ? 'light' : undefined });
 
   // Keep the animated transform (inline style) and the visual styling (className)
   // on separate elements so they don't overwrite each other on the `style` prop.
@@ -48,14 +43,13 @@ export function Button({
       accessibilityRole="button"
       accessibilityState={{ disabled: !!disabled }}
       disabled={disabled}
-      style={[{ alignSelf: 'stretch' }, animatedStyle]}
+      style={[{ alignSelf: 'stretch' }, press.animatedStyle]}
       onPressIn={(e) => {
-        scale.set(withTiming(0.96, { duration: 90 }));
+        press.onPressIn();
         onPressIn?.(e);
       }}
       onPressOut={(e) => {
-        // spring back with a slight overshoot → subtle "shrink then pop" feel
-        scale.set(withSpring(1, { damping: 12, stiffness: 260, mass: 0.6 }));
+        press.onPressOut();
         onPressOut?.(e);
       }}
       {...rest}

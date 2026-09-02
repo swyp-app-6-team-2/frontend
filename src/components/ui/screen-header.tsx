@@ -22,7 +22,8 @@ export type ScreenHeaderProps = {
 // Figma: 헤더 — Bold 24 (title), h72, margin 20. Leading back chevron or close(X) optional.
 export function ScreenHeader({ title, back, close, onClose, right }: ScreenHeaderProps) {
   const router = useRouter();
-  const dismiss = onClose ?? (() => router.back());
+  // 딥링크로 직접 진입해 back 스택이 비면 router.back()은 no-op이므로 홈 허브로 폴백.
+  const dismiss = onClose ?? (() => (router.canGoBack() ? router.back() : router.replace('/')));
 
   return (
     <View className="h-[72px] flex-row items-center gap-2 px-screen">

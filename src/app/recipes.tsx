@@ -3,12 +3,15 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AddRecipeMenu } from '@/components/add-recipe-menu';
 import { TabBar } from '@/components/tab-bar';
-import { AppText, SearchBar } from '@/components/ui';
+import { AppText, PressableScale, SearchBar } from '@/components/ui';
+import { staggerDelay } from '@/constants/animation';
 import { palette } from '@/constants/tokens';
+import { useEnteringOnce } from '@/hooks/use-entering-once';
 
 type Category = '한식' | '양식' | '중식';
 type Recipe = { title: string; category: Category };
@@ -33,9 +36,10 @@ const MAX_SLOTS = 50;
 // muted (Figma 익스포트의 #18181B는 배경과 겹쳐 안 보임).
 function FilterChip({ label }: { label: string }) {
   return (
-    <Pressable
+    <PressableScale
       accessibilityRole="button"
-      className="h-9 flex-row items-center justify-center gap-1 rounded-pill border border-field px-4 active:opacity-80"
+      haptic="selection"
+      className="h-9 flex-row items-center justify-center gap-1 rounded-pill border border-field px-4"
     >
       <Text className="text-chip text-foreground">{label}</Text>
       <Image
@@ -44,7 +48,7 @@ function FilterChip({ label }: { label: string }) {
         tintColor={palette.muted}
         contentFit="contain"
       />
-    </Pressable>
+    </PressableScale>
   );
 }
 
@@ -52,7 +56,7 @@ function FilterChip({ label }: { label: string }) {
 // 미니칩(field bg, pill, px12 py4, 12px bold). 제목은 이미지 아래 12px, 16px bold.
 function RecipeCard({ recipe, onPress }: { recipe: Recipe; onPress: () => void }) {
   return (
-    <Pressable className="w-[48%] active:opacity-90" onPress={onPress} accessibilityRole="button">
+    <Pressable className="w-full active:opacity-90" onPress={onPress} accessibilityRole="button">
       <View className="aspect-[173/127] w-full overflow-hidden rounded-[12px] bg-field">
         <Image
           source={require('../assets/images/food-sample.png')}
@@ -75,6 +79,7 @@ export default function RecipesScreen() {
   const insets = useSafeAreaInsets();
   const [menuOpen, setMenuOpen] = useState(false);
   const isFull = RECIPES.length >= MAX_SLOTS;
+  const animate = useEnteringOnce('recipes'); // 최초 진입에만 카드 순차 등장
 
   // + 탭 — 슬롯 가득 차면 안내 팝업, 아니면 등록 메뉴 토글
   const onFabPress = () => (isFull ? router.push('/slot-full') : setMenuOpen((o) => !o));
@@ -93,10 +98,17 @@ export default function RecipesScreen() {
               <FilterChip key={f} label={f} />
             ))}
           </View>
-          {/* 2열 그리드 — 열 간격 16(justify-between), 행 간격 24(Figma 역산) */}
+          {/* 2열 그리드 — 열 간격 16(justify-between), 행 간격 24(Figma 역산).
+              폭(48%)은 Animated 래퍼에 inline style로(애니메이션 노드에 className 금지). */}
           <View className="flex-row flex-wrap justify-between gap-y-6">
-            {RECIPES.map((r) => (
-              <RecipeCard key={r.title} recipe={r} onPress={() => router.push('/recipe-view')} />
+            {RECIPES.map((r, i) => (
+              <Animated.View
+                key={r.title}
+                style={{ width: '48%' }}
+                entering={animate ? FadeInDown.delay(staggerDelay(i)).springify() : undefined}
+              >
+                <RecipeCard recipe={r} onPress={() => router.push('/recipe-view')} />
+              </Animated.View>
             ))}
           </View>
         </ScrollView>
@@ -129,14 +141,15 @@ export default function RecipesScreen() {
             />
           </View>
         ) : null}
-        <Pressable
+        <PressableScale
           onPress={onFabPress}
-          className="h-14 w-14 items-center justify-center rounded-full bg-primary active:opacity-90"
+          haptic="light"
+          className="h-14 w-14 items-center justify-center rounded-full bg-primary"
           accessibilityRole="button"
           accessibilityLabel="레시피 등록"
         >
           <Feather name="plus" size={24} color={palette.ink} />
-        </Pressable>
+        </PressableScale>
       </View>
     </View>
   );

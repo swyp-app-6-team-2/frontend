@@ -1,8 +1,11 @@
 import { useRef, useState } from 'react';
-import { Pressable, ScrollView, Text, useWindowDimensions, View } from 'react-native';
+import { ScrollView, Text, useWindowDimensions, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 
-import { Button, Screen, SearchBar } from '@/components/ui';
+import { Button, PressableScale, Screen, SearchBar } from '@/components/ui';
+import { staggerDelay } from '@/constants/animation';
+import { useEnteringOnce } from '@/hooks/use-entering-once';
 
 // 재료관리 — 검색 + 카테고리 칩 + 재료 그리드 (Figma). 목업 데이터.
 const CATEGORIES = [
@@ -37,6 +40,7 @@ export default function FridgeScreen() {
   const chipScrollRef = useRef<ScrollView>(null);
   const chipLayouts = useRef<Record<number, { x: number; w: number }>>({});
   const [active, setActive] = useState(0);
+  const animate = useEnteringOnce('fridge'); // 최초 진입에만 재료 순차 등장
 
   // 선택한 칩이 가로 스크롤 가운데로 오도록
   const selectChip = (i: number) => {
@@ -68,7 +72,7 @@ export default function FridgeScreen() {
             {CATEGORIES.map((c, i) => {
               const on = i === active;
               return (
-                <Pressable
+                <PressableScale
                   key={c.label}
                   onPress={() => selectChip(i)}
                   onLayout={(e) => {
@@ -78,7 +82,8 @@ export default function FridgeScreen() {
                     };
                   }}
                   accessibilityRole="button"
-                  className={`h-9 items-center justify-center rounded-pill border border-field px-4 active:opacity-80 ${
+                  haptic="selection"
+                  className={`h-9 items-center justify-center rounded-pill border border-field px-4 ${
                     on ? 'bg-primary' : ''
                   }`}
                 >
@@ -87,7 +92,7 @@ export default function FridgeScreen() {
                   >
                     {c.label} ({c.count})
                   </Text>
-                </Pressable>
+                </PressableScale>
               );
             })}
           </ScrollView>
@@ -97,18 +102,25 @@ export default function FridgeScreen() {
             {Array.from({ length: Math.ceil(ITEMS.length / 3) }, (_, r) => (
               <View key={r} className="flex-row gap-4">
                 {[0, 1, 2].map((c) => {
-                  const item = ITEMS[r * 3 + c];
+                  const idx = r * 3 + c;
+                  const item = ITEMS[idx];
                   if (!item) return <View key={c} className="flex-1" />;
                   return (
-                    <View
+                    // flex(1)는 Animated 노드에 inline style로, 시각 스타일은 안쪽 View에
+                    <Animated.View
                       key={c}
-                      className="aspect-[110/83] flex-1 items-center justify-center gap-1 rounded-[12px] bg-popup-button"
+                      style={{ flex: 1 }}
+                      entering={
+                        animate ? FadeInDown.delay(staggerDelay(idx)).springify() : undefined
+                      }
                     >
-                      <Text className="text-[20px]">{item.icon}</Text>
-                      <Text className="text-[16px] font-medium leading-[21px] text-foreground">
-                        {item.name}
-                      </Text>
-                    </View>
+                      <View className="aspect-[110/83] w-full items-center justify-center gap-1 rounded-[12px] bg-popup-button">
+                        <Text className="text-[20px]">{item.icon}</Text>
+                        <Text className="text-[16px] font-medium leading-[21px] text-foreground">
+                          {item.name}
+                        </Text>
+                      </View>
+                    </Animated.View>
                   );
                 })}
               </View>

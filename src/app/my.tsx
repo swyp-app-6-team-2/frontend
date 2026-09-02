@@ -1,9 +1,12 @@
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useRouter, type Href } from 'expo-router';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { TabBar } from '@/components/tab-bar';
 import { AppText, Chevron, ListRow } from '@/components/ui';
+import { staggerDelay } from '@/constants/animation';
+import { useEnteringOnce } from '@/hooks/use-entering-once';
 
 // 마이페이지 — 프로필 + 남은 별(슬롯) + 설정 메뉴.
 // 하단 메뉴 (Figma 리스트, gap 32).
@@ -17,6 +20,7 @@ const MENU: { label: string; href?: Href }[] = [
 
 export default function MyScreen() {
   const router = useRouter();
+  const animate = useEnteringOnce('my'); // 최초 진입에만 메뉴 순차 등장
 
   return (
     <View className="flex-1 bg-background">
@@ -69,12 +73,16 @@ export default function MyScreen() {
 
           {/* 설정 메뉴 (행 간격 32px) */}
           <View className="mt-2 gap-8">
-            {MENU.map((item) => (
-              <ListRow
+            {MENU.map((item, i) => (
+              <Animated.View
                 key={item.label}
-                label={item.label}
-                onPress={() => (item.href ? router.push(item.href) : undefined)}
-              />
+                entering={animate ? FadeInDown.delay(staggerDelay(i)).springify() : undefined}
+              >
+                <ListRow
+                  label={item.label}
+                  onPress={() => (item.href ? router.push(item.href) : undefined)}
+                />
+              </Animated.View>
             ))}
           </View>
         </ScrollView>

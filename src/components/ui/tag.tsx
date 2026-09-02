@@ -1,5 +1,7 @@
 import { Pressable, Text, View } from 'react-native';
 
+import { PressableScale } from './pressable-scale';
+
 export type TagProps = {
   label: string;
   active?: boolean;
@@ -32,14 +34,17 @@ export function Tag({ label, active, onPress, onRemove }: TagProps) {
     </View>
   );
 
+  // 누를 수 있는 태그만 press-scale + selection 햅틱. 안쪽 × 삭제 Pressable은
+  // 별도 responder라 태그 스케일과 충돌하지 않으므로 그대로 둔다.
   return onPress ? (
-    <Pressable
+    <PressableScale
       onPress={onPress}
       accessibilityRole="button"
       accessibilityState={{ selected: !!active }}
+      haptic="selection"
     >
       {content}
-    </Pressable>
+    </PressableScale>
   ) : (
     content
   );

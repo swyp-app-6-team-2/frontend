@@ -1,10 +1,11 @@
 import type { ReactNode } from 'react';
-import { Pressable, View, type PressableProps } from 'react-native';
+import { View, type PressableProps } from 'react-native';
 
 import { AppText } from './app-text';
 import { Chevron } from './chevron';
+import { PressableScale } from './pressable-scale';
 
-export type ListRowProps = Omit<PressableProps, 'children'> & {
+export type ListRowProps = Omit<PressableProps, 'children' | 'style'> & {
   label: string;
   /** Optional secondary line under the label. */
   subtitle?: string;
@@ -33,10 +34,12 @@ export function ListRow({
   const trailing =
     right ?? (showChevron ? <Chevron direction="right" className="text-muted" /> : null);
 
+  // 넓은 행이라 축소는 약하게(0.98). active:opacity 대신 스케일로 피드백 통일.
   return (
-    <Pressable
+    <PressableScale
       accessibilityRole="button"
-      className={`min-h-6 w-full flex-row items-center gap-3 active:opacity-60 ${className ?? ''}`}
+      scaleTo={0.98}
+      className={`min-h-6 w-full flex-row items-center gap-3 ${className ?? ''}`}
       {...rest}
     >
       {leftIcon}
@@ -51,6 +54,6 @@ export function ListRow({
         ) : null}
       </View>
       {trailing}
-    </Pressable>
+    </PressableScale>
   );
 }

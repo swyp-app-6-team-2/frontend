@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppText, ScreenHeader } from '@/components/ui';
 import { palette } from '@/constants/tokens';
+import { fireHaptic } from '@/lib/haptics';
 
 // 문의내역 목업 — status: 답변완료(success) / 접수(disabled)
 type Inquiry = { status: '답변완료' | '접수'; date: string; text: string };
@@ -36,6 +37,7 @@ export default function InquiryScreen() {
   const [tab, setTab] = useState(0); // 0=작성, 1=내역
 
   const goTab = (i: number) => {
+    fireHaptic('selection');
     setTab(i);
     pagerRef.current?.scrollTo({ x: i * width, animated: true });
   };
@@ -153,7 +155,10 @@ export default function InquiryScreen() {
               <Pressable
                 className="h-[52px] flex-1 items-center justify-center rounded-[30px] bg-primary active:opacity-90"
                 accessibilityRole="button"
-                onPress={() => router.back()}
+                onPress={() => {
+                  fireHaptic('success');
+                  router.back();
+                }}
               >
                 <Text className="text-body font-semibold text-ink">문의 접수</Text>
               </Pressable>

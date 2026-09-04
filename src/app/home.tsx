@@ -24,24 +24,36 @@ export default function HomeScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      {/* 산 배경 + 캐릭터 — Figma 402×874 절대좌표를 bottom 기준으로 환산 (bottom = 874 − top − h) */}
+      {/* 산 배경 + 캐릭터 — 애셋 네이티브 비율 유지(왜곡 방지) */}
       <View pointerEvents="none" className="absolute inset-0">
-        {/* 왼쪽 산 — mountain.png (left -74, top 698 → bottom -1, 402×177) */}
-        <Image
-          source={require('../assets/images/mountain.png')}
-          style={{ position: 'absolute', left: -74, bottom: -1, width: 402, height: 177 }}
-          contentFit="cover"
-        />
-        {/* 오른쪽 산 — mountain2.png (left 149, top 755 → bottom -58, 402×177) */}
+        {/* 왼쪽 봉우리 (뒤) — 캐릭터가 앉는 산 */}
         <Image
           source={require('../assets/images/mountain2.png')}
-          style={{ position: 'absolute', left: 149, bottom: -58, width: 402, height: 177 }}
+          style={{
+            position: 'absolute',
+            bottom: 10,
+            left: '45%', // 화면 폭 기준(≈180/402) — 기종별 폭 변화에 대응
+            width: '58%',
+            aspectRatio: 253 / 119,
+          }}
+          contentFit="contain"
+        />
+        {/* 앞쪽 큰 산 (바닥 전체) */}
+        <Image
+          source={require('../assets/images/mountain.png')}
+          style={{
+            position: 'absolute',
+            bottom: -45,
+            left: '-8%',
+            width: '116%',
+            aspectRatio: 328 / 176,
+          }}
           contentFit="cover"
         />
-        {/* 캐릭터 (left 72, top 658, 49×46) */}
+        {/* 캐릭터 — 왼쪽 봉우리(mountain2) crest 위에 */}
         <Image
           source={require('../assets/images/character.png')}
-          style={{ position: 'absolute', left: 72, bottom: 170, width: 49, height: 46 }}
+          style={{ position: 'absolute', left: '19%', bottom: 178, width: 49, height: 46 }}
           contentFit="contain"
         />
       </View>

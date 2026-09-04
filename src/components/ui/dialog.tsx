@@ -6,7 +6,7 @@ import { fireHaptic } from '@/lib/haptics';
 
 import { PressableScale } from './pressable-scale';
 
-export type DialogTone = 'neutral' | 'danger';
+export type DialogTone = 'neutral' | 'danger' | 'primary';
 
 // 카드 등장 — 아래서 살짝 올라오며 스프링 팝. reduce-motion은 기본값이 자동 존중.
 const cardEntering = FadeInDown.springify().damping(18).mass(0.85);
@@ -14,14 +14,15 @@ const cardEntering = FadeInDown.springify().damping(18).mass(0.85);
 export type DialogAction = {
   label: string;
   onPress: () => void;
-  /** neutral = 팝업 중립 버튼(#34394B), danger = Error(#FF6B5E). 기본 neutral. */
+  /** neutral=중립(#34394B) · danger=Error(#FF6B5E) · primary=골드 확인. 기본 neutral. */
   tone?: DialogTone;
 };
 
 export type AlertDialogProps = {
-  /** 아이콘 원(60·Error 15%) 안에 들어갈 요소 — 이모지 <Text> 또는 tint된 <Image>. */
-  icon: ReactNode;
-  title: string;
+  /** 아이콘 원(60·Error 15%) 안에 들어갈 요소 — 없으면 아이콘 생략(예: 로그아웃 확인). */
+  icon?: ReactNode;
+  /** 제목(Bold 22) — 없으면 생략하고 message를 강조(18px 흰색)로 표시. */
+  title?: string;
   /** 본문 — `\n` 으로 두 줄. */
   message: string;
   /** 1~2개 버튼, 왼→오. */
@@ -63,27 +64,35 @@ export function AlertDialog({ icon, title, message, actions }: AlertDialogProps)
             shadowOffset: { width: 0, height: 20 },
           }}
         >
-          {/* Frame 288: 아이콘 + 텍스트 (gap 20) */}
+          {/* Frame 288: 아이콘 + 텍스트 (gap 20). 아이콘 없으면 텍스트만 */}
           <View className="items-center" style={{ gap: 20 }}>
-            {/* Frame 283: 아이콘 원 60 · Error 15% */}
-            <View
-              className="items-center justify-center bg-error/15"
-              style={{ width: 60, height: 60, borderRadius: 99 }}
-            >
-              {icon}
-            </View>
-
-            {/* Frame 287: 제목 + 본문 (gap 12) */}
-            <View className="items-center" style={{ gap: 12 }}>
-              <Text
-                className="text-center font-bold text-foreground"
-                style={{ fontSize: 22, lineHeight: 22 * 1.3 }}
+            {/* Frame 283: 아이콘 원 60 · Error 15% (있을 때만) */}
+            {icon ? (
+              <View
+                className="items-center justify-center bg-error/15"
+                style={{ width: 60, height: 60, borderRadius: 99 }}
               >
-                {title}
-              </Text>
+                {icon}
+              </View>
+            ) : null}
+
+            {/* Frame 287: 제목(있을 때) + 본문 (gap 12). 제목 없으면 본문을 강조 +
+                위아래 여백(24/20)으로 카드 높이 확보(Figma 197). */}
+            <View
+              className="items-center"
+              style={{ gap: 12, paddingTop: title ? 0 : 24, paddingBottom: title ? 0 : 20 }}
+            >
+              {title ? (
+                <Text
+                  className="text-center font-bold text-foreground"
+                  style={{ fontSize: 22, lineHeight: 22 * 1.3 }}
+                >
+                  {title}
+                </Text>
+              ) : null}
               <Text
-                className="text-center font-medium text-body-muted"
-                style={{ fontSize: 16, lineHeight: 16 * 1.3 }}
+                className={`text-center font-medium ${title ? 'text-body-muted' : 'text-foreground'}`}
+                style={{ fontSize: title ? 16 : 18, lineHeight: (title ? 16 : 18) * 1.3 }}
               >
                 {message}
               </Text>
@@ -93,18 +102,28 @@ export function AlertDialog({ icon, title, message, actions }: AlertDialogProps)
           {/* Frame 286: 버튼 행 (gap 12) */}
           <View className="flex-row justify-center" style={{ gap: 12 }}>
             {actions.map((a) => {
-              const danger = a.tone === 'danger';
+              const tone = a.tone ?? 'neutral';
+              const bg =
+                tone === 'danger'
+                  ? 'bg-error'
+                  : tone === 'primary'
+                    ? 'bg-primary'
+                    : 'bg-popup-button';
+              const textColor =
+                tone === 'danger'
+                  ? 'text-foreground'
+                  : tone === 'primary'
+                    ? 'text-ink'
+                    : 'text-popup-button-text';
               return (
                 <PressableScale
                   key={a.label}
                   onPress={a.onPress}
                   accessibilityRole="button"
-                  className={`h-[52px] w-[150px] items-center justify-center rounded-[30px] ${
-                    danger ? 'bg-error' : 'bg-popup-button'
-                  }`}
+                  className={`h-[52px] w-[150px] items-center justify-center rounded-[30px] ${bg}`}
                 >
                   <Text
-                    className={`font-semibold ${danger ? 'text-foreground' : 'text-popup-button-text'}`}
+                    className={`font-semibold ${textColor}`}
                     style={{ fontSize: 16, lineHeight: 21 }}
                   >
                     {a.label}

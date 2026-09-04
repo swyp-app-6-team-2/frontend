@@ -13,6 +13,7 @@ module.exports = {
         background: token('--color-background'),
         surface: token('--color-surface'),
         field: token('--color-field'),
+        'field-dark': token('--color-field-dark'),
         primary: token('--color-primary'),
         'primary-subtle': token('--color-primary-subtle'),
         'on-primary': token('--color-on-primary'),

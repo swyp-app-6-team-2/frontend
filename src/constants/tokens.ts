@@ -10,6 +10,7 @@ export const palette = {
   background: '#060A19',
   surface: '#18181B',
   field: '#1E2230',
+  fieldDark: '#131724',
   primary: '#FFD457',
   primarySubtle: '#FAEECB',
   onPrimary: '#694800',

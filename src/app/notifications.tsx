@@ -207,19 +207,40 @@ function LoopWheel({
   );
 }
 
-// 시간 선택 바텀시트 — 딤 + 슬라이드업 + 오전/오후·시·분 휠 + 취소/확인.
+// 시간 선택 바텀시트 — 상단 알람 전환 세그먼트 + 오전/오후·시·분 휠 + 취소/확인.
 function TimeSheet({
-  initial,
+  alarms,
+  initialIndex,
   onCancel,
   onConfirm,
 }: {
-  initial: string;
+  alarms: { label: string; time: string }[];
+  initialIndex: number;
   onCancel: () => void;
-  onConfirm: (time: string) => void;
+  onConfirm: (times: string[]) => void;
 }) {
   const insets = useSafeAreaInsets();
-  const p = parseTime(initial);
+  const [times, setTimes] = useState(() => alarms.map((a) => a.time));
+  const [active, setActive] = useState(initialIndex);
+  const p = parseTime(times[active]);
   const sel = useRef({ ampm: p.ampm, hour: p.hour, min: p.min });
+
+  // 다른 알람 칩으로 전환 — 현재 휠 값을 저장 후 그 알람 시간으로 리셋(휠은 key로 리마운트).
+  const switchTo = (i: number) => {
+    if (i === active) return;
+    fireHaptic('selection');
+    const cur = formatTime(sel.current.ampm, sel.current.hour, sel.current.min);
+    setTimes((prev) => prev.map((t, k) => (k === active ? cur : t)));
+    const np = parseTime(times[i]);
+    sel.current = { ampm: np.ampm, hour: np.hour, min: np.min };
+    setActive(i);
+  };
+
+  const confirm = () => {
+    fireHaptic('success');
+    const cur = formatTime(sel.current.ampm, sel.current.hour, sel.current.min);
+    onConfirm(times.map((t, k) => (k === active ? cur : t)));
+  };
 
   return (
     <Modal transparent visible animationType="none" onRequestClose={onCancel}>
@@ -246,9 +267,45 @@ function TimeSheet({
           }}
         >
           <View className="items-center gap-8 px-5 pt-8">
-            {/* 시:분 휠 */}
+            {/* 상단 알람 전환 세그먼트 (Frame 1437264107) */}
+            <View className="w-full flex-row items-center rounded-[105px] bg-field-dark px-5 py-2">
+              {alarms.map((a, i) => {
+                const on = i === active;
+                const short = a.label.replace('알람', '').trim();
+                return (
+                  <Pressable
+                    key={a.label}
+                    onPress={() => switchTo(i)}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: on }}
+                    className={`h-[49px] flex-1 items-center justify-center rounded-[100px] ${
+                      on ? 'bg-field' : ''
+                    }`}
+                    style={
+                      on
+                        ? {
+                            shadowColor: '#050816',
+                            shadowOpacity: 0.25,
+                            shadowRadius: 12,
+                            shadowOffset: { width: 0, height: 0 },
+                          }
+                        : undefined
+                    }
+                  >
+                    <Text
+                      className={`text-[16px] font-medium ${on ? 'text-foreground' : 'text-disabled'}`}
+                    >
+                      {short}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            {/* 시:분 휠 — active 바뀌면 remount되어 그 알람 시간으로 */}
             <View className="flex-row items-center justify-center gap-3">
               <Wheel
+                key={`ampm-${active}`}
                 items={AMPM}
                 initialIndex={p.ampm}
                 fontSize={24}
@@ -256,6 +313,7 @@ function TimeSheet({
                 onChange={(i) => (sel.current.ampm = i)}
               />
               <LoopWheel
+                key={`hour-${active}`}
                 items={HOURS}
                 initialIndex={p.hour}
                 fontSize={36}
@@ -264,6 +322,7 @@ function TimeSheet({
               />
               <Text style={{ fontSize: 36, fontWeight: '700', color: palette.foreground }}>:</Text>
               <LoopWheel
+                key={`min-${active}`}
                 items={MINS}
                 initialIndex={p.min}
                 fontSize={36}
@@ -282,10 +341,7 @@ function TimeSheet({
                 <Text className="text-[16px] font-semibold text-popup-button-text">취소</Text>
               </Pressable>
               <Pressable
-                onPress={() => {
-                  fireHaptic('success');
-                  onConfirm(formatTime(sel.current.ampm, sel.current.hour, sel.current.min));
-                }}
+                onPress={confirm}
                 accessibilityRole="button"
                 className="h-[52px] flex-1 items-center justify-center rounded-pill bg-primary active:opacity-90"
               >
@@ -413,10 +469,11 @@ export default function NotificationsScreen() {
       {/* 시간 선택 바텀시트 */}
       {sheetFor !== null ? (
         <TimeSheet
-          initial={alarms[sheetFor].time}
+          alarms={alarms}
+          initialIndex={sheetFor}
           onCancel={() => setSheetFor(null)}
-          onConfirm={(time) => {
-            setAlarms((prev) => prev.map((a, i) => (i === sheetFor ? { ...a, time } : a)));
+          onConfirm={(times) => {
+            setAlarms((prev) => prev.map((a, i) => ({ ...a, time: times[i] })));
             setSheetFor(null);
           }}
         />

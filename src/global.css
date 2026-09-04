@@ -11,6 +11,7 @@
   --color-background: 6 10 25; /* #060A19 app background */
   --color-surface: 24 24 27; /* #18181B card / grayscale */
   --color-field: 30 34 48; /* #1E2230 input surface */
+  --color-field-dark: 19 23 36; /* #131724 세그먼트 트랙(더 어두운 field) */
   --color-primary: 255 212 87; /* #FFD457 brand */
   --color-primary-subtle: 250 238 203; /* #FAEECB */
   --color-on-primary: 105 72 0; /* #694800 text on subtle/gold */

@@ -28,6 +28,7 @@ module.exports = {
         'reco-button': token('--color-reco-button'),
         success: token('--color-success'),
         error: token('--color-error'),
+        info: token('--color-info'),
       },
       fontSize: {
         // [size, { lineHeight }] — Figma: title(screen header) Bold 24, subheading Bold 22, body Medium 16, chip Regular 14

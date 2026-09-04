@@ -16,6 +16,7 @@ const PAGES: { href: Href; label: string }[] = [
   { href: '/fridge', label: '재료관리 (내 냉장고)' },
   { href: '/recipes', label: '나의 레시피' },
   { href: '/my', label: '마이' },
+  { href: '/notifications', label: '↳ 알림 설정' },
   { href: '/profile-edit', label: '↳ 프로필 수정' },
   { href: '/login-manage', label: '↳ 로그인 관리' },
   { href: '/inquiry', label: '↳ 문의하기' },

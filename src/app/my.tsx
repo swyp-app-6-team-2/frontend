@@ -11,7 +11,7 @@ import { useEnteringOnce } from '@/hooks/use-entering-once';
 // 마이페이지 — 프로필 + 남은 별(슬롯) + 설정 메뉴.
 // 하단 메뉴 (Figma 리스트, gap 32).
 const MENU: { label: string; href?: Href }[] = [
-  { label: '알림 설정' },
+  { label: '알림 설정', href: '/notifications' },
   { label: '로그인 관리', href: '/login-manage' },
   { label: '구매내역', href: '/purchase-history' },
   { label: '약관', href: '/terms' },

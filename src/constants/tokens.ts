@@ -25,6 +25,7 @@ export const palette = {
   recoButton: '#0C1033',
   success: '#2FA96B',
   error: '#FF6B5E',
+  info: '#2BAEFF',
 } as const;
 
 /** Figma: title Bold 24 · subheading Bold 22 · body Medium 16 · chip Regular 14. */

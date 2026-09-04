@@ -146,11 +146,17 @@ export default function OnboardingScreen() {
             </Pressable>
             <Pressable
               onPress={finish}
+              hitSlop={8}
               accessibilityRole="button"
               accessibilityLabel="건너뛰기"
-              className="rounded-pill border border-body-muted bg-background px-4 py-2 active:opacity-80"
+              className="active:opacity-80"
             >
-              <Text className="text-body font-medium text-foreground">건너뛰기</Text>
+              <Image
+                source={require('../assets/images/ic-close.png')}
+                style={{ width: 24, height: 24 }}
+                tintColor={palette.foreground}
+                contentFit="contain"
+              />
             </Pressable>
           </View>
 
@@ -366,11 +372,17 @@ export default function OnboardingScreen() {
           )}
           <Pressable
             onPress={finish}
+            hitSlop={8}
             accessibilityRole="button"
             accessibilityLabel="건너뛰기"
-            className="rounded-pill border border-body-muted bg-background px-4 py-2 active:opacity-80"
+            className="active:opacity-80"
           >
-            <Text className="text-body font-medium text-foreground">건너뛰기</Text>
+            <Image
+              source={require('../assets/images/ic-close.png')}
+              style={{ width: 24, height: 24 }}
+              tintColor={palette.foreground}
+              contentFit="contain"
+            />
           </Pressable>
         </View>
 

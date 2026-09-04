@@ -12,7 +12,7 @@ import {
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { AppText, ScreenHeader } from '@/components/ui';
+import { AppText, PressableScale, ScreenHeader } from '@/components/ui';
 import { palette } from '@/constants/tokens';
 import { fireHaptic } from '@/lib/haptics';
 
@@ -174,7 +174,14 @@ export default function InquiryScreen() {
               {HISTORY.map((q, i) => {
                 const answered = q.status === '답변완료';
                 return (
-                  <View key={`${q.date}-${i}`} className="gap-3 rounded-[12px] bg-field px-4 py-5">
+                  <PressableScale
+                    key={`${q.date}-${i}`}
+                    onPress={() => router.push('/inquiry-detail')}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${q.status} 문의 상세`}
+                    scaleTo={0.98}
+                    className="gap-3 rounded-[12px] bg-field px-4 py-5"
+                  >
                     <View className="flex-row items-center gap-3">
                       <View
                         className={`items-center justify-center rounded-pill px-3 py-1 ${answered ? 'bg-success' : 'bg-disabled'}`}
@@ -188,7 +195,7 @@ export default function InquiryScreen() {
                     <Text className="text-[16px] font-medium leading-[21px] text-foreground">
                       {q.text}
                     </Text>
-                  </View>
+                  </PressableScale>
                 );
               })}
             </ScrollView>

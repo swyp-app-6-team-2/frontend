@@ -20,6 +20,7 @@ const PAGES: { href: Href; label: string }[] = [
   { href: '/profile-edit', label: '↳ 프로필 수정' },
   { href: '/login-manage', label: '↳ 로그인 관리' },
   { href: '/inquiry', label: '↳ 문의하기' },
+  { href: '/inquiry-detail', label: '↳ 문의 상세' },
   { href: '/purchase-history', label: '↳ 구매내역' },
   { href: '/add-recipe', label: '＋ 레시피 등록 (플로우 시작)' },
   { href: '/add-recipe-url', label: '↳ URL로 등록' },

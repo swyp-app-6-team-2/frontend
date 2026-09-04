@@ -3,6 +3,7 @@ import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
+import { QueryProvider } from '@/components/query-provider';
 import { useReduceMotion } from '@/hooks/use-reduce-motion';
 
 SplashScreen.preventAutoHideAsync();
@@ -24,15 +25,17 @@ export default function RootLayout() {
   const reduceMotion = useReduceMotion();
   const animation = reduceMotion ? 'none' : 'fade';
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <AnimatedSplashOverlay />
-      <Stack screenOptions={{ headerShown: false, animation }}>
-        <Stack.Screen name="(tabs)" options={{ animation: 'none' }} />
-        <Stack.Screen name="home" options={{ animation: 'none' }} />
-        <Stack.Screen name="fridge" options={{ animation: 'none' }} />
-        <Stack.Screen name="recipes" options={{ animation: 'none' }} />
-        <Stack.Screen name="my" options={{ animation: 'none' }} />
-      </Stack>
-    </ThemeProvider>
+    <QueryProvider>
+      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+        <AnimatedSplashOverlay />
+        <Stack screenOptions={{ headerShown: false, animation }}>
+          <Stack.Screen name="(tabs)" options={{ animation: 'none' }} />
+          <Stack.Screen name="home" options={{ animation: 'none' }} />
+          <Stack.Screen name="fridge" options={{ animation: 'none' }} />
+          <Stack.Screen name="recipes" options={{ animation: 'none' }} />
+          <Stack.Screen name="my" options={{ animation: 'none' }} />
+        </Stack>
+      </ThemeProvider>
+    </QueryProvider>
   );
 }

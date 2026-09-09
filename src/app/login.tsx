@@ -1,6 +1,7 @@
-import { Alert, Pressable, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, View } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { GoogleLoginSlot } from '@/components/google-login-slot';
 import { AppText } from '@/components/ui';
@@ -55,49 +56,62 @@ export default function LoginScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      <View className="flex-1 items-center justify-center gap-5 px-screen">
-        {/* 히어로: 마스코트 + 앱 이름 (추후 인트로 gif/영상으로 교체) */}
-        <Image
-          source={require('../assets/images/character.png')}
-          style={{ width: 132, height: 124 }}
-          contentFit="contain"
-        />
-        <AppText variant="title" className="text-[32px] leading-[40px] text-foreground">
-          별따먹자
-        </AppText>
-      </View>
+      {/* 밤하늘 배경 (풀스크린) */}
+      <Image
+        source={require('../assets/images/login-bg.png')}
+        style={StyleSheet.absoluteFill}
+        contentFit="cover"
+      />
 
-      {/* SNS 간편 가입 (Figma 402×874) — 문구 top 611 / 버튼 top 652·bottom 708 → 하단 166px */}
-      <View className="items-center gap-5 px-screen pb-[166px]">
-        <AppText variant="body" className="text-center font-normal leading-[21px] text-muted">
-          SNS 계정으로 간편 가입하기
-        </AppText>
-        <View className="flex-row gap-4">
-          {PROVIDERS.map((p) =>
-            p.key === 'google' ? (
-              <GoogleLoginSlot
-                key={p.key}
-                src={p.src}
-                label={`${p.name}로 계속하기`}
-                disabled={socialLogin.isPending}
-                onIdToken={(idToken) => void finishLogin(API_PROVIDER.google, idToken)}
-                onError={(msg) => Alert.alert('로그인 실패', msg)}
-              />
-            ) : (
-              <Pressable
-                key={p.key}
-                onPress={() => onProvider(p.key)}
-                disabled={socialLogin.isPending}
-                accessibilityRole="button"
-                accessibilityLabel={`${p.name}로 계속하기`}
-                className="active:opacity-80"
-              >
-                <Image source={p.src} style={{ width: 56, height: 56 }} contentFit="contain" />
-              </Pressable>
-            ),
-          )}
+      <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
+        <View className="flex-1 items-center px-screen">
+          {/* 타이틀 로고 '별따먹자' + 부제 '나의 레시피가 별이 된다' (이미지에 포함) */}
+          <Image
+            source={require('../assets/images/login-title.png')}
+            style={{ width: 320, height: 100, marginTop: 88 }}
+            contentFit="contain"
+          />
+
+          {/* 마스코트 (별·레시피 든 캐릭터) */}
+          <Image
+            source={require('../assets/images/login-mascot.png')}
+            style={{ width: 237, height: 179, marginTop: 56 }}
+            contentFit="contain"
+          />
+
+          <View className="flex-1" />
+
+          {/* SNS 간편 가입 */}
+          <AppText variant="body" className="text-center font-normal leading-[21px] text-muted">
+            SNS 계정으로 간편 가입하기
+          </AppText>
+          <View className="mb-10 mt-5 flex-row gap-4">
+            {PROVIDERS.map((p) =>
+              p.key === 'google' ? (
+                <GoogleLoginSlot
+                  key={p.key}
+                  src={p.src}
+                  label={`${p.name}로 계속하기`}
+                  disabled={socialLogin.isPending}
+                  onIdToken={(idToken) => void finishLogin(API_PROVIDER.google, idToken)}
+                  onError={(msg) => Alert.alert('로그인 실패', msg)}
+                />
+              ) : (
+                <Pressable
+                  key={p.key}
+                  onPress={() => onProvider(p.key)}
+                  disabled={socialLogin.isPending}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${p.name}로 계속하기`}
+                  className="active:opacity-80"
+                >
+                  <Image source={p.src} style={{ width: 56, height: 56 }} contentFit="contain" />
+                </Pressable>
+              ),
+            )}
+          </View>
         </View>
-      </View>
+      </SafeAreaView>
     </View>
   );
 }

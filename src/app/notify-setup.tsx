@@ -1,0 +1,128 @@
+import { useState } from 'react';
+import { Pressable, Text, View } from 'react-native';
+import { Image } from 'expo-image';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+
+import { AppText, Screen } from '@/components/ui';
+import { palette } from '@/constants/tokens';
+
+// 알림 시간대 설정 — 신규 가입(약관 동의) 후. 선택한 시간대에 '별똥별' 알림을 보낸다.
+// 시간대 라벨은 임시(스펙 확정 시 교체). 복수 선택 가능(Figma: 2개 활성 예시).
+const SLOTS = ['아침', '점심', '저녁', '야식'];
+
+// 172×52 미니 토글 — on=골드·ink 글자, off=배경·비활성 테두리·흰 글자.
+function TimeSlot({ label, on, onPress }: { label: string; on: boolean; onPress: () => void }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityState={{ selected: on }}
+      className={`h-[52px] flex-1 items-center justify-center rounded-pill active:opacity-80 ${
+        on ? 'bg-primary' : ''
+      }`}
+      style={on ? undefined : { borderWidth: 1, borderColor: palette.disabled }}
+    >
+      <Text
+        className={`text-[20px] font-semibold leading-[26px] ${on ? 'text-ink' : 'text-foreground'}`}
+      >
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
+export default function NotifySetupScreen() {
+  const router = useRouter();
+  const { nick } = useLocalSearchParams<{ nick?: string }>();
+  const nickname = nick || '요리사';
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  const toggle = (s: string) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(s)) next.delete(s);
+      else next.add(s);
+      return next;
+    });
+
+  const canSubmit = selected.size > 0;
+  const onSubmit = () => {
+    if (!canSubmit) return;
+    // TODO: 선택 시간대를 알림 설정 API로 저장.
+    // 신규 가입 흐름: 알림 시간대 설정 → 온보딩 튜토리얼.
+    router.replace('/onboarding');
+  };
+
+  return (
+    <Screen title="" back>
+      <View className="flex-1">
+        {/* 제목 + 부제 */}
+        <Text className="mt-2 text-[24px] font-bold leading-[31px] text-foreground">
+          {nickname}님, 평소 어느 시간대에{'\n'}요리하시나요?
+        </Text>
+        <AppText variant="body" className="mt-2 font-normal text-muted">
+          그 시간에 맞춰 별똥별을 보내드릴게요
+        </AppText>
+
+        {/* 2×2 시간대 그리드 */}
+        <View className="mt-9 gap-4">
+          <View className="flex-row gap-[18px]">
+            <TimeSlot
+              label={SLOTS[0]}
+              on={selected.has(SLOTS[0])}
+              onPress={() => toggle(SLOTS[0])}
+            />
+            <TimeSlot
+              label={SLOTS[1]}
+              on={selected.has(SLOTS[1])}
+              onPress={() => toggle(SLOTS[1])}
+            />
+          </View>
+          <View className="flex-row gap-[18px]">
+            <TimeSlot
+              label={SLOTS[2]}
+              on={selected.has(SLOTS[2])}
+              onPress={() => toggle(SLOTS[2])}
+            />
+            <TimeSlot
+              label={SLOTS[3]}
+              on={selected.has(SLOTS[3])}
+              onPress={() => toggle(SLOTS[3])}
+            />
+          </View>
+        </View>
+
+        {/* 마스코트 */}
+        <View className="flex-1 items-center justify-center">
+          <Image
+            source={require('../assets/images/character.png')}
+            style={{ width: 120, height: 112 }}
+            contentFit="contain"
+          />
+        </View>
+      </View>
+
+      {/* 하단 완료 버튼 — 1개 이상 선택 시 골드 활성 */}
+      <View className="pb-8 pt-4">
+        <Pressable
+          onPress={onSubmit}
+          disabled={!canSubmit}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: !canSubmit }}
+          className={`h-[52px] items-center justify-center rounded-pill active:opacity-90 ${
+            canSubmit ? 'bg-primary' : ''
+          }`}
+          style={canSubmit ? undefined : { borderWidth: 1, borderColor: palette.disabledLine }}
+        >
+          <Text
+            className={`text-[16px] font-semibold leading-[21px] ${
+              canSubmit ? 'text-ink' : 'text-disabled'
+            }`}
+          >
+            완료하기
+          </Text>
+        </Pressable>
+      </View>
+    </Screen>
+  );
+}

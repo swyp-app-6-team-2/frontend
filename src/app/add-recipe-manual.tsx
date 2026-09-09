@@ -8,8 +8,9 @@ import { AppText, Button, Screen, SearchBar } from '@/components/ui';
 import { RECIPE_CATEGORY_LABEL, RECIPE_CATEGORY_ORDER } from '@/constants/labels';
 import { palette } from '@/constants/tokens';
 import { useCreateRecipe } from '@/hooks/use-api';
-import { ApiError } from '@/lib/api';
+import { ApiError, uploadImage } from '@/lib/api';
 import type { RecipeCategory } from '@/lib/api/types';
+import { ImagePickerUnavailableError, pickSquareImage, type PickedImage } from '@/lib/pick-image';
 
 // 냉장고에 있는 재료 추천 (탭하면 재료 행에 추가)
 const OWNED = ['브로콜리', '새우', '대파', '계란', '다진 마늘', '설탕', '소금', '후추'];
@@ -50,16 +51,57 @@ export default function AddRecipeManualScreen() {
   const [servings, setServings] = useState('');
   const [ingredients, setIngredients] = useState<Ingredient[]>([{ name: '', qty: '' }]);
   const [steps, setSteps] = useState<string[]>(['']);
+  const [cover, setCover] = useState<PickedImage | null>(null);
+  const [uploading, setUploading] = useState(false);
+
+  // 대표 사진 선택 — 네이티브 모듈 없으면(리빌드 전) 안내 후 무시.
+  const onPickCover = async () => {
+    try {
+      const picked = await pickSquareImage();
+      if (picked) setCover(picked);
+    } catch (e) {
+      if (e instanceof ImagePickerUnavailableError) {
+        Alert.alert('사진 기능 준비 중', '앱을 다시 빌드하면 사진 추가를 사용할 수 있어요.');
+        return;
+      }
+      Alert.alert('오류', '사진을 불러오지 못했어요.');
+    }
+  };
 
   const onSave = async () => {
     if (!title.trim()) {
       Alert.alert('알림', '레시피명을 입력해주세요.');
       return;
     }
+
+    // 대표 사진이 있으면 먼저 업로드해 objectKey를 얻는다. 실패 시 사진 없이 저장할지 확인.
+    let coverImageKey: string | undefined;
+    if (cover) {
+      setUploading(true);
+      try {
+        coverImageKey = await uploadImage('RECIPE_COVER', cover);
+      } catch (e) {
+        const msg = e instanceof ApiError ? e.message : '사진을 업로드하지 못했어요.';
+        const proceed = await new Promise<boolean>((resolve) =>
+          Alert.alert('사진 업로드 실패', `${msg}\n사진 없이 저장할까요?`, [
+            { text: '취소', style: 'cancel', onPress: () => resolve(false) },
+            { text: '사진 없이 저장', onPress: () => resolve(true) },
+          ]),
+        );
+        if (!proceed) {
+          setUploading(false);
+          return;
+        }
+      } finally {
+        setUploading(false);
+      }
+    }
+
     try {
       const res = await create.mutateAsync({
         title: title.trim(),
         categoryCode: category,
+        coverImageKey,
         servings: servings ? Number(servings) : undefined,
         ingredients: ingredients
           .filter((i) => i.name.trim())
@@ -103,23 +145,32 @@ export default function AddRecipeManualScreen() {
       scroll
       scrollRef={scrollRef}
     >
-      {/* 대표 사진 추가 (선택) — 정사각 field 박스, 중앙 카메라+안내 */}
+      {/* 대표 사진 추가 (선택) — 정사각 field 박스. 선택하면 미리보기, 없으면 카메라+안내 */}
       <Pressable
-        className="aspect-square w-full items-center justify-center rounded-[12px] bg-field active:opacity-80"
+        onPress={onPickCover}
+        className="aspect-square w-full items-center justify-center overflow-hidden rounded-[12px] bg-field active:opacity-80"
         accessibilityRole="button"
-        accessibilityLabel="대표 사진 추가"
+        accessibilityLabel={cover ? '대표 사진 변경' : '대표 사진 추가'}
       >
-        <View className="flex-row items-center gap-[10px]">
+        {cover ? (
           <Image
-            source={require('../assets/images/ic-camera.png')}
-            style={{ width: 24, height: 24 }}
-            tintColor={palette.muted}
-            contentFit="contain"
+            source={{ uri: cover.uri }}
+            style={{ width: '100%', height: '100%' }}
+            contentFit="cover"
           />
-          <AppText variant="body" className="font-normal text-muted">
-            대표 사진 추가 (선택)
-          </AppText>
-        </View>
+        ) : (
+          <View className="flex-row items-center gap-[10px]">
+            <Image
+              source={require('../assets/images/ic-camera.png')}
+              style={{ width: 24, height: 24 }}
+              tintColor={palette.muted}
+              contentFit="contain"
+            />
+            <AppText variant="body" className="font-normal text-muted">
+              대표 사진 추가 (선택)
+            </AppText>
+          </View>
+        )}
       </Pressable>
 
       {/* 이름 — Frame 298 라벨행(padding 8/16/8/8, gap0→input) · 위 마진 20 = screen gap16 + mt-1 */}
@@ -292,7 +343,11 @@ export default function AddRecipeManualScreen() {
         <DashedAddButton label="단계 추가" onPress={addStep} className="mt-1" />
       </View>
 
-      <Button label="저장하기" onPress={onSave} disabled={create.isPending} />
+      <Button
+        label={uploading ? '사진 업로드 중…' : '저장하기'}
+        onPress={onSave}
+        disabled={create.isPending || uploading}
+      />
     </Screen>
   );
 }

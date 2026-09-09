@@ -4,6 +4,7 @@ import type {
   CookHistoryItem,
   ImageContentType,
   IngredientListResponse,
+  MeResponse,
   RecipeCreateRequest,
   RecipeCreateResponse,
   RecipeDetailResponse,
@@ -20,6 +21,12 @@ import type {
 export const authApi = {
   socialLogin: (body: SocialLoginRequest) =>
     apiFetch<SocialLoginResponse>('/auth/social-login', { method: 'POST', body, auth: false }),
+};
+
+// ── User / Profile ────────────────────────────────────────────
+export const userApi = {
+  // 백엔드 GET /users/me 미구현 → 현재 404. 생기면 마이페이지에 자동 반영.
+  me: () => apiFetch<MeResponse>('/users/me'),
 };
 
 // ── Upload ────────────────────────────────────────────────────

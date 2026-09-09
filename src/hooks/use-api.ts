@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { setTokens } from '@/lib/api/auth-token';
-import { authApi, cookingApi, ingredientApi, recipeApi } from '@/lib/api/endpoints';
+import { authApi, cookingApi, ingredientApi, recipeApi, userApi } from '@/lib/api/endpoints';
 import type {
   CookHistoryCreateRequest,
   RecipeCreateRequest,
@@ -16,11 +16,22 @@ export const queryKeys = {
   recipe: (recipeId: number) => ['recipe', recipeId] as const,
   cookHistories: (recipeId: number) => ['cook-histories', recipeId] as const,
   ingredients: () => ['ingredients'] as const,
+  me: () => ['me'] as const,
 };
 
 // ── Queries ───────────────────────────────────────────────────
 export function useRecipes(params: RecipeListParams = {}) {
   return useQuery({ queryKey: queryKeys.recipes(params), queryFn: () => recipeApi.list(params) });
+}
+
+// 현재 로그인 유저 프로필. 백엔드 GET /users/me 미구현 시 404 → 화면은 폴백 처리.
+export function useProfile() {
+  return useQuery({
+    queryKey: queryKeys.me(),
+    queryFn: () => userApi.me(),
+    retry: false, // 엔드포인트 없으면 재시도 무의미
+    staleTime: 5 * 60 * 1000,
+  });
 }
 
 export function useRecipe(recipeId: number | null | undefined) {

@@ -1,4 +1,5 @@
 import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Image } from 'expo-image';
 import { useRouter, type Href } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -6,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { TabBar } from '@/components/tab-bar';
 import { AppText, Chevron, ListRow } from '@/components/ui';
 import { staggerDelay } from '@/constants/animation';
+import { useProfile } from '@/hooks/use-api';
 import { useEnteringOnce } from '@/hooks/use-entering-once';
 
 // 마이페이지 — 프로필 + 남은 별(슬롯) + 설정 메뉴.
@@ -21,6 +23,8 @@ const MENU: { label: string; href?: Href }[] = [
 export default function MyScreen() {
   const router = useRouter();
   const animate = useEnteringOnce('my'); // 최초 진입에만 메뉴 순차 등장
+  // 프로필 — 백엔드 GET /users/me 생기면 실데이터, 아직 없으면 폴백값.
+  const { data: me } = useProfile();
 
   return (
     <View className="flex-1 bg-background">
@@ -39,10 +43,18 @@ export default function MyScreen() {
             onPress={() => router.push('/profile-edit')}
           >
             <View className="flex-row items-center gap-4">
-              {/* 아바타 자리 (실제 이미지 자산 없음 → 비활성 색 원) */}
-              <View className="h-[68px] w-[68px] rounded-full bg-disabled" />
+              {/* 아바타 — 프로필 이미지 있으면 표시, 없으면 비활성 색 원 */}
+              {me?.profileImageUrl ? (
+                <Image
+                  source={{ uri: me.profileImageUrl }}
+                  style={{ width: 68, height: 68, borderRadius: 34 }}
+                  contentFit="cover"
+                />
+              ) : (
+                <View className="h-[68px] w-[68px] rounded-full bg-disabled" />
+              )}
               <View className="flex-row items-center gap-1.5">
-                <AppText variant="subheading">별따먹는사람</AppText>
+                <AppText variant="subheading">{me?.nickname ?? '별따먹는사람'}</AppText>
                 {/* 카카오 로그인 배지 — 아이콘 라이브러리 없음, 이모지 임시 */}
                 <View className="h-4 w-4 items-center justify-center rounded-full bg-primary">
                   <Text className="text-[9px]">💬</Text>

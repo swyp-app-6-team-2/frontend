@@ -28,6 +28,16 @@ export type SocialLoginResponse = {
   signupToken?: string;
 };
 
+// ── User / Profile ────────────────────────────────────────────
+// 현재 프로필 조회. 백엔드 엔드포인트(GET /users/me)는 미구현 — 생기면 그대로 붙는다.
+// (profiles 테이블: nickname, profile_image_url / users: last_login_provider)
+export type MeResponse = {
+  userId: number;
+  nickname: string;
+  profileImageUrl?: string | null;
+  provider?: string; // KAKAO | NAVER | GOOGLE | APPLE — 배지용
+};
+
 // ── Upload ────────────────────────────────────────────────────
 export type UploadUrlIssueRequest = { purpose: UploadPurpose; contentType: ImageContentType };
 export type UploadUrlIssueResponse = {

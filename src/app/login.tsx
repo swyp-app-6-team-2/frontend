@@ -1,10 +1,8 @@
-import { useEffect } from 'react';
 import { Alert, Pressable, View } from 'react-native';
-import * as Google from 'expo-auth-session/providers/google';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import * as WebBrowser from 'expo-web-browser';
 
+import { GoogleLoginSlot } from '@/components/google-login-slot';
 import { AppText } from '@/components/ui';
 import { useSocialLogin } from '@/hooks/use-api';
 import { ApiError } from '@/lib/api';
@@ -14,9 +12,6 @@ import {
   SocialAuthNotConfiguredError,
   type SocialProvider,
 } from '@/lib/social-auth';
-
-// 소셜 로그인 후 웹 브라우저 세션 정리(리다이렉트 복귀 처리).
-WebBrowser.maybeCompleteAuthSession();
 
 const PROVIDERS = [
   { key: 'kakao' as SocialProvider, src: require('../assets/images/kakao.png'), name: '카카오' },
@@ -28,12 +23,6 @@ const PROVIDERS = [
 export default function LoginScreen() {
   const router = useRouter();
   const socialLogin = useSocialLogin();
-
-  // 구글 OAuth — client ID는 .env.local의 EXPO_PUBLIC_GOOGLE_* 에서 주입.
-  const [googleRequest, googleResponse, googlePrompt] = Google.useAuthRequest({
-    iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
-    webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
-  });
 
   // 백엔드 로그인 + 신규/기존 분기.
   const finishLogin = async (provider: string, authToken: string) => {
@@ -49,24 +38,9 @@ export default function LoginScreen() {
     }
   };
 
-  // 구글 인증 결과 처리 — idToken을 백엔드로.
-  useEffect(() => {
-    if (googleResponse?.type !== 'success') return;
-    const idToken = googleResponse.authentication?.idToken ?? googleResponse.params?.id_token;
-    if (!idToken) {
-      Alert.alert('로그인 실패', '구글 인증 토큰을 받지 못했어요.');
-      return;
-    }
-    void finishLogin(API_PROVIDER.google, idToken);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [googleResponse]);
-
   const onProvider = async (provider: SocialProvider) => {
-    if (provider === 'google') {
-      void googlePrompt(); // 결과는 위 useEffect에서 처리
-      return;
-    }
     // 카카오/네이버/애플 — SDK 미연동(스텁). dev에선 온보딩 폴백.
+    // (구글은 GoogleLoginSlot이 직접 처리)
     try {
       const authToken = await getSocialAuthToken(provider);
       await finishLogin(API_PROVIDER[provider], authToken);
@@ -99,18 +73,29 @@ export default function LoginScreen() {
           SNS 계정으로 간편 가입하기
         </AppText>
         <View className="flex-row gap-4">
-          {PROVIDERS.map((p) => (
-            <Pressable
-              key={p.key}
-              onPress={() => onProvider(p.key)}
-              disabled={socialLogin.isPending || (p.key === 'google' && !googleRequest)}
-              accessibilityRole="button"
-              accessibilityLabel={`${p.name}로 계속하기`}
-              className="active:opacity-80"
-            >
-              <Image source={p.src} style={{ width: 56, height: 56 }} contentFit="contain" />
-            </Pressable>
-          ))}
+          {PROVIDERS.map((p) =>
+            p.key === 'google' ? (
+              <GoogleLoginSlot
+                key={p.key}
+                src={p.src}
+                label={`${p.name}로 계속하기`}
+                disabled={socialLogin.isPending}
+                onIdToken={(idToken) => void finishLogin(API_PROVIDER.google, idToken)}
+                onError={(msg) => Alert.alert('로그인 실패', msg)}
+              />
+            ) : (
+              <Pressable
+                key={p.key}
+                onPress={() => onProvider(p.key)}
+                disabled={socialLogin.isPending}
+                accessibilityRole="button"
+                accessibilityLabel={`${p.name}로 계속하기`}
+                className="active:opacity-80"
+              >
+                <Image source={p.src} style={{ width: 56, height: 56 }} contentFit="contain" />
+              </Pressable>
+            ),
+          )}
         </View>
       </View>
     </View>

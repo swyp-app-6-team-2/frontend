@@ -20,6 +20,7 @@ export const palette = {
   tabInactive: '#505050',
   bodyMuted: '#82848C',
   disabled: '#3F4250',
+  disabledLine: '#292A30',
   popupButton: '#34394B',
   popupButtonText: '#A5A7AD',
   recoPanel: '#181F42',

@@ -23,6 +23,7 @@ module.exports = {
         'tab-inactive': token('--color-tab-inactive'),
         'body-muted': token('--color-body-muted'),
         disabled: token('--color-disabled'),
+        'disabled-line': token('--color-disabled-line'),
         'popup-button': token('--color-popup-button'),
         'popup-button-text': token('--color-popup-button-text'),
         'reco-panel': token('--color-reco-panel'),

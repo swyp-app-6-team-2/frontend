@@ -21,6 +21,7 @@
   --color-tab-inactive: 80 80 80; /* #505050 탭바 비활성 아이콘/라벨 */
   --color-body-muted: 130 132 140; /* #82848C 팝업 본문 등 약한 본문 */
   --color-disabled: 63 66 80; /* #3F4250 */
+  --color-disabled-line: 41 42 48; /* #292A30 비활성화 라인(체크박스 off·버튼 off 테두리) */
   --color-popup-button: 52 57 75; /* #34394B 팝업 중립 버튼 배경 */
   --color-popup-button-text: 165 167 173; /* #A5A7AD 팝업 중립 버튼 글자 */
   --color-reco-panel: 24 31 66; /* #181F42 홈 추천 드롭다운 옵션 패널 */

@@ -1,6 +1,9 @@
+import { useEffect } from 'react';
 import { Alert, Pressable, View } from 'react-native';
+import * as Google from 'expo-auth-session/providers/google';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
 
 import { AppText } from '@/components/ui';
 import { useSocialLogin } from '@/hooks/use-api';
@@ -11,6 +14,9 @@ import {
   SocialAuthNotConfiguredError,
   type SocialProvider,
 } from '@/lib/social-auth';
+
+// 소셜 로그인 후 웹 브라우저 세션 정리(리다이렉트 복귀 처리).
+WebBrowser.maybeCompleteAuthSession();
 
 const PROVIDERS = [
   { key: 'kakao' as SocialProvider, src: require('../assets/images/kakao.png'), name: '카카오' },
@@ -23,25 +29,53 @@ export default function LoginScreen() {
   const router = useRouter();
   const socialLogin = useSocialLogin();
 
-  // 소셜 SDK로 authToken 획득 → 백엔드 로그인 → 신규는 약관, 기존은 홈.
-  const onProvider = async (provider: SocialProvider) => {
+  // 구글 OAuth — client ID는 .env.local의 EXPO_PUBLIC_GOOGLE_* 에서 주입.
+  const [googleRequest, googleResponse, googlePrompt] = Google.useAuthRequest({
+    iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
+    webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+  });
+
+  // 백엔드 로그인 + 신규/기존 분기.
+  const finishLogin = async (provider: string, authToken: string) => {
     try {
-      const authToken = await getSocialAuthToken(provider);
-      const res = await socialLogin.mutateAsync({ provider: API_PROVIDER[provider], authToken });
+      const res = await socialLogin.mutateAsync({ provider, authToken });
       if (res.requiresTermsAgreement) {
-        router.push('/terms'); // 신규 회원 → 약관 동의 (signupToken은 서버 응답에 있음)
+        router.push('/terms'); // 신규 → 약관 (signupToken은 응답에)
       } else {
-        router.replace('/home'); // 기존 회원 → 홈 (accessToken은 훅이 저장)
+        router.replace('/home'); // 기존 → 홈 (accessToken은 훅이 저장)
       }
     } catch (e) {
+      Alert.alert('로그인 실패', e instanceof ApiError ? e.message : '잠시 후 다시 시도해주세요.');
+    }
+  };
+
+  // 구글 인증 결과 처리 — idToken을 백엔드로.
+  useEffect(() => {
+    if (googleResponse?.type !== 'success') return;
+    const idToken = googleResponse.authentication?.idToken ?? googleResponse.params?.id_token;
+    if (!idToken) {
+      Alert.alert('로그인 실패', '구글 인증 토큰을 받지 못했어요.');
+      return;
+    }
+    void finishLogin(API_PROVIDER.google, idToken);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [googleResponse]);
+
+  const onProvider = async (provider: SocialProvider) => {
+    if (provider === 'google') {
+      void googlePrompt(); // 결과는 위 useEffect에서 처리
+      return;
+    }
+    // 카카오/네이버/애플 — SDK 미연동(스텁). dev에선 온보딩 폴백.
+    try {
+      const authToken = await getSocialAuthToken(provider);
+      await finishLogin(API_PROVIDER[provider], authToken);
+    } catch (e) {
       if (e instanceof SocialAuthNotConfiguredError) {
-        // 소셜 SDK 미연동 — 개발 중엔 기존 목업 흐름(온보딩) 유지
         if (__DEV__) router.replace('/onboarding');
         return;
       }
-      const message =
-        e instanceof ApiError ? e.message : '로그인에 실패했습니다. 잠시 후 다시 시도해주세요.';
-      Alert.alert('로그인 실패', message);
+      Alert.alert('로그인 실패', e instanceof ApiError ? e.message : '잠시 후 다시 시도해주세요.');
     }
   };
 
@@ -69,7 +103,7 @@ export default function LoginScreen() {
             <Pressable
               key={p.key}
               onPress={() => onProvider(p.key)}
-              disabled={socialLogin.isPending}
+              disabled={socialLogin.isPending || (p.key === 'google' && !googleRequest)}
               accessibilityRole="button"
               accessibilityLabel={`${p.name}로 계속하기`}
               className="active:opacity-80"

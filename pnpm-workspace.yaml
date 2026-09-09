@@ -1,3 +1,8 @@
 allowBuilds:
   unrs-resolver: true
 nodeLinker: hoisted
+# expo-constants 57.0.17 패치가 미출시 @expo/env@2.4.3를 참조해 설치가 깨진다.
+# 프로젝트가 쓰는 57.0.10으로 핀 + @expo/env는 출시된 2.4.2로 고정.
+overrides:
+  expo-constants: 57.0.10
+  '@expo/env': 2.4.2

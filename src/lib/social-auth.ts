@@ -25,14 +25,63 @@ export class SocialAuthNotConfiguredError extends Error {
   }
 }
 
+// 카카오 OAuth 2.0 엔드포인트 (REST). 네이티브 SDK 대신 브라우저 인증(expo-auth-session).
+const KAKAO_DISCOVERY = {
+  authorizationEndpoint: 'https://kauth.kakao.com/oauth/authorize',
+  tokenEndpoint: 'https://kauth.kakao.com/oauth/token',
+};
+
+// 카카오 웹 OAuth: authorize(브라우저) → code → token 교환 → accessToken.
+// 백엔드는 이 accessToken으로 kapi.kakao.com/v2/user/me 호출해 검증한다.
+async function getKakaoAccessToken(): Promise<string> {
+  const restKey = process.env.EXPO_PUBLIC_KAKAO_REST_API_KEY;
+  // REST API 키 없으면 미연동으로 처리(dev 폴백). 네이티브 앱 키와 다른 값이다.
+  if (!restKey) throw new SocialAuthNotConfiguredError('kakao');
+
+  const AuthSession = await import('expo-auth-session');
+  const WebBrowser = await import('expo-web-browser');
+  WebBrowser.maybeCompleteAuthSession();
+
+  const redirectUri = AuthSession.makeRedirectUri({ scheme: 'orca', path: 'oauth' });
+  const request = new AuthSession.AuthRequest({
+    clientId: restKey,
+    redirectUri,
+    responseType: AuthSession.ResponseType.Code,
+    scopes: [],
+    usePKCE: false,
+  });
+  await request.makeAuthUrlAsync(KAKAO_DISCOVERY);
+
+  const result = await request.promptAsync(KAKAO_DISCOVERY);
+  if (result.type !== 'success' || !result.params.code) {
+    throw new Error('카카오 로그인이 취소되었거나 실패했어요.');
+  }
+
+  const token = await AuthSession.exchangeCodeAsync(
+    {
+      clientId: restKey,
+      code: result.params.code,
+      redirectUri,
+      extraParams: {
+        grant_type: 'authorization_code',
+        // 카카오 콘솔에서 Client Secret을 켠 경우에만 필요.
+        ...(process.env.EXPO_PUBLIC_KAKAO_CLIENT_SECRET
+          ? { client_secret: process.env.EXPO_PUBLIC_KAKAO_CLIENT_SECRET }
+          : {}),
+      },
+    },
+    KAKAO_DISCOVERY,
+  );
+  if (!token.accessToken) throw new Error('카카오 토큰 교환에 실패했어요.');
+  return token.accessToken;
+}
+
 /**
- * Provider SDK로 로그인해 백엔드에 넘길 authToken을 반환한다.
- *
- * ⚠️ 카카오/네이버 네이티브 SDK(@react-native-seoul/*)는 Expo 57의 precompiled React와
- * 충돌한다(Naver vendored 동적 프레임워크가 React.framework 임베드를 깨뜨려 앱이 dyld
- * 크래시). 로컬 네이티브 연동 보류. 대안: expo-auth-session 웹 OAuth(구글처럼) 또는 EAS Build.
- * 백엔드는 provider accessToken만 있으면 검증 가능(kakao/naver userinfo API 호출).
+ * Provider별 로그인 → 백엔드에 넘길 authToken(accessToken) 반환.
+ * 카카오: expo-auth-session 웹 OAuth로 연동. 네이버/애플: 아직 미연동(스텁).
  */
 export async function getSocialAuthToken(provider: SocialProvider): Promise<string> {
+  if (provider === 'kakao') return getKakaoAccessToken();
+  // 네이버(웹 OAuth 예정)·애플은 아직.
   throw new SocialAuthNotConfiguredError(provider);
 }

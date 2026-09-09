@@ -1,21 +1,32 @@
-import { useRef, useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 
 import { AppText, Button, Screen } from '@/components/ui';
 import { palette } from '@/constants/tokens';
+import { ImagePickerUnavailableError, pickImage, type PickedImage } from '@/lib/pick-image';
 
 // 17 이미지로 등록 — 캡처 이미지 업로드 → OCR 로딩으로.
-// 실제 이미지 자산이 없어 썸네일은 field 플레이스홀더로 목업(나의레시피와 동일 방식).
 export default function AddRecipeImageScreen() {
   const router = useRouter();
-  const nextId = useRef(0);
-  const [images, setImages] = useState<number[]>([]);
+  const [images, setImages] = useState<PickedImage[]>([]);
 
-  const addImage = () => setImages((prev) => [...prev, nextId.current++]);
-  const removeImage = (id: number) => setImages((prev) => prev.filter((x) => x !== id));
+  // 갤러리에서 원본 사진 선택(OCR용이라 크롭 안 함). 여러 장은 반복 탭.
+  const addImage = async () => {
+    try {
+      const picked = await pickImage();
+      if (picked) setImages((prev) => [...prev, picked]);
+    } catch (e) {
+      if (e instanceof ImagePickerUnavailableError) {
+        Alert.alert('사진 기능 준비 중', '앱을 다시 빌드하면 사진 추가를 사용할 수 있어요.');
+        return;
+      }
+      Alert.alert('오류', '사진을 불러오지 못했어요.');
+    }
+  };
+  const removeImage = (index: number) => setImages((prev) => prev.filter((_, i) => i !== index));
 
   return (
     <Screen title="이미지로 등록" back>
@@ -51,19 +62,20 @@ export default function AddRecipeImageScreen() {
               {Array.from({ length: Math.ceil(images.length / 3) }, (_, r) => (
                 <View key={r} className="flex-row gap-4">
                   {[0, 1, 2].map((c) => {
-                    const id = images[r * 3 + c];
+                    const idx = r * 3 + c;
+                    const img = images[idx];
                     // 빈 칸은 스페이서로 채워 마지막 줄 셀 크기·좌측정렬 유지
-                    if (id === undefined) return <View key={c} className="flex-1" />;
+                    if (!img) return <View key={c} className="flex-1" />;
                     return (
                       <View key={c} className="aspect-square flex-1">
                         <Image
-                          source={require('../assets/images/food-sample.png')}
+                          source={{ uri: img.uri }}
                           style={{ width: '100%', height: '100%', borderRadius: 12 }}
                           contentFit="cover"
                         />
                         {/* 삭제 배지 — 우상단 8px 인셋, 20원 border primary, X primary */}
                         <Pressable
-                          onPress={() => removeImage(id)}
+                          onPress={() => removeImage(idx)}
                           hitSlop={6}
                           accessibilityRole="button"
                           accessibilityLabel="이미지 삭제"

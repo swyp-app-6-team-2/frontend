@@ -27,15 +27,12 @@ export class SocialAuthNotConfiguredError extends Error {
 
 /**
  * Provider SDK로 로그인해 백엔드에 넘길 authToken을 반환한다.
- * 현재는 미연동이라 SocialAuthNotConfiguredError를 던진다.
+ *
+ * ⚠️ 카카오/네이버 네이티브 SDK(@react-native-seoul/*)는 Expo 57의 precompiled React와
+ * 충돌한다(Naver vendored 동적 프레임워크가 React.framework 임베드를 깨뜨려 앱이 dyld
+ * 크래시). 로컬 네이티브 연동 보류. 대안: expo-auth-session 웹 OAuth(구글처럼) 또는 EAS Build.
+ * 백엔드는 provider accessToken만 있으면 검증 가능(kakao/naver userinfo API 호출).
  */
 export async function getSocialAuthToken(provider: SocialProvider): Promise<string> {
-  // TODO(provider별 연동). 예) Apple:
-  //   import * as AppleAuthentication from 'expo-apple-authentication';
-  //   const cred = await AppleAuthentication.signInAsync({
-  //     requestedScopes: [AppleAuthentication.AppleAuthenticationScope.EMAIL],
-  //   });
-  //   if (!cred.identityToken) throw new Error('Apple identityToken 없음');
-  //   return cred.identityToken;
   throw new SocialAuthNotConfiguredError(provider);
 }

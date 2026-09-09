@@ -1,4 +1,5 @@
 allowBuilds:
+  dooboolab-welcome: false
   unrs-resolver: true
 nodeLinker: hoisted
 # expo-constants 57.0.17 패치가 미출시 @expo/env@2.4.3를 참조해 설치가 깨진다.

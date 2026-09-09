@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
+import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import { Feather } from '@expo/vector-icons';
 
 import { AppText, Chevron, Screen } from '@/components/ui';
 import { palette } from '@/constants/tokens';
@@ -17,10 +17,18 @@ const ITEMS: { key: Key; label: string }[] = [
 ];
 const REQUIRED: Key[] = ['age', 'tos', 'privacy'];
 
-// 체크 표시 — off는 비활성화 라인색(#292A30), on은 흰색(Figma Component 12 Vector).
+// 체크 표시 — Figma Component 12 이미지(off=흐린 회색, on=흰색).
 function CheckMark({ on }: { on: boolean }) {
   return (
-    <Feather name="check-circle" size={24} color={on ? palette.foreground : palette.disabledLine} />
+    <Image
+      source={
+        on
+          ? require('../assets/images/checkbox-on.png')
+          : require('../assets/images/checkbox-off.png')
+      }
+      style={{ width: 24, height: 24 }}
+      contentFit="contain"
+    />
   );
 }
 

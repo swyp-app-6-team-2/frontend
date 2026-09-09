@@ -1,7 +1,6 @@
 import { Alert, Pressable, StyleSheet, View } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { GoogleLoginSlot } from '@/components/google-login-slot';
 import { AppText } from '@/components/ui';
@@ -20,6 +19,17 @@ const PROVIDERS = [
   { key: 'google' as SocialProvider, src: require('../assets/images/google.png'), name: '구글' },
   { key: 'apple' as SocialProvider, src: require('../assets/images/apple.png'), name: '애플' },
 ];
+
+// Figma 402×874 절대 좌표를 화면 높이 비율로. (같은 비율로 모든 기기 대응)
+const H = 874;
+const rowStyle = (top: number) =>
+  ({
+    position: 'absolute',
+    top: `${(top / H) * 100}%`,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+  }) as const;
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -63,55 +73,59 @@ export default function LoginScreen() {
         contentFit="cover"
       />
 
-      <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
-        <View className="flex-1 items-center px-screen">
-          {/* 타이틀 로고 '별따먹자' + 부제 '나의 레시피가 별이 된다' (이미지에 포함) */}
-          <Image
-            source={require('../assets/images/login-title.png')}
-            style={{ width: 320, height: 100, marginTop: 88 }}
-            contentFit="contain"
-          />
+      {/* 타이틀 '별따먹자' + 부제 (Group 171 이미지) — top 182 */}
+      <View style={rowStyle(182)}>
+        <Image
+          source={require('../assets/images/login-title.png')}
+          style={{ width: 362, height: 113 }}
+          contentFit="contain"
+        />
+      </View>
 
-          {/* 마스코트 (별·레시피 든 캐릭터) */}
-          <Image
-            source={require('../assets/images/login-mascot.png')}
-            style={{ width: 237, height: 179, marginTop: 56 }}
-            contentFit="contain"
-          />
+      {/* 마스코트 (Group 173) — top 433 */}
+      <View style={rowStyle(433)}>
+        <Image
+          source={require('../assets/images/login-mascot.png')}
+          style={{ width: 237, height: 179 }}
+          contentFit="contain"
+        />
+      </View>
 
-          <View className="flex-1" />
+      {/* SNS 간편 가입 문구 — top 648 */}
+      <View style={rowStyle(648)}>
+        <AppText variant="body" className="text-center font-normal leading-[21px] text-muted">
+          SNS 계정으로 간편 가입하기
+        </AppText>
+      </View>
 
-          {/* SNS 간편 가입 */}
-          <AppText variant="body" className="text-center font-normal leading-[21px] text-muted">
-            SNS 계정으로 간편 가입하기
-          </AppText>
-          <View className="mb-10 mt-5 flex-row gap-4">
-            {PROVIDERS.map((p) =>
-              p.key === 'google' ? (
-                <GoogleLoginSlot
-                  key={p.key}
-                  src={p.src}
-                  label={`${p.name}로 계속하기`}
-                  disabled={socialLogin.isPending}
-                  onIdToken={(idToken) => void finishLogin(API_PROVIDER.google, idToken)}
-                  onError={(msg) => Alert.alert('로그인 실패', msg)}
-                />
-              ) : (
-                <Pressable
-                  key={p.key}
-                  onPress={() => onProvider(p.key)}
-                  disabled={socialLogin.isPending}
-                  accessibilityRole="button"
-                  accessibilityLabel={`${p.name}로 계속하기`}
-                  className="active:opacity-80"
-                >
-                  <Image source={p.src} style={{ width: 56, height: 56 }} contentFit="contain" />
-                </Pressable>
-              ),
-            )}
-          </View>
+      {/* SNS 버튼 (56×56, gap 16) — top 689 */}
+      <View style={rowStyle(689)}>
+        <View className="flex-row gap-4">
+          {PROVIDERS.map((p) =>
+            p.key === 'google' ? (
+              <GoogleLoginSlot
+                key={p.key}
+                src={p.src}
+                label={`${p.name}로 계속하기`}
+                disabled={socialLogin.isPending}
+                onIdToken={(idToken) => void finishLogin(API_PROVIDER.google, idToken)}
+                onError={(msg) => Alert.alert('로그인 실패', msg)}
+              />
+            ) : (
+              <Pressable
+                key={p.key}
+                onPress={() => onProvider(p.key)}
+                disabled={socialLogin.isPending}
+                accessibilityRole="button"
+                accessibilityLabel={`${p.name}로 계속하기`}
+                className="active:opacity-80"
+              >
+                <Image source={p.src} style={{ width: 56, height: 56 }} contentFit="contain" />
+              </Pressable>
+            ),
+          )}
         </View>
-      </SafeAreaView>
+      </View>
     </View>
   );
 }

@@ -12,6 +12,17 @@ export const RECIPE_CATEGORY_LABEL: Record<RecipeCategory, string> = {
   OTHER: '기타',
 };
 
+// 레시피 카테고리 선택 순서(직접 입력 폼 등).
+export const RECIPE_CATEGORY_ORDER: RecipeCategory[] = [
+  'KOREAN',
+  'WESTERN',
+  'CHINESE',
+  'JAPANESE',
+  'BUNSIK',
+  'ASIAN',
+  'OTHER',
+];
+
 export const INGREDIENT_CATEGORY_LABEL: Record<IngredientCategory, string> = {
   MEAT: '육류',
   SEAFOOD: '해산물',

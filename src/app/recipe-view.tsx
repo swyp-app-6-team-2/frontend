@@ -1,5 +1,5 @@
 import { Fragment } from 'react';
-import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
@@ -7,7 +7,8 @@ import { Feather } from '@expo/vector-icons';
 import { AppText, Button, Screen } from '@/components/ui';
 import { RECIPE_CATEGORY_LABEL } from '@/constants/labels';
 import { palette } from '@/constants/tokens';
-import { useRecipe } from '@/hooks/use-api';
+import { useCreateCookHistory, useDeleteRecipe, useRecipe } from '@/hooks/use-api';
+import { ApiError } from '@/lib/api';
 
 // 21 레시피 상세 — 저장된 레시피 보기. 목록에서 recipeId를 params.id로 넘겨받는다.
 export default function RecipeViewScreen() {
@@ -15,6 +16,33 @@ export default function RecipeViewScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const recipeId = Number(id);
   const { data, isLoading, isError } = useRecipe(Number.isFinite(recipeId) ? recipeId : null);
+  const createCook = useCreateCookHistory(recipeId);
+  const deleteRecipe = useDeleteRecipe();
+
+  const onDelete = () => {
+    Alert.alert('레시피 삭제', '이 레시피를 삭제할까요?', [
+      { text: '취소', style: 'cancel' },
+      {
+        text: '삭제',
+        style: 'destructive',
+        onPress: () =>
+          deleteRecipe.mutate(recipeId, {
+            onSuccess: () => router.back(),
+            onError: (e) =>
+              Alert.alert('삭제 실패', e instanceof ApiError ? e.message : '다시 시도해주세요.'),
+          }),
+      },
+    ]);
+  };
+
+  const onComplete = async () => {
+    try {
+      await createCook.mutateAsync({});
+      router.replace({ pathname: '/cook-complete', params: { title: data?.title ?? '' } });
+    } catch (e) {
+      Alert.alert('기록 실패', e instanceof ApiError ? e.message : '다시 시도해주세요.');
+    }
+  };
 
   if (isLoading) {
     return (
@@ -39,7 +67,20 @@ export default function RecipeViewScreen() {
   }
 
   return (
-    <Screen title="" back>
+    <Screen
+      title=""
+      back
+      headerRight={
+        <Pressable
+          onPress={onDelete}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="삭제"
+        >
+          <Feather name="trash-2" size={22} color={palette.muted} />
+        </Pressable>
+      }
+    >
       <View className="flex-1">
         <ScrollView contentContainerClassName="pb-4" showsVerticalScrollIndicator={false}>
           {/* 대표 이미지 362x362 */}
@@ -136,9 +177,9 @@ export default function RecipeViewScreen() {
         </ScrollView>
       </View>
 
-      {/* 하단 고정 완료 버튼 */}
+      {/* 하단 고정 — 요리 완료 기록(별 점등) */}
       <View className="pb-8 pt-4">
-        <Button label="완료하기" onPress={() => router.back()} />
+        <Button label="완료하기" onPress={onComplete} disabled={createCook.isPending} />
       </View>
     </Screen>
   );

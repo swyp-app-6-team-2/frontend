@@ -1,13 +1,16 @@
 import { useRef, useState } from 'react';
-import { Pressable, Text, TextInput, View, type ScrollView } from 'react-native';
+import { Alert, Pressable, Text, TextInput, View, type ScrollView } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 
 import { AppText, Button, Screen, SearchBar } from '@/components/ui';
+import { RECIPE_CATEGORY_LABEL, RECIPE_CATEGORY_ORDER } from '@/constants/labels';
 import { palette } from '@/constants/tokens';
+import { useCreateRecipe } from '@/hooks/use-api';
+import { ApiError } from '@/lib/api';
+import type { RecipeCategory } from '@/lib/api/types';
 
-const CATEGORIES = ['한식', '양식', '중식', '일식', '분식', '아시안', '기타'];
 // 냉장고에 있는 재료 추천 (탭하면 재료 행에 추가)
 const OWNED = ['브로콜리', '새우', '대파', '계란', '다진 마늘', '설탕', '소금', '후추'];
 
@@ -41,10 +44,33 @@ function DashedAddButton({
 export default function AddRecipeManualScreen() {
   const router = useRouter();
   const scrollRef = useRef<ScrollView>(null);
-  const [category, setCategory] = useState('한식');
+  const create = useCreateRecipe();
+  const [title, setTitle] = useState('');
+  const [category, setCategory] = useState<RecipeCategory>('KOREAN');
   const [servings, setServings] = useState('');
   const [ingredients, setIngredients] = useState<Ingredient[]>([{ name: '', qty: '' }]);
   const [steps, setSteps] = useState<string[]>(['']);
+
+  const onSave = async () => {
+    if (!title.trim()) {
+      Alert.alert('알림', '레시피명을 입력해주세요.');
+      return;
+    }
+    try {
+      const res = await create.mutateAsync({
+        title: title.trim(),
+        categoryCode: category,
+        servings: servings ? Number(servings) : undefined,
+        ingredients: ingredients
+          .filter((i) => i.name.trim())
+          .map((i) => ({ name: i.name.trim(), amountText: i.qty.trim() || undefined })),
+        steps: steps.filter((s) => s.trim()).map((s) => ({ content: s.trim() })),
+      });
+      router.replace({ pathname: '/recipe-view', params: { id: String(res.recipeId) } });
+    } catch (e) {
+      Alert.alert('저장 실패', e instanceof ApiError ? e.message : '잠시 후 다시 시도해주세요.');
+    }
+  };
 
   const setIngredient = (i: number, key: keyof Ingredient, val: string) =>
     setIngredients((prev) => prev.map((ing, idx) => (idx === i ? { ...ing, [key]: val } : ing)));
@@ -103,7 +129,7 @@ export default function AddRecipeManualScreen() {
             레시피명
           </AppText>
         </View>
-        <SearchBar placeholder="예)김치찜" leftIcon={null} />
+        <SearchBar placeholder="예)김치찜" leftIcon={null} value={title} onChangeText={setTitle} />
       </View>
 
       {/* 카테고리 — 선택 칩(골드)·나머지 outline · 위 마진 24 = screen gap16 + mt-2 */}
@@ -112,12 +138,12 @@ export default function AddRecipeManualScreen() {
           카테고리
         </AppText>
         <View className="flex-row flex-wrap gap-2">
-          {CATEGORIES.map((c) => {
-            const on = c === category;
+          {RECIPE_CATEGORY_ORDER.map((code) => {
+            const on = code === category;
             return (
               <Pressable
-                key={c}
-                onPress={() => setCategory(c)}
+                key={code}
+                onPress={() => setCategory(code)}
                 accessibilityRole="button"
                 className={`h-9 items-center justify-center rounded-pill border border-field px-4 active:opacity-80 ${
                   on ? 'bg-primary' : ''
@@ -126,7 +152,7 @@ export default function AddRecipeManualScreen() {
                 <Text
                   className={`text-[14px] leading-[17px] ${on ? 'text-surface' : 'text-foreground'}`}
                 >
-                  {c}
+                  {RECIPE_CATEGORY_LABEL[code]}
                 </Text>
               </Pressable>
             );
@@ -266,7 +292,7 @@ export default function AddRecipeManualScreen() {
         <DashedAddButton label="단계 추가" onPress={addStep} className="mt-1" />
       </View>
 
-      <Button label="저장하기" onPress={() => router.replace('/recipe-view')} />
+      <Button label="저장하기" onPress={onSave} disabled={create.isPending} />
     </Screen>
   );
 }

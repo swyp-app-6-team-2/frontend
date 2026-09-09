@@ -12,7 +12,14 @@
       "bundleIdentifier": "com.byeolddameokja.app",
       "supportsTablet": true,
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "CFBundleURLTypes": [
+          {
+            "CFBundleURLSchemes": [
+              "com.googleusercontent.apps.844378154938-9lhifn3h276dgbsebefdimdkoo6jjvcq"
+            ]
+          }
+        ]
       }
     },
     "android": {

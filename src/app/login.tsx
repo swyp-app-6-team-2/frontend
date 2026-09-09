@@ -1,20 +1,49 @@
-import { Pressable, View } from 'react-native';
+import { Alert, Pressable, View } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 
 import { AppText } from '@/components/ui';
+import { useSocialLogin } from '@/hooks/use-api';
+import { ApiError } from '@/lib/api';
+import {
+  API_PROVIDER,
+  getSocialAuthToken,
+  SocialAuthNotConfiguredError,
+  type SocialProvider,
+} from '@/lib/social-auth';
 
 const PROVIDERS = [
-  { key: 'kakao', src: require('../assets/images/kakao.png'), name: '카카오' },
-  { key: 'naver', src: require('../assets/images/naver.png'), name: '네이버' },
-  { key: 'google', src: require('../assets/images/google.png'), name: '구글' },
-  { key: 'apple', src: require('../assets/images/apple.png'), name: '애플' },
+  { key: 'kakao' as SocialProvider, src: require('../assets/images/kakao.png'), name: '카카오' },
+  { key: 'naver' as SocialProvider, src: require('../assets/images/naver.png'), name: '네이버' },
+  { key: 'google' as SocialProvider, src: require('../assets/images/google.png'), name: '구글' },
+  { key: 'apple' as SocialProvider, src: require('../assets/images/apple.png'), name: '애플' },
 ];
 
 export default function LoginScreen() {
   const router = useRouter();
-  // 로그인 성공 → 온보딩 → 홈
-  const login = () => router.replace('/onboarding');
+  const socialLogin = useSocialLogin();
+
+  // 소셜 SDK로 authToken 획득 → 백엔드 로그인 → 신규는 약관, 기존은 홈.
+  const onProvider = async (provider: SocialProvider) => {
+    try {
+      const authToken = await getSocialAuthToken(provider);
+      const res = await socialLogin.mutateAsync({ provider: API_PROVIDER[provider], authToken });
+      if (res.requiresTermsAgreement) {
+        router.push('/terms'); // 신규 회원 → 약관 동의 (signupToken은 서버 응답에 있음)
+      } else {
+        router.replace('/home'); // 기존 회원 → 홈 (accessToken은 훅이 저장)
+      }
+    } catch (e) {
+      if (e instanceof SocialAuthNotConfiguredError) {
+        // 소셜 SDK 미연동 — 개발 중엔 기존 목업 흐름(온보딩) 유지
+        if (__DEV__) router.replace('/onboarding');
+        return;
+      }
+      const message =
+        e instanceof ApiError ? e.message : '로그인에 실패했습니다. 잠시 후 다시 시도해주세요.';
+      Alert.alert('로그인 실패', message);
+    }
+  };
 
   return (
     <View className="flex-1 bg-background">
@@ -39,7 +68,8 @@ export default function LoginScreen() {
           {PROVIDERS.map((p) => (
             <Pressable
               key={p.key}
-              onPress={login}
+              onPress={() => onProvider(p.key)}
+              disabled={socialLogin.isPending}
               accessibilityRole="button"
               accessibilityLabel={`${p.name}로 계속하기`}
               className="active:opacity-80"

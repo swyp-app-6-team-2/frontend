@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
@@ -10,21 +10,11 @@ import { AddRecipeMenu } from '@/components/add-recipe-menu';
 import { TabBar } from '@/components/tab-bar';
 import { AppText, PressableScale, SearchBar } from '@/components/ui';
 import { staggerDelay } from '@/constants/animation';
+import { RECIPE_CATEGORY_LABEL } from '@/constants/labels';
 import { palette } from '@/constants/tokens';
+import { useRecipes } from '@/hooks/use-api';
 import { useEnteringOnce } from '@/hooks/use-entering-once';
-
-type Category = '한식' | '양식' | '중식';
-type Recipe = { title: string; category: Category };
-
-// 나의레시피_main — 목업 데이터 (실제 이미지 자산 없음 → field 플레이스홀더).
-const RECIPES: Recipe[] = [
-  { title: '들기름 막국수', category: '한식' },
-  { title: '애호박 새우젓 볶음', category: '한식' },
-  { title: '연어 포케', category: '양식' },
-  { title: '마파두부', category: '중식' },
-  { title: '방울토마토 파스타', category: '양식' },
-  { title: '김치볶음밥', category: '한식' },
-];
+import type { RecipeListItem } from '@/lib/api/types';
 
 const FILTERS = ['카테고리', '재료', '최신순'];
 
@@ -54,21 +44,27 @@ function FilterChip({ label }: { label: string }) {
 
 // Figma 카드 — 이미지 173×127(aspect 173/127), radius 12. 좌상단 4px 인셋에
 // 미니칩(field bg, pill, px12 py4, 12px bold). 제목은 이미지 아래 12px, 16px bold.
-function RecipeCard({ recipe, onPress }: { recipe: Recipe; onPress: () => void }) {
+function RecipeCard({ item, onPress }: { item: RecipeListItem; onPress: () => void }) {
   return (
     <Pressable className="w-full active:opacity-90" onPress={onPress} accessibilityRole="button">
       <View className="aspect-[173/127] w-full overflow-hidden rounded-[12px] bg-field">
         <Image
-          source={require('../assets/images/food-sample.png')}
+          source={
+            item.coverImageUrl
+              ? { uri: item.coverImageUrl }
+              : require('../assets/images/food-sample.png')
+          }
           style={{ position: 'absolute', width: '100%', height: '100%' }}
           contentFit="cover"
         />
         <View className="absolute left-1 top-1 rounded-pill bg-field px-3 py-1">
-          <Text className="text-[12px] font-bold text-foreground">{recipe.category}</Text>
+          <Text className="text-[12px] font-bold text-foreground">
+            {RECIPE_CATEGORY_LABEL[item.categoryCode]}
+          </Text>
         </View>
       </View>
       <AppText variant="body" className="mt-3 font-bold" numberOfLines={1}>
-        {recipe.title}
+        {item.title}
       </AppText>
     </Pressable>
   );
@@ -78,7 +74,9 @@ export default function RecipesScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [menuOpen, setMenuOpen] = useState(false);
-  const isFull = RECIPES.length >= MAX_SLOTS;
+  const { data, isLoading, isError } = useRecipes();
+  const recipes = data?.recipes ?? [];
+  const isFull = (data?.totalCount ?? 0) >= MAX_SLOTS;
   const animate = useEnteringOnce('recipes'); // 최초 진입에만 카드 순차 등장
 
   // + 탭 — 슬롯 가득 차면 안내 팝업, 아니면 등록 메뉴 토글
@@ -98,19 +96,42 @@ export default function RecipesScreen() {
               <FilterChip key={f} label={f} />
             ))}
           </View>
-          {/* 2열 그리드 — 열 간격 16(justify-between), 행 간격 24(Figma 역산).
+          {/* 목록 — 로딩/에러/빈 상태 후 2열 그리드.
               폭(48%)은 Animated 래퍼에 inline style로(애니메이션 노드에 className 금지). */}
-          <View className="flex-row flex-wrap justify-between gap-y-6">
-            {RECIPES.map((r, i) => (
-              <Animated.View
-                key={r.title}
-                style={{ width: '48%' }}
-                entering={animate ? FadeInDown.delay(staggerDelay(i)).springify() : undefined}
-              >
-                <RecipeCard recipe={r} onPress={() => router.push('/recipe-view')} />
-              </Animated.View>
-            ))}
-          </View>
+          {isLoading ? (
+            <View className="items-center py-20">
+              <ActivityIndicator color={palette.primary} />
+            </View>
+          ) : isError ? (
+            <View className="items-center py-20">
+              <AppText variant="body" className="text-muted">
+                레시피를 불러오지 못했어요.
+              </AppText>
+            </View>
+          ) : recipes.length === 0 ? (
+            <View className="items-center py-20">
+              <AppText variant="body" className="text-muted">
+                아직 저장한 레시피가 없어요.
+              </AppText>
+            </View>
+          ) : (
+            <View className="flex-row flex-wrap justify-between gap-y-6">
+              {recipes.map((r, i) => (
+                <Animated.View
+                  key={r.recipeId}
+                  style={{ width: '48%' }}
+                  entering={animate ? FadeInDown.delay(staggerDelay(i)).springify() : undefined}
+                >
+                  <RecipeCard
+                    item={r}
+                    onPress={() =>
+                      router.push({ pathname: '/recipe-view', params: { id: String(r.recipeId) } })
+                    }
+                  />
+                </Animated.View>
+              ))}
+            </View>
+          )}
         </ScrollView>
 
         <TabBar active="recipes" />

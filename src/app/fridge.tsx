@@ -1,46 +1,52 @@
-import { useRef, useState } from 'react';
-import { ScrollView, Text, useWindowDimensions, View } from 'react-native';
+import { useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, ScrollView, Text, useWindowDimensions, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { Button, PressableScale, Screen, SearchBar } from '@/components/ui';
 import { staggerDelay } from '@/constants/animation';
+import {
+  INGREDIENT_CATEGORY_EMOJI,
+  INGREDIENT_CATEGORY_LABEL,
+  INGREDIENT_CATEGORY_ORDER,
+} from '@/constants/labels';
+import { palette } from '@/constants/tokens';
+import { useIngredients } from '@/hooks/use-api';
 import { useEnteringOnce } from '@/hooks/use-entering-once';
+import type { IngredientCategory } from '@/lib/api/types';
 
-// 재료관리 — 검색 + 카테고리 칩 + 재료 그리드 (Figma). 목업 데이터.
-const CATEGORIES = [
-  { label: '전체', count: 533 },
-  { label: '채소', count: 91 },
-  { label: '양념', count: 62 },
-  { label: '육류', count: 3 },
-  { label: '기타', count: 5 },
-];
-
-const ITEMS = [
-  { name: '계란', icon: '🥚' },
-  { name: '대파', icon: '🌿' },
-  { name: '양파', icon: '🧅' },
-  { name: '두부', icon: '🧈' },
-  { name: '배추', icon: '🥬' },
-  { name: '당근', icon: '🥕' },
-  { name: '감자', icon: '🥔' },
-  { name: '토마토', icon: '🍅' },
-  { name: '우유', icon: '🥛' },
-  { name: '버섯', icon: '🍄' },
-  { name: '마늘', icon: '🧄' },
-  { name: '고추', icon: '🌶️' },
-  { name: '새우', icon: '🦐' },
-  { name: '치즈', icon: '🧀' },
-  { name: '옥수수', icon: '🌽' },
-];
-
+// 재료관리 — 검색 + 카테고리 칩 + 재료 그리드. 재료 마스터(GET /ingredients) 연결.
 export default function FridgeScreen() {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const chipScrollRef = useRef<ScrollView>(null);
   const chipLayouts = useRef<Record<number, { x: number; w: number }>>({});
-  const [active, setActive] = useState(0);
-  const animate = useEnteringOnce('fridge'); // 최초 진입에만 재료 순차 등장
+  const [active, setActive] = useState(0); // 0 = 전체, 이후 카테고리
+  const animate = useEnteringOnce('fridge');
+
+  const { data, isLoading, isError } = useIngredients();
+  const items = useMemo(() => data?.ingredients ?? [], [data]);
+
+  // 칩: 전체 + 항목이 있는 카테고리만. category=null 이 전체.
+  const chips = useMemo(() => {
+    const withItems = INGREDIENT_CATEGORY_ORDER.filter((cat) =>
+      items.some((it) => it.categoryCode === cat),
+    );
+    return [
+      { category: null as IngredientCategory | null, label: '전체', count: items.length },
+      ...withItems.map((cat) => ({
+        category: cat,
+        label: INGREDIENT_CATEGORY_LABEL[cat],
+        count: items.filter((it) => it.categoryCode === cat).length,
+      })),
+    ];
+  }, [items]);
+
+  const selectedCategory = chips[active]?.category ?? null;
+  const visible = useMemo(
+    () => (selectedCategory ? items.filter((it) => it.categoryCode === selectedCategory) : items),
+    [items, selectedCategory],
+  );
 
   // 선택한 칩이 가로 스크롤 가운데로 오도록
   const selectChip = (i: number) => {
@@ -69,7 +75,7 @@ export default function FridgeScreen() {
             showsHorizontalScrollIndicator={false}
             contentContainerClassName="gap-2"
           >
-            {CATEGORIES.map((c, i) => {
+            {chips.map((c, i) => {
               const on = i === active;
               return (
                 <PressableScale
@@ -97,35 +103,54 @@ export default function FridgeScreen() {
             })}
           </ScrollView>
 
-          {/* 재료 그리드 — 3열 청킹, 110×83 카드 (bg #34394B, r12) */}
-          <View className="gap-4">
-            {Array.from({ length: Math.ceil(ITEMS.length / 3) }, (_, r) => (
-              <View key={r} className="flex-row gap-4">
-                {[0, 1, 2].map((c) => {
-                  const idx = r * 3 + c;
-                  const item = ITEMS[idx];
-                  if (!item) return <View key={c} className="flex-1" />;
-                  return (
-                    // flex(1)는 Animated 노드에 inline style로, 시각 스타일은 안쪽 View에
-                    <Animated.View
-                      key={c}
-                      style={{ flex: 1 }}
-                      entering={
-                        animate ? FadeInDown.delay(staggerDelay(idx)).springify() : undefined
-                      }
-                    >
-                      <View className="aspect-[110/83] w-full items-center justify-center gap-1 rounded-[12px] bg-popup-button">
-                        <Text className="text-[20px]">{item.icon}</Text>
-                        <Text className="text-[16px] font-medium leading-[21px] text-foreground">
-                          {item.name}
-                        </Text>
-                      </View>
-                    </Animated.View>
-                  );
-                })}
-              </View>
-            ))}
-          </View>
+          {/* 재료 그리드 — 로딩/에러/빈 상태 후 3열 청킹 */}
+          {isLoading ? (
+            <View className="items-center py-20">
+              <ActivityIndicator color={palette.primary} />
+            </View>
+          ) : isError ? (
+            <View className="items-center py-20">
+              <Text className="text-[16px] text-muted">재료를 불러오지 못했어요.</Text>
+            </View>
+          ) : visible.length === 0 ? (
+            <View className="items-center py-20">
+              <Text className="text-[16px] text-muted">재료가 없어요.</Text>
+            </View>
+          ) : (
+            <View className="gap-4">
+              {Array.from({ length: Math.ceil(visible.length / 3) }, (_, r) => (
+                <View key={r} className="flex-row gap-4">
+                  {[0, 1, 2].map((c) => {
+                    const idx = r * 3 + c;
+                    const item = visible[idx];
+                    if (!item) return <View key={c} className="flex-1" />;
+                    return (
+                      // flex(1)는 Animated 노드에 inline style로, 시각 스타일은 안쪽 View에
+                      <Animated.View
+                        key={c}
+                        style={{ flex: 1 }}
+                        entering={
+                          animate ? FadeInDown.delay(staggerDelay(idx)).springify() : undefined
+                        }
+                      >
+                        <View className="aspect-[110/83] w-full items-center justify-center gap-1 rounded-[12px] bg-popup-button">
+                          <Text className="text-[20px]">
+                            {INGREDIENT_CATEGORY_EMOJI[item.categoryCode]}
+                          </Text>
+                          <Text
+                            numberOfLines={1}
+                            className="text-[16px] font-medium leading-[21px] text-foreground"
+                          >
+                            {item.name}
+                          </Text>
+                        </View>
+                      </Animated.View>
+                    );
+                  })}
+                </View>
+              ))}
+            </View>
+          )}
         </ScrollView>
       </View>
 

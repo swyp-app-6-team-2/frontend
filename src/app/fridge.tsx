@@ -22,6 +22,8 @@ export default function FridgeScreen() {
   const chipScrollRef = useRef<ScrollView>(null);
   const chipLayouts = useRef<Record<number, { x: number; w: number }>>({});
   const [active, setActive] = useState(0); // 0 = 전체, 이후 카테고리
+  const [q, setQ] = useState('');
+  const query = q.trim().toLowerCase();
   const animate = useEnteringOnce('fridge');
 
   const { data, isLoading, isError } = useIngredients();
@@ -43,9 +45,20 @@ export default function FridgeScreen() {
   }, [items]);
 
   const selectedCategory = chips[active]?.category ?? null;
+  // 카테고리 + 검색어(이름/별칭) 클라이언트 필터. 백엔드는 재료 검색을 주지 않는다.
   const visible = useMemo(
-    () => (selectedCategory ? items.filter((it) => it.categoryCode === selectedCategory) : items),
-    [items, selectedCategory],
+    () =>
+      items.filter((it) => {
+        if (selectedCategory && it.categoryCode !== selectedCategory) return false;
+        if (
+          query &&
+          !it.name.toLowerCase().includes(query) &&
+          !it.aliases.some((a) => a.toLowerCase().includes(query))
+        )
+          return false;
+        return true;
+      }),
+    [items, selectedCategory, query],
   );
 
   // 선택한 칩이 가로 스크롤 가운데로 오도록
@@ -66,7 +79,12 @@ export default function FridgeScreen() {
           showsVerticalScrollIndicator={false}
           contentContainerClassName="gap-4 pb-4 pt-2"
         >
-          <SearchBar placeholder="재료명을 검색해보세요" />
+          <SearchBar
+            placeholder="재료명을 검색해보세요"
+            value={q}
+            onChangeText={setQ}
+            returnKeyType="search"
+          />
 
           {/* 카테고리 칩 — 가로 스크롤, 선택=골드 */}
           <ScrollView

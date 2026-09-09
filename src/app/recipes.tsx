@@ -74,8 +74,13 @@ export default function RecipesScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [q, setQ] = useState('');
+  const query = q.trim().toLowerCase();
   const { data, isLoading, isError } = useRecipes();
-  const recipes = data?.recipes ?? [];
+  // 백엔드는 서버 검색을 주지 않아, 로드된 페이지 안에서 제목으로 클라이언트 필터.
+  const recipes = (data?.recipes ?? []).filter(
+    (r) => !query || r.title.toLowerCase().includes(query),
+  );
   const isFull = (data?.totalCount ?? 0) >= MAX_SLOTS;
   const animate = useEnteringOnce('recipes'); // 최초 진입에만 카드 순차 등장
 
@@ -90,7 +95,12 @@ export default function RecipesScreen() {
           showsVerticalScrollIndicator={false}
         >
           <AppText variant="title">나의 레시피</AppText>
-          <SearchBar placeholder="레시피명을 검색해보세요" />
+          <SearchBar
+            placeholder="레시피명을 검색해보세요"
+            value={q}
+            onChangeText={setQ}
+            returnKeyType="search"
+          />
           <View className="flex-row gap-2">
             {FILTERS.map((f) => (
               <FilterChip key={f} label={f} />
@@ -111,7 +121,7 @@ export default function RecipesScreen() {
           ) : recipes.length === 0 ? (
             <View className="items-center py-20">
               <AppText variant="body" className="text-muted">
-                아직 저장한 레시피가 없어요.
+                {query ? '검색 결과가 없어요.' : '아직 저장한 레시피가 없어요.'}
               </AppText>
             </View>
           ) : (

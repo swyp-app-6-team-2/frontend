@@ -19,6 +19,7 @@ const PAGES: { href: Href; label: string }[] = [
   { href: '/notifications', label: '↳ 알림 설정' },
   { href: '/profile-edit', label: '↳ 프로필 수정' },
   { href: '/login-manage', label: '↳ 로그인 관리' },
+  { href: '/policies', label: '↳ 약관' },
   { href: '/inquiry', label: '↳ 문의하기' },
   { href: '/inquiry-detail', label: '↳ 문의 상세' },
   { href: '/purchase-history', label: '↳ 구매내역' },

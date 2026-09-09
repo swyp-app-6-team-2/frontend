@@ -16,7 +16,7 @@ const MENU: { label: string; href?: Href }[] = [
   { label: '알림 설정', href: '/notifications' },
   { label: '로그인 관리', href: '/login-manage' },
   { label: '구매내역', href: '/purchase-history' },
-  { label: '약관', href: '/terms' },
+  { label: '약관', href: '/policies' },
   { label: '문의하기', href: '/inquiry' },
 ];
 

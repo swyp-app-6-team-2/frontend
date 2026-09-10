@@ -92,15 +92,11 @@ export default function IngredientsScreen() {
                     {INGREDIENT_CATEGORY_LABEL[s.cat]}
                   </AppText>
                 </View>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerClassName="gap-2"
-                >
+                <View className="flex-row flex-wrap gap-2">
                   {s.items.map((ing) => (
                     <IngredientChip key={ing.ingredientId} ing={ing} />
                   ))}
-                </ScrollView>
+                </View>
               </View>
             ))
           )}

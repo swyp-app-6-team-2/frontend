@@ -2,7 +2,6 @@ import { Alert, Pressable, StyleSheet, View } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 
-import { GoogleLoginSlot } from '@/components/google-login-slot';
 import { AppText } from '@/components/ui';
 import { useSocialLogin } from '@/hooks/use-api';
 import { ApiError } from '@/lib/api';
@@ -50,8 +49,7 @@ export default function LoginScreen() {
   };
 
   const onProvider = async (provider: SocialProvider) => {
-    // 카카오/네이버/애플 — SDK 미연동(스텁). dev에선 온보딩 폴백.
-    // (구글은 GoogleLoginSlot이 직접 처리)
+    // 구글/카카오/네이버 — 네이티브 SDK 로그인. 애플은 스텁(dev에선 온보딩 폴백).
     try {
       const authToken = await getSocialAuthToken(provider);
       await finishLogin(API_PROVIDER[provider], authToken);
@@ -101,29 +99,18 @@ export default function LoginScreen() {
       {/* SNS 버튼 (56×56, gap 16) — top 689 */}
       <View style={rowStyle(689)}>
         <View className="flex-row gap-4">
-          {PROVIDERS.map((p) =>
-            p.key === 'google' ? (
-              <GoogleLoginSlot
-                key={p.key}
-                src={p.src}
-                label={`${p.name}로 계속하기`}
-                disabled={socialLogin.isPending}
-                onIdToken={(idToken) => void finishLogin(API_PROVIDER.google, idToken)}
-                onError={(msg) => Alert.alert('로그인 실패', msg)}
-              />
-            ) : (
-              <Pressable
-                key={p.key}
-                onPress={() => onProvider(p.key)}
-                disabled={socialLogin.isPending}
-                accessibilityRole="button"
-                accessibilityLabel={`${p.name}로 계속하기`}
-                className="active:opacity-80"
-              >
-                <Image source={p.src} style={{ width: 56, height: 56 }} contentFit="contain" />
-              </Pressable>
-            ),
-          )}
+          {PROVIDERS.map((p) => (
+            <Pressable
+              key={p.key}
+              onPress={() => onProvider(p.key)}
+              disabled={socialLogin.isPending}
+              accessibilityRole="button"
+              accessibilityLabel={`${p.name}로 계속하기`}
+              className="active:opacity-80"
+            >
+              <Image source={p.src} style={{ width: 56, height: 56 }} contentFit="contain" />
+            </Pressable>
+          ))}
         </View>
       </View>
     </View>

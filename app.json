@@ -12,14 +12,7 @@
       "bundleIdentifier": "com.byeolddameokja.app",
       "supportsTablet": true,
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false,
-        "CFBundleURLTypes": [
-          {
-            "CFBundleURLSchemes": [
-              "com.googleusercontent.apps.844378154938-9lhifn3h276dgbsebefdimdkoo6jjvcq"
-            ]
-          }
-        ]
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -63,6 +56,12 @@
         "@react-native-seoul/naver-login",
         {
           "urlScheme": "naverlogin"
+        }
+      ],
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.844378154938-9lhifn3h276dgbsebefdimdkoo6jjvcq"
         }
       ]
     ],

@@ -56,13 +56,29 @@ async function getNaverAccessToken(): Promise<string> {
   return res.successResponse.accessToken;
 }
 
+// 구글 네이티브 Sign-In — 네이티브 계정 선택 시트. idToken 반환(백엔드로).
+// webClientId를 주면 idToken의 aud가 웹 클라이언트 ID로 찍혀 백엔드 검증과 맞는다.
+async function getGoogleIdToken(): Promise<string> {
+  const { GoogleSignin } = await import('@react-native-google-signin/google-signin');
+  GoogleSignin.configure({
+    iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
+    webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+  });
+  const res = await GoogleSignin.signIn();
+  if (res.type !== 'success' || !res.data.idToken) {
+    throw new Error('구글 로그인이 취소되었거나 실패했어요.');
+  }
+  return res.data.idToken;
+}
+
 /**
- * Provider별 네이티브 SDK 로그인 → 백엔드에 넘길 accessToken 반환.
- * 백엔드는 이 accessToken으로 kakao/naver userinfo API를 호출해 검증한다.
+ * Provider별 네이티브 SDK 로그인 → 백엔드에 넘길 토큰 반환.
+ * google=idToken, kakao/naver=accessToken. 백엔드가 provider별로 검증한다.
  * 네이티브 모듈이라 사용 시점에 동적 import — 리빌드 전엔 SocialAuthNotConfiguredError로 폴백.
  */
 export async function getSocialAuthToken(provider: SocialProvider): Promise<string> {
   try {
+    if (provider === 'google') return await getGoogleIdToken();
     if (provider === 'kakao') return await getKakaoAccessToken();
     if (provider === 'naver') return await getNaverAccessToken();
   } catch (e) {

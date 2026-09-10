@@ -150,17 +150,29 @@ export function RecipeSortSheet({
 
   return (
     <SheetShell onCancel={onCancel} onConfirm={() => onApply(sel)}>
+      {/* Figma: 등록일순(16 medium) + 풀폭 가운데정렬 행, 사이 구분선 #3F4250 */}
       <AppText variant="body" className="text-foreground">
         등록일순
       </AppText>
-      <View className="mt-4 flex-row gap-2">
-        {SORT_OPTIONS.map((opt) => (
-          <Chip
-            key={opt.key}
-            label={opt.label}
-            active={sel === opt.key}
-            onPress={() => setSel(opt.key)}
-          />
+      <View className="mt-6">
+        {SORT_OPTIONS.map((opt, i) => (
+          <View key={opt.key}>
+            {i > 0 ? <View className="my-4 h-px bg-disabled" /> : null}
+            <Pressable
+              onPress={() => setSel(opt.key)}
+              accessibilityRole="button"
+              accessibilityState={{ selected: sel === opt.key }}
+              className="h-9 items-center justify-center active:opacity-80"
+            >
+              <Text
+                className={`text-[14px] leading-[17px] ${
+                  sel === opt.key ? 'text-foreground' : 'text-muted'
+                }`}
+              >
+                {opt.label}
+              </Text>
+            </Pressable>
+          </View>
         ))}
       </View>
     </SheetShell>

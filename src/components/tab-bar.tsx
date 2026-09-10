@@ -9,7 +9,7 @@ export type TabKey = 'home' | 'fridge' | 'recipes' | 'my';
 
 const TABS: { key: TabKey; icon: ImageSource; label: string; href: Href }[] = [
   { key: 'home', icon: require('../assets/images/ic-tab-home.png'), label: '홈', href: '/home' },
-  { key: 'fridge', icon: require('../assets/images/ic-tab-fridge.png'), label: '재료관리', href: '/fridge' }, // prettier-ignore
+  { key: 'fridge', icon: require('../assets/images/ic-tab-fridge.png'), label: '재료관리', href: '/ingredients' }, // prettier-ignore
   { key: 'recipes', icon: require('../assets/images/ic-tab-recipes.png'), label: '나의 레시피', href: '/recipes' }, // prettier-ignore
   { key: 'my', icon: require('../assets/images/ic-tab-my.png'), label: '마이', href: '/my' },
 ];

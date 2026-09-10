@@ -7,16 +7,15 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AddRecipeMenu } from '@/components/add-recipe-menu';
+import { RecipeFilterSheet, RecipeSortSheet } from '@/components/recipe-filter-sheet';
 import { TabBar } from '@/components/tab-bar';
 import { AppText, PressableScale, SearchBar } from '@/components/ui';
 import { staggerDelay } from '@/constants/animation';
 import { RECIPE_CATEGORY_LABEL } from '@/constants/labels';
 import { palette } from '@/constants/tokens';
-import { useRecipes } from '@/hooks/use-api';
+import { useIngredients, useRecipes } from '@/hooks/use-api';
 import { useEnteringOnce } from '@/hooks/use-entering-once';
-import type { RecipeListItem } from '@/lib/api/types';
-
-const FILTERS = ['카테고리', '재료', '최신순'];
+import type { RecipeCategory, RecipeListItem, RecipeListSort } from '@/lib/api/types';
 
 // 저장 슬롯 최대 50개 — 초과 시 slot-full 팝업
 const MAX_SLOTS = 50;
@@ -24,9 +23,10 @@ const MAX_SLOTS = 50;
 // Figma 필터칩 — h36, pill, 투명 bg + 1px border #1E2230(field), gap4, px16.
 // 라벨 14px 흰색 + 우측 16px 드롭다운 아이콘. 화살표는 다크 배경에서 보이도록
 // muted (Figma 익스포트의 #18181B는 배경과 겹쳐 안 보임).
-function FilterChip({ label }: { label: string }) {
+function FilterChip({ label, onPress }: { label: string; onPress: () => void }) {
   return (
     <PressableScale
+      onPress={onPress}
       accessibilityRole="button"
       haptic="selection"
       className="h-9 flex-row items-center justify-center gap-1 rounded-pill border border-field px-4"
@@ -34,11 +34,26 @@ function FilterChip({ label }: { label: string }) {
       <Text className="text-chip text-foreground">{label}</Text>
       <Image
         source={require('../assets/images/ic-chevron-down.png')}
-        style={{ width: 16, height: 16 }}
+        style={{ width: 20, height: 20 }}
         tintColor={palette.muted}
         contentFit="contain"
       />
     </PressableScale>
+  );
+}
+
+// 적용된 필터 태그 — 골드 라벨 + × (탭하면 해당 필터 제거). Figma: #FFD457 + close 16.
+function ActiveFilterTag({ label, onRemove }: { label: string; onRemove: () => void }) {
+  return (
+    <Pressable
+      onPress={onRemove}
+      accessibilityRole="button"
+      accessibilityLabel={`${label} 필터 제거`}
+      className="flex-row items-center gap-1 active:opacity-70"
+    >
+      <Text className="text-[14px] leading-[17px] text-primary">{label}</Text>
+      <Feather name="x" size={16} color={palette.muted} />
+    </Pressable>
   );
 }
 
@@ -76,13 +91,37 @@ export default function RecipesScreen() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [q, setQ] = useState('');
   const query = q.trim().toLowerCase();
-  const { data, isLoading, isError } = useRecipes();
-  // 백엔드는 서버 검색을 주지 않아, 로드된 페이지 안에서 제목으로 클라이언트 필터.
-  const recipes = (data?.recipes ?? []).filter(
-    (r) => !query || r.title.toLowerCase().includes(query),
-  );
+  // 필터: 정렬·카테고리·재료 + 시트 열림
+  const [sort, setSort] = useState<RecipeListSort>('LATEST');
+  const [selectedCats, setSelectedCats] = useState<Set<RecipeCategory>>(new Set());
+  const [selectedIngs, setSelectedIngs] = useState<Set<string>>(new Set());
+  const [sheet, setSheet] = useState<'filter' | 'sort' | null>(null);
+
+  const { data, isLoading, isError } = useRecipes({ sort });
+  const { data: ingredientData } = useIngredients();
+  // 백엔드 서버검색 없음 → 로드된 목록에서 제목·카테고리·재료로 클라이언트 필터.
+  const recipes = (data?.recipes ?? []).filter((r) => {
+    if (query && !r.title.toLowerCase().includes(query)) return false;
+    if (selectedCats.size > 0 && !selectedCats.has(r.categoryCode)) return false;
+    if (selectedIngs.size > 0 && !r.ingredientNames.some((n) => selectedIngs.has(n))) return false;
+    return true;
+  });
   const isFull = (data?.totalCount ?? 0) >= MAX_SLOTS;
   const animate = useEnteringOnce('recipes'); // 최초 진입에만 카드 순차 등장
+
+  const sortLabel = sort === 'LATEST' ? '최신순' : '오래된순';
+  const removeCat = (c: RecipeCategory) =>
+    setSelectedCats((prev) => {
+      const next = new Set(prev);
+      next.delete(c);
+      return next;
+    });
+  const removeIng = (n: string) =>
+    setSelectedIngs((prev) => {
+      const next = new Set(prev);
+      next.delete(n);
+      return next;
+    });
 
   // + 탭 — 슬롯 가득 차면 안내 팝업, 아니면 등록 메뉴 토글
   const onFabPress = () => (isFull ? router.push('/slot-full') : setMenuOpen((o) => !o));
@@ -101,10 +140,47 @@ export default function RecipesScreen() {
             onChangeText={setQ}
             returnKeyType="search"
           />
-          <View className="flex-row gap-2">
-            {FILTERS.map((f) => (
-              <FilterChip key={f} label={f} />
-            ))}
+          {/* Figma: 1줄 = 총 N개(좌) + 정렬 컴팩트 드롭다운(우), 2줄 = 카테고리·재료 칩 */}
+          <View className="gap-3">
+            <View className="flex-row items-center justify-between">
+              <Text className="text-[14px] leading-[17px] text-foreground">
+                총 {recipes.length}개
+              </Text>
+              {/* 정렬 — 테두리 없는 컴팩트 드롭다운(최신순 탭 → 등록일순 시트) */}
+              <PressableScale
+                onPress={() => setSheet('sort')}
+                accessibilityRole="button"
+                haptic="selection"
+                className="h-5 flex-row items-center gap-1"
+              >
+                <Text className="text-chip text-foreground">{sortLabel}</Text>
+                <Image
+                  source={require('../assets/images/ic-chevron-down.png')}
+                  style={{ width: 20, height: 20 }}
+                  tintColor={palette.muted}
+                  contentFit="contain"
+                />
+              </PressableScale>
+            </View>
+            <View className="flex-row gap-2">
+              <FilterChip label="카테고리" onPress={() => setSheet('filter')} />
+              <FilterChip label="재료" onPress={() => setSheet('filter')} />
+            </View>
+            {/* 적용된 필터 — 골드 태그 + × 로 제거 */}
+            {selectedCats.size > 0 || selectedIngs.size > 0 ? (
+              <View className="flex-row flex-wrap gap-x-4 gap-y-2">
+                {[...selectedCats].map((c) => (
+                  <ActiveFilterTag
+                    key={`c-${c}`}
+                    label={RECIPE_CATEGORY_LABEL[c]}
+                    onRemove={() => removeCat(c)}
+                  />
+                ))}
+                {[...selectedIngs].map((n) => (
+                  <ActiveFilterTag key={`i-${n}`} label={n} onRemove={() => removeIng(n)} />
+                ))}
+              </View>
+            ) : null}
           </View>
           {/* 목록 — 로딩/에러/빈 상태 후 2열 그리드.
               폭(48%)은 Animated 래퍼에 inline style로(애니메이션 노드에 className 금지). */}
@@ -182,6 +258,33 @@ export default function RecipesScreen() {
           <Feather name="plus" size={24} color={palette.ink} />
         </PressableScale>
       </View>
+
+      {/* 카테고리·재료 필터 시트 */}
+      {sheet === 'filter' ? (
+        <RecipeFilterSheet
+          ingredients={ingredientData?.ingredients ?? []}
+          categories={selectedCats}
+          ingredientNames={selectedIngs}
+          onCancel={() => setSheet(null)}
+          onApply={(cats, ings) => {
+            setSelectedCats(cats);
+            setSelectedIngs(ings);
+            setSheet(null);
+          }}
+        />
+      ) : null}
+
+      {/* 등록일순 정렬 시트 */}
+      {sheet === 'sort' ? (
+        <RecipeSortSheet
+          sort={sort}
+          onCancel={() => setSheet(null)}
+          onApply={(s) => {
+            setSort(s);
+            setSheet(null);
+          }}
+        />
+      ) : null}
     </View>
   );
 }

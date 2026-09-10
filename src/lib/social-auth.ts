@@ -46,7 +46,8 @@ async function getNaverAccessToken(): Promise<string> {
     consumerKey: process.env.EXPO_PUBLIC_NAVER_CLIENT_ID ?? '',
     consumerSecret: process.env.EXPO_PUBLIC_NAVER_CLIENT_SECRET ?? '',
     serviceUrlSchemeIOS: 'naverlogin',
-    disableNaverAppAuthIOS: true,
+    // false = 네이버 앱 설치 시 app-to-app. Info.plist LSApplicationQueriesSchemes 필요.
+    disableNaverAppAuthIOS: false,
   });
   const res = await NaverLogin.login();
   if (!res.isSuccess || !res.successResponse?.accessToken) {

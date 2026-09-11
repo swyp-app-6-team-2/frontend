@@ -1,19 +1,44 @@
 import { useRef, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Alert, Pressable, Text, View } from 'react-native';
 import { Image } from 'expo-image';
+import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { RecommendPopup } from '@/components/recommend-popup';
 import { TabBar } from '@/components/tab-bar';
 import { AppText } from '@/components/ui';
 import { palette } from '@/constants/tokens';
+import { useRecipes } from '@/hooks/use-api';
+import type { RecipeListItem } from '@/lib/api/types';
 
 const RECO = ['랜덤으로 골라줘', '내재료로 골라줘'];
 
+// 저장 레시피 중 랜덤 1개(재추천 시 직전과 다르게). 없으면 null.
+// 모듈 레벨(react-compiler가 렌더 내 Math.random을 impure로 막는다).
+function pickRandomRecipe(recipes: RecipeListItem[], excludeId?: number): RecipeListItem | null {
+  const pool = recipes.filter((r) => r.recipeId !== excludeId);
+  const list = pool.length > 0 ? pool : recipes;
+  return list.length > 0 ? list[Math.floor(Math.random() * list.length)] : null;
+}
+
 export default function HomeScreen() {
+  const router = useRouter();
+  const { data } = useRecipes();
+  const recipes = data?.recipes ?? [];
   const [hasStar, setHasStar] = useState(true);
   const [reco, setReco] = useState(RECO[0]);
   const [open, setOpen] = useState(false);
+  const [recommend, setRecommend] = useState<RecipeListItem | null>(null);
   const lastTap = useRef(0);
+
+  // 추천 옵션 선택 → 랜덤 레시피 팝업 (저장 레시피 없으면 안내)
+  const onRecommend = (label: string) => {
+    setReco(label);
+    setOpen(false);
+    const rec = pickRandomRecipe(recipes);
+    if (rec) setRecommend(rec);
+    else Alert.alert('추천할 레시피가 없어요', '먼저 레시피를 저장해주세요.');
+  };
 
   // 더블탭 → 별 토글(별똥별 떨어짐)
   const onSkyTap = () => {
@@ -94,10 +119,7 @@ export default function HomeScreen() {
                   {RECO.map((r) => (
                     <Pressable
                       key={r}
-                      onPress={() => {
-                        setReco(r);
-                        setOpen(false);
-                      }}
+                      onPress={() => onRecommend(r)}
                       className="h-[47px] items-center justify-center active:opacity-80"
                     >
                       <Text className="text-[16px] leading-[19px] text-foreground">{r}</Text>
@@ -128,6 +150,20 @@ export default function HomeScreen() {
         {/* 떠 있는 탭바 */}
         <TabBar active="home" />
       </SafeAreaView>
+
+      {/* 메뉴 추천 결과 팝업 */}
+      {recommend ? (
+        <RecommendPopup
+          recipe={recommend}
+          onReroll={() => setRecommend((cur) => pickRandomRecipe(recipes, cur?.recipeId) ?? cur)}
+          onView={() => {
+            const id = recommend.recipeId;
+            setRecommend(null);
+            router.push({ pathname: '/recipe-view', params: { id: String(id) } });
+          }}
+          onClose={() => setRecommend(null)}
+        />
+      ) : null}
     </View>
   );
 }

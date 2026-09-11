@@ -210,15 +210,15 @@ export function RecipeSortSheet({
       <AppText variant="body" className="text-foreground">
         등록일순
       </AppText>
-      <View className="mt-4">
+      <View className="mt-10">
         {SORT_OPTIONS.map((opt, i) => (
           <View key={opt.key}>
-            {i > 0 ? <View className="my-3 h-px bg-disabled" /> : null}
+            {i > 0 ? <View className="my-5 h-px bg-disabled" /> : null}
             <Pressable
               onPress={() => setSel(opt.key)}
               accessibilityRole="button"
               accessibilityState={{ selected: sel === opt.key }}
-              className="h-9 items-center justify-center active:opacity-80"
+              className="h-12 items-center justify-center active:opacity-80"
             >
               <Text
                 className={`text-[14px] leading-[17px] ${

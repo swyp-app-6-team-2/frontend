@@ -1,17 +1,27 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
-import Animated, { Easing, FadeIn, SlideInDown } from 'react-native-reanimated';
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 
 import {
   INGREDIENT_CATEGORY_EMOJI,
   RECIPE_CATEGORY_LABEL,
   RECIPE_CATEGORY_ORDER,
 } from '@/constants/labels';
+import { useReduceMotion } from '@/hooks/use-reduce-motion';
 import type { Ingredient, RecipeCategory, RecipeListSort } from '@/lib/api/types';
 
 import { AppText } from './ui';
 
-// 하단 시트 껍데기 — 딤 배경 + (튕김 없이) 스르륵 슬라이드업 + 취소/확인 버튼.
+// 시트를 화면 아래로 완전히 밀어내는 거리(px) — 닫힘 슬라이드용.
+const OFFSCREEN = 700;
+
+// 하단 시트 껍데기 — 위로 스르륵 등장, 닫을 땐 아래로 스르륵 하강 후 unmount.
+// (Modal이 즉시 닫히면 exit이 안 보여서, shared value로 enter/exit을 직접 제어)
 function SheetShell({
   onCancel,
   onConfirm,
@@ -21,33 +31,79 @@ function SheetShell({
   onConfirm: () => void;
   children: ReactNode;
 }) {
+  const reduceMotion = useReduceMotion();
+  const ty = useSharedValue(reduceMotion ? 0 : OFFSCREEN);
+  const op = useSharedValue(reduceMotion ? 1 : 0);
+  const pending = useRef<(() => void) | null>(null);
+  const [closing, setClosing] = useState(false);
+
+  // 등장/닫힘을 한 이펙트로(단일 writer — react-compiler가 op/ty 재대입을 막는 걸 회피).
+  // closing=false → 위로 스르륵 등장, true → 아래로 스르륵 하강 후 실제 unmount.
+  useEffect(() => {
+    if (reduceMotion) {
+      ty.value = closing ? OFFSCREEN : 0;
+      op.value = closing ? 0 : 1;
+      if (closing) pending.current?.();
+      return;
+    }
+    if (closing) {
+      op.value = withTiming(0, { duration: 220 });
+      ty.value = withTiming(OFFSCREEN, { duration: 260, easing: Easing.in(Easing.cubic) });
+      const done = pending.current;
+      const t = setTimeout(() => done?.(), 280);
+      return () => clearTimeout(t);
+    }
+    op.value = withTiming(1, { duration: 200 });
+    ty.value = withTiming(0, { duration: 300, easing: Easing.out(Easing.cubic) });
+  }, [closing, reduceMotion, op, ty]);
+
+  const requestClose = (done: () => void) => {
+    pending.current = done;
+    setClosing(true);
+  };
+
+  const overlayStyle = useAnimatedStyle(() => ({ opacity: op.value }));
+  const sheetStyle = useAnimatedStyle(() => ({ transform: [{ translateY: ty.value }] }));
+
   return (
-    <Modal transparent visible animationType="none" onRequestClose={onCancel} statusBarTranslucent>
-      <Animated.View entering={FadeIn.duration(150)} className="flex-1 bg-background/85">
-        <Pressable className="flex-1" onPress={onCancel} accessibilityLabel="닫기" />
-      </Animated.View>
-      <Animated.View
-        entering={SlideInDown.duration(260).easing(Easing.out(Easing.cubic))}
-        className="absolute inset-x-0 bottom-0 rounded-t-[20px] bg-field"
-      >
-        <View className="px-screen pt-6">{children}</View>
-        <View className="flex-row gap-3 px-screen pb-8 pt-4">
+    <Modal
+      transparent
+      visible
+      animationType="none"
+      statusBarTranslucent
+      onRequestClose={() => requestClose(onCancel)}
+    >
+      <View className="flex-1">
+        <Animated.View style={overlayStyle} className="flex-1 bg-background/85">
           <Pressable
-            onPress={onCancel}
-            accessibilityRole="button"
-            className="h-[52px] flex-1 items-center justify-center rounded-pill bg-popup-button active:opacity-80"
-          >
-            <Text className="text-[16px] font-semibold text-popup-button-text">취소</Text>
-          </Pressable>
-          <Pressable
-            onPress={onConfirm}
-            accessibilityRole="button"
-            className="h-[52px] flex-1 items-center justify-center rounded-pill bg-primary active:opacity-90"
-          >
-            <Text className="text-[16px] font-semibold text-ink">확인</Text>
-          </Pressable>
-        </View>
-      </Animated.View>
+            className="flex-1"
+            onPress={() => requestClose(onCancel)}
+            accessibilityLabel="닫기"
+          />
+        </Animated.View>
+        <Animated.View
+          style={sheetStyle}
+          className="absolute inset-x-0 bottom-0 rounded-t-[20px] bg-field"
+        >
+          <View className="px-screen pt-6">{children}</View>
+          <View className="flex-row gap-3 px-screen pb-8 pt-4">
+            <Pressable
+              onPress={() => requestClose(onCancel)}
+              accessibilityRole="button"
+              className="h-[52px] flex-1 items-center justify-center rounded-pill bg-popup-button active:opacity-80"
+            >
+              <Text className="text-[16px] font-semibold text-popup-button-text">취소</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => requestClose(onConfirm)}
+              accessibilityRole="button"
+              className="h-[52px] flex-1 items-center justify-center rounded-pill bg-primary active:opacity-90"
+            >
+              <Text className="text-[16px] font-semibold text-ink">확인</Text>
+            </Pressable>
+          </View>
+        </Animated.View>
+      </View>
     </Modal>
   );
 }
@@ -154,10 +210,10 @@ export function RecipeSortSheet({
       <AppText variant="body" className="text-foreground">
         등록일순
       </AppText>
-      <View className="mt-6">
+      <View className="mt-4">
         {SORT_OPTIONS.map((opt, i) => (
           <View key={opt.key}>
-            {i > 0 ? <View className="my-4 h-px bg-disabled" /> : null}
+            {i > 0 ? <View className="my-3 h-px bg-disabled" /> : null}
             <Pressable
               onPress={() => setSel(opt.key)}
               accessibilityRole="button"

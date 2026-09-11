@@ -32,6 +32,7 @@ export default function RootLayout() {
           <Stack.Screen name="(tabs)" options={{ animation: 'none' }} />
           <Stack.Screen name="home" options={{ animation: 'none' }} />
           <Stack.Screen name="fridge" options={{ animation: 'none' }} />
+          <Stack.Screen name="ingredients" options={{ animation: 'none' }} />
           <Stack.Screen name="recipes" options={{ animation: 'none' }} />
           <Stack.Screen name="my" options={{ animation: 'none' }} />
         </Stack>

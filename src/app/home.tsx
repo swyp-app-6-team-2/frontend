@@ -8,7 +8,7 @@ import { RecommendPopup } from '@/components/recommend-popup';
 import { TabBar } from '@/components/tab-bar';
 import { AppText } from '@/components/ui';
 import { palette } from '@/constants/tokens';
-import { useRecipes } from '@/hooks/use-api';
+import { useIngredients, useRecipes } from '@/hooks/use-api';
 import type { RecipeListItem } from '@/lib/api/types';
 
 const RECO = ['랜덤으로 골라줘', '내재료로 골라줘'];
@@ -23,8 +23,10 @@ function pickRandomRecipe(recipes: RecipeListItem[], excludeId?: number): Recipe
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { data } = useRecipes();
+  // 나의 레시피 화면과 같은 쿼리 키(sort:'LATEST')를 써서 캐시를 공유 → 탭 진입 즉시 표시.
+  const { data } = useRecipes({ sort: 'LATEST' });
   const recipes = data?.recipes ?? [];
+  useIngredients(); // 재료관리 탭 워밍업(staleTime Infinity라 세션당 1회만 fetch)
   const [hasStar, setHasStar] = useState(true);
   const [reco, setReco] = useState(RECO[0]);
   const [open, setOpen] = useState(false);

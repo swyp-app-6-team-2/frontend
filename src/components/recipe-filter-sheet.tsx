@@ -210,7 +210,7 @@ export function RecipeSortSheet({
       <AppText variant="body" className="text-foreground">
         등록일순
       </AppText>
-      <View className="mt-10">
+      <View className="mb-9 mt-10">
         {SORT_OPTIONS.map((opt, i) => (
           <View key={opt.key}>
             {i > 0 ? <View className="my-5 h-px bg-disabled" /> : null}

@@ -16,12 +16,29 @@ import { useIngredients } from '@/hooks/use-api';
 import type { Ingredient } from '@/lib/api/types';
 
 // Figma 칩 — 이모지 + 이름, bg #1E2230(field), h36, pill, px16.
-function IngredientChip({ ing }: { ing: Ingredient }) {
+// 탭으로 보유 여부 토글: 보유=흰색, 미보유=muted. (백엔드 보유 플래그 전까지 로컬 상태)
+function IngredientChip({
+  ing,
+  owned,
+  onToggle,
+}: {
+  ing: Ingredient;
+  owned: boolean;
+  onToggle: () => void;
+}) {
   return (
-    <View className="h-9 flex-row items-center gap-1.5 rounded-pill bg-field px-4">
+    <PressableScale
+      onPress={onToggle}
+      haptic="selection"
+      accessibilityRole="button"
+      accessibilityState={{ selected: owned }}
+      className="h-9 flex-row items-center gap-1.5 rounded-pill bg-field px-4"
+    >
       <Text className="text-[14px]">{INGREDIENT_CATEGORY_EMOJI[ing.categoryCode]}</Text>
-      <Text className="text-[14px] leading-[17px] text-foreground">{ing.name}</Text>
-    </View>
+      <Text className={`text-[14px] leading-[17px] ${owned ? 'text-foreground' : 'text-muted'}`}>
+        {ing.name}
+      </Text>
+    </PressableScale>
   );
 }
 
@@ -31,6 +48,15 @@ export default function IngredientsScreen() {
   const insets = useSafeAreaInsets();
   const [q, setQ] = useState('');
   const query = q.trim().toLowerCase();
+  // 미보유(dim)로 표시할 재료 이름 — 비어 있으면 전부 보유(흰색). 탭으로 토글(로컬).
+  const [dimmed, setDimmed] = useState<Set<string>>(new Set());
+  const toggleOwned = (name: string) =>
+    setDimmed((prev) => {
+      const next = new Set(prev);
+      if (next.has(name)) next.delete(name);
+      else next.add(name);
+      return next;
+    });
 
   const { data, isLoading, isError } = useIngredients();
   const items = useMemo(() => data?.ingredients ?? [], [data]);
@@ -94,7 +120,12 @@ export default function IngredientsScreen() {
                 </View>
                 <View className="flex-row flex-wrap gap-2">
                   {s.items.map((ing) => (
-                    <IngredientChip key={ing.ingredientId} ing={ing} />
+                    <IngredientChip
+                      key={ing.ingredientId}
+                      ing={ing}
+                      owned={!dimmed.has(ing.name)}
+                      onToggle={() => toggleOwned(ing.name)}
+                    />
                   ))}
                 </View>
               </View>

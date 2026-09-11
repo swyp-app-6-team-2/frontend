@@ -15,7 +15,7 @@ if (__DEV__) {
 }
 
 // Root Stack: the (tabs) group is the base screen; detail pages (design-system,
-// my-trade, …) push on top. Each page renders its own header via <Screen>, so
+// cook-complete, …) push on top. Each page renders its own header via <Screen>, so
 // the native stack header is hidden.
 export default function RootLayout() {
   const colorScheme = useColorScheme();

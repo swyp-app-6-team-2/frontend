@@ -1,6 +1,6 @@
 import { Modal, Pressable, Text, View } from 'react-native';
 import { Image } from 'expo-image';
-import Animated, { FadeIn, ZoomIn } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 
 import type { RecipeListItem } from '@/lib/api/types';
 
@@ -27,7 +27,7 @@ export function RecommendPopup({
       >
         <Pressable className="absolute inset-0" onPress={onClose} accessibilityLabel="닫기" />
         <Animated.View
-          entering={ZoomIn.springify().damping(14)}
+          entering={FadeIn.duration(180)}
           className="w-full max-w-[362px] overflow-hidden rounded-[20px]"
         >
           {/* 추천 레시피 이미지 */}
@@ -56,14 +56,14 @@ export function RecommendPopup({
                 accessibilityRole="button"
                 className="h-[52px] flex-1 items-center justify-center rounded-[30px] bg-popup-button active:opacity-80"
               >
-                <Text className="text-[16px] font-semibold text-popup-button-text">다시 추천</Text>
+                <Text className="text-[16px] font-semibold text-popup-button-text">안 땡겨요</Text>
               </Pressable>
               <Pressable
                 onPress={onView}
                 accessibilityRole="button"
                 className="h-[52px] flex-1 items-center justify-center rounded-[30px] bg-primary active:opacity-90"
               >
-                <Text className="text-[16px] font-semibold text-ink">보기</Text>
+                <Text className="text-[16px] font-semibold text-ink">좋아!</Text>
               </Pressable>
             </View>
           </View>

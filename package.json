@@ -50,7 +50,9 @@
     "typescript": "~6.0.3"
   },
   "scripts": {
-    "start": "expo start",
+    "start": "expo start --dev-client",
+    "start:local": "EXPO_PUBLIC_API_BASE_URL=http://localhost:8080 expo start --dev-client -c",
+    "start:dev": "EXPO_PUBLIC_API_BASE_URL=https://dev-api.starpick.cloud expo start --dev-client -c",
     "reset-project": "node ./scripts/reset-project.js",
     "android": "expo run:android",
     "ios": "expo run:ios",

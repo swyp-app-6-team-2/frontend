@@ -67,22 +67,15 @@ function TwinkleStar({ spec, reduceMotion }: { spec: StarSpec; reduceMotion: boo
     transform: [{ scale: 0.65 + v.value * 0.35 }],
   }));
   return (
-    <Animated.Text
-      style={[
-        {
-          position: 'absolute',
-          left: `${spec.left}%`,
-          top: `${spec.top}%`,
-          fontSize: spec.size,
-          color: palette.primary,
-          textShadowColor: palette.primary,
-          textShadowRadius: 6,
-        },
-        style,
-      ]}
+    <Animated.View
+      style={[{ position: 'absolute', left: `${spec.left}%`, top: `${spec.top}%` }, style]}
     >
-      ★
-    </Animated.Text>
+      <Image
+        source={require('../assets/images/star.png')}
+        style={{ width: spec.size, height: spec.size }}
+        contentFit="contain"
+      />
+    </Animated.View>
   );
 }
 

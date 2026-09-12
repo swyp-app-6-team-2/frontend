@@ -99,22 +99,11 @@ function NightSky() {
           <Text className="font-bold text-foreground">5/10</Text>
         </View>
       </View>
-      {/* 산 */}
+      {/* 바닥 돔(지평선) */}
       <View className="absolute inset-0 justify-end">
         <Image
-          source={require('../assets/images/mountain2.png')}
-          style={{
-            position: 'absolute',
-            bottom: 128,
-            left: -12,
-            width: '58%',
-            aspectRatio: 253 / 119,
-          }}
-          contentFit="contain"
-        />
-        <Image
-          source={require('../assets/images/mountain.png')}
-          style={{ width: '100%', aspectRatio: 328 / 176 }}
+          source={require('../assets/images/notify-bottom.png')}
+          style={{ width: '100%', aspectRatio: 402 / 257 }}
           contentFit="cover"
         />
       </View>
@@ -446,7 +435,7 @@ export default function OnboardingScreen() {
           <View className="pb-3" pointerEvents="box-none">
             <View className="flex-row items-end justify-between" pointerEvents="box-none">
               <Image
-                source={require('../assets/images/character.png')}
+                source={require('../assets/images/mascot-blob.png')}
                 style={{ width: 68, height: 64, opacity: 0.4 }}
                 contentFit="contain"
               />
@@ -503,7 +492,7 @@ export default function OnboardingScreen() {
           <View className="pb-3" pointerEvents="none">
             <View className="flex-row items-end justify-between">
               <Image
-                source={require('../assets/images/character.png')}
+                source={require('../assets/images/mascot-blob.png')}
                 style={{ width: 68, height: 64, opacity: 0.4 }}
                 contentFit="contain"
               />

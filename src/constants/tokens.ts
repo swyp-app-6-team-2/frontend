@@ -24,6 +24,7 @@ export const palette = {
   popupButton: '#34394B',
   popupButtonText: '#A5A7AD',
   recoPanel: '#181F42',
+  slot: '#36398A',
   recoButton: '#0C1033',
   success: '#2FA96B',
   error: '#FF6B5E',

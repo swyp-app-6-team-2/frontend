@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import Animated, {
@@ -125,33 +125,28 @@ export default function CookCompleteScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      {/* 산 + 캐릭터 — 홈과 같은 별따먹자 비주얼 언어 */}
+      {/* 구름 배경 + 바닥 돔 + 캐릭터 — 홈과 동일 비주얼 */}
       <View pointerEvents="none" className="absolute inset-0">
         <Image
-          source={require('../assets/images/mountain2.png')}
-          style={{
-            position: 'absolute',
-            bottom: 10,
-            left: '45%',
-            width: '58%',
-            aspectRatio: 253 / 119,
-          }}
-          contentFit="contain"
+          source={require('../assets/images/sky-bg.png')}
+          style={StyleSheet.absoluteFill}
+          contentFit="cover"
         />
         <Image
-          source={require('../assets/images/mountain.png')}
+          source={require('../assets/images/notify-bottom.png')}
           style={{
             position: 'absolute',
-            bottom: -45,
-            left: '-8%',
-            width: '116%',
-            aspectRatio: 328 / 176,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            width: '100%',
+            aspectRatio: 402 / 257,
           }}
           contentFit="cover"
         />
         <Image
-          source={require('../assets/images/character.png')}
-          style={{ position: 'absolute', left: '19%', bottom: 178, width: 49, height: 46 }}
+          source={require('../assets/images/mascot-blob.png')}
+          style={{ position: 'absolute', left: '14%', bottom: 138, width: 110, height: 110 }}
           contentFit="contain"
         />
       </View>

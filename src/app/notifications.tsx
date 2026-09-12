@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Image } from 'expo-image';
 import { Feather } from '@expo/vector-icons';
 import ReanimatedSwipeable, {
   type SwipeableMethods,
@@ -419,14 +420,20 @@ function DeleteAction({
     return { opacity: p, transform: [{ scale: 0.5 + 0.5 * p }] };
   });
   return (
-    <Animated.View style={style} className="h-full justify-center pl-3">
+    <Animated.View style={style} className="h-full justify-center">
       <Pressable
         onPress={onPress}
         accessibilityRole="button"
         accessibilityLabel={label}
-        className="h-11 w-11 items-center justify-center rounded-full bg-error active:opacity-80"
+        hitSlop={12}
+        className="h-11 w-[54px] items-center justify-center active:opacity-60"
       >
-        <Feather name="x" size={22} color={palette.foreground} />
+        <Image
+          source={require('../assets/images/ic-close.png')}
+          style={{ width: 16, height: 16 }}
+          tintColor={palette.muted}
+          contentFit="contain"
+        />
       </Pressable>
     </Animated.View>
   );

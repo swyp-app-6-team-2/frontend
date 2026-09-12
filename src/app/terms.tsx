@@ -121,7 +121,7 @@ export default function TermsScreen() {
               canSubmit ? 'text-ink' : 'text-body-muted'
             }`}
           >
-            완료하기
+            확인
           </Text>
         </Pressable>
       </View>

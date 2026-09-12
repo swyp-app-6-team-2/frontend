@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import ReanimatedSwipeable, {
+  type SwipeableMethods,
+} from 'react-native-gesture-handler/ReanimatedSwipeable';
 import Animated, {
-  FadeIn,
-  SlideInDown,
+  Easing,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
@@ -12,7 +14,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText, PressableScale, Screen } from '@/components/ui';
 import { palette } from '@/constants/tokens';
+import { useReduceMotion } from '@/hooks/use-reduce-motion';
 import { fireHaptic } from '@/lib/haptics';
+
+// 바텀시트를 화면 아래로 밀어내는 거리(px) — 닫힘 슬라이드용.
+const SHEET_OFFSCREEN = 700;
 
 const DAYS = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -225,6 +231,39 @@ function TimeSheet({
   const p = parseTime(times[active]);
   const sel = useRef({ ampm: p.ampm, hour: p.hour, min: p.min });
 
+  // 등장/닫힘 슬라이드 — 스르륵 위로 등장, 닫을 땐 아래로 하강 후 unmount.
+  const reduceMotion = useReduceMotion();
+  const ty = useSharedValue(reduceMotion ? 0 : SHEET_OFFSCREEN);
+  const op = useSharedValue(reduceMotion ? 1 : 0);
+  const pending = useRef<(() => void) | null>(null);
+  const [closing, setClosing] = useState(false);
+
+  useEffect(() => {
+    if (reduceMotion) {
+      ty.value = closing ? SHEET_OFFSCREEN : 0;
+      op.value = closing ? 0 : 1;
+      if (closing) pending.current?.();
+      return;
+    }
+    if (closing) {
+      op.value = withTiming(0, { duration: 220 });
+      ty.value = withTiming(SHEET_OFFSCREEN, { duration: 260, easing: Easing.in(Easing.cubic) });
+      const done = pending.current;
+      const t = setTimeout(() => done?.(), 280);
+      return () => clearTimeout(t);
+    }
+    op.value = withTiming(1, { duration: 200 });
+    ty.value = withTiming(0, { duration: 300, easing: Easing.out(Easing.cubic) });
+  }, [closing, reduceMotion, op, ty]);
+
+  const requestClose = (done: () => void) => {
+    pending.current = done;
+    setClosing(true);
+  };
+
+  const overlayStyle = useAnimatedStyle(() => ({ opacity: op.value }));
+  const sheetStyle = useAnimatedStyle(() => ({ transform: [{ translateY: ty.value }] }));
+
   // 다른 알람 칩으로 전환 — 현재 휠 값을 저장 후 그 알람 시간으로 리셋(휠은 key로 리마운트).
   const switchTo = (i: number) => {
     if (i === active) return;
@@ -239,32 +278,41 @@ function TimeSheet({
   const confirm = () => {
     fireHaptic('success');
     const cur = formatTime(sel.current.ampm, sel.current.hour, sel.current.min);
-    onConfirm(times.map((t, k) => (k === active ? cur : t)));
+    const result = times.map((t, k) => (k === active ? cur : t));
+    requestClose(() => onConfirm(result));
   };
 
   return (
-    <Modal transparent visible animationType="none" onRequestClose={onCancel}>
+    <Modal
+      transparent
+      visible
+      animationType="none"
+      statusBarTranslucent
+      onRequestClose={() => requestClose(onCancel)}
+    >
       <View className="flex-1 justify-end">
-        {/* 딤 — 탭하면 취소 */}
-        <Animated.View entering={FadeIn.duration(150)} style={{ flex: 1 }}>
+        {/* 딤 — 탭하면 취소(스르륵 닫힘) */}
+        <Animated.View style={[overlayStyle, { flex: 1 }]}>
           <Pressable
             className="flex-1 bg-background/85"
-            onPress={onCancel}
+            onPress={() => requestClose(onCancel)}
             accessibilityLabel="닫기"
           />
         </Animated.View>
 
         {/* 바텀시트 */}
         <Animated.View
-          entering={SlideInDown.springify().damping(22).mass(0.9)}
           className="absolute inset-x-0 bottom-0 rounded-t-[20px] bg-field"
-          style={{
-            paddingBottom: insets.bottom + 26,
-            shadowColor: '#000000',
-            shadowOpacity: 0.35,
-            shadowRadius: 30,
-            shadowOffset: { width: 0, height: -9 },
-          }}
+          style={[
+            sheetStyle,
+            {
+              paddingBottom: insets.bottom + 26,
+              shadowColor: '#000000',
+              shadowOpacity: 0.35,
+              shadowRadius: 30,
+              shadowOffset: { width: 0, height: -9 },
+            },
+          ]}
         >
           <View className="items-center gap-8 px-5 pt-8">
             {/* 상단 알람 전환 세그먼트 (Frame 1437264107) */}
@@ -334,7 +382,7 @@ function TimeSheet({
             {/* 취소 / 확인 */}
             <View className="flex-row gap-3 self-stretch">
               <Pressable
-                onPress={onCancel}
+                onPress={() => requestClose(onCancel)}
                 accessibilityRole="button"
                 className="h-[52px] flex-1 items-center justify-center rounded-pill bg-popup-button active:opacity-80"
               >
@@ -352,6 +400,59 @@ function TimeSheet({
         </Animated.View>
       </View>
     </Modal>
+  );
+}
+
+// 알람 행 — 왼쪽으로 밀면 오른쪽에 X(삭제)가 드러난다. 탭(편집 모드)하면 시간 시트.
+function AlarmRow({
+  alarm,
+  editing,
+  onPress,
+  onDelete,
+}: {
+  alarm: { label: string; time: string };
+  editing: boolean;
+  onPress: () => void;
+  onDelete: () => void;
+}) {
+  const ref = useRef<SwipeableMethods>(null);
+  return (
+    <View className="gap-2">
+      <Text className="text-[16px] leading-[21px] text-muted">{alarm.label}</Text>
+      <ReanimatedSwipeable
+        ref={ref}
+        renderRightActions={() => (
+          <Pressable
+            onPress={() => {
+              fireHaptic('warning');
+              ref.current?.close();
+              onDelete();
+            }}
+            accessibilityRole="button"
+            accessibilityLabel={`${alarm.label} 삭제`}
+            className="ml-2 w-[54px] items-center justify-center rounded-pill bg-field active:opacity-80"
+          >
+            <Feather name="x" size={20} color={palette.muted} />
+          </Pressable>
+        )}
+        rightThreshold={40}
+        overshootRight={false}
+        friction={1.6}
+      >
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`${alarm.label} 시간 ${alarm.time}`}
+          disabled={!editing}
+          onPress={onPress}
+          className={`flex-row items-center gap-2.5 rounded-pill bg-field px-4 py-2.5 active:opacity-80 ${
+            editing ? 'border border-primary' : ''
+          }`}
+        >
+          <Feather name="clock" size={24} color={palette.muted} />
+          <Text className="text-[16px] leading-[21px] text-foreground">{alarm.time}</Text>
+        </Pressable>
+      </ReanimatedSwipeable>
+    </View>
   );
 }
 
@@ -400,23 +501,15 @@ export default function NotificationsScreen() {
             </Pressable>
           </View>
 
-          {/* 알람 시간 — 편집 모드에서 탭하면 시간 휠 바텀시트 */}
+          {/* 알람 시간 — 탭(편집)하면 시간 시트, 왼쪽으로 밀면 X로 삭제 */}
           {alarms.map((a, i) => (
-            <View key={a.label} className="gap-2">
-              <Text className="text-[16px] leading-[21px] text-muted">{a.label}</Text>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={`${a.label} 시간 ${a.time}`}
-                disabled={!editing}
-                onPress={() => setSheetFor(i)}
-                className={`flex-row items-center gap-2.5 rounded-pill bg-field px-4 py-2.5 active:opacity-80 ${
-                  editing ? 'border border-primary' : ''
-                }`}
-              >
-                <Feather name="clock" size={24} color={palette.muted} />
-                <Text className="text-[16px] leading-[21px] text-foreground">{a.time}</Text>
-              </Pressable>
-            </View>
+            <AlarmRow
+              key={a.label}
+              alarm={a}
+              editing={editing}
+              onPress={() => setSheetFor(i)}
+              onDelete={() => setAlarms((prev) => prev.filter((_, k) => k !== i))}
+            />
           ))}
 
           {/* + 추가 (편집 모드에서만 활성 느낌) */}

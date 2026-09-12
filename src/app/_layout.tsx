@@ -1,6 +1,7 @@
 import { LogBox, useColorScheme } from 'react-native';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { QueryProvider } from '@/components/query-provider';
@@ -25,18 +26,20 @@ export default function RootLayout() {
   const reduceMotion = useReduceMotion();
   const animation = reduceMotion ? 'none' : 'fade';
   return (
-    <QueryProvider>
-      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-        <AnimatedSplashOverlay />
-        <Stack screenOptions={{ headerShown: false, animation }}>
-          <Stack.Screen name="(tabs)" options={{ animation: 'none' }} />
-          <Stack.Screen name="home" options={{ animation: 'none' }} />
-          <Stack.Screen name="fridge" options={{ animation: 'none' }} />
-          <Stack.Screen name="ingredients" options={{ animation: 'none' }} />
-          <Stack.Screen name="recipes" options={{ animation: 'none' }} />
-          <Stack.Screen name="my" options={{ animation: 'none' }} />
-        </Stack>
-      </ThemeProvider>
-    </QueryProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <QueryProvider>
+        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+          <AnimatedSplashOverlay />
+          <Stack screenOptions={{ headerShown: false, animation }}>
+            <Stack.Screen name="(tabs)" options={{ animation: 'none' }} />
+            <Stack.Screen name="home" options={{ animation: 'none' }} />
+            <Stack.Screen name="fridge" options={{ animation: 'none' }} />
+            <Stack.Screen name="ingredients" options={{ animation: 'none' }} />
+            <Stack.Screen name="recipes" options={{ animation: 'none' }} />
+            <Stack.Screen name="my" options={{ animation: 'none' }} />
+          </Stack>
+        </ThemeProvider>
+      </QueryProvider>
+    </GestureHandlerRootView>
   );
 }

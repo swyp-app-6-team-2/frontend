@@ -1,7 +1,16 @@
-import { useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withRepeat,
+  withSequence,
+  withTiming,
+} from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { RecommendPopup } from '@/components/recommend-popup';
@@ -9,6 +18,7 @@ import { TabBar } from '@/components/tab-bar';
 import { AppText } from '@/components/ui';
 import { palette } from '@/constants/tokens';
 import { useIngredients, useRecipes } from '@/hooks/use-api';
+import { useReduceMotion } from '@/hooks/use-reduce-motion';
 import type { RecipeListItem } from '@/lib/api/types';
 
 const RECO = ['랜덤으로 골라줘', '내재료로 골라줘'];
@@ -21,12 +31,80 @@ function pickRandomRecipe(recipes: RecipeListItem[], excludeId?: number): Recipe
   return list.length > 0 ? list[Math.floor(Math.random() * list.length)] : null;
 }
 
+// 레시피 수만큼 밤하늘에 흩뿌리는 반짝이별 — 시야를 안 가리게 상단~중앙 하늘 영역에만.
+const MAX_STARS = 24;
+type StarSpec = { left: number; top: number; size: number; delay: number; dur: number };
+// 모듈 레벨(react-compiler가 렌더 내 Math.random을 막는다). 위치는 무작위·비겹침 지향.
+function makeStars(count: number): StarSpec[] {
+  return Array.from({ length: Math.min(Math.max(count, 0), MAX_STARS) }, () => ({
+    left: 6 + Math.random() * 86, // 6%~92%
+    top: 15 + Math.random() * 48, // 15%~63% (제목 아래 ~ 캐릭터/드롭다운 위)
+    size: 10 + Math.random() * 12, // 10~22
+    delay: Math.random() * 2200,
+    dur: 1600 + Math.random() * 1600, // 1.6~3.2s 반짝임 주기
+  }));
+}
+
+// 별 하나 — 투명↔불투명을 천천히 왕복(반짝임). reduce-motion이면 은은히 고정.
+function TwinkleStar({ spec, reduceMotion }: { spec: StarSpec; reduceMotion: boolean }) {
+  const v = useSharedValue(reduceMotion ? 0.8 : 0);
+  useEffect(() => {
+    if (reduceMotion) return;
+    v.value = withDelay(
+      spec.delay,
+      withRepeat(
+        withSequence(
+          withTiming(1, { duration: spec.dur * 0.5, easing: Easing.inOut(Easing.quad) }),
+          withTiming(0.08, { duration: spec.dur * 0.5, easing: Easing.inOut(Easing.quad) }),
+        ),
+        -1,
+        false,
+      ),
+    );
+  }, [reduceMotion, v, spec.delay, spec.dur]);
+  const style = useAnimatedStyle(() => ({
+    opacity: 0.08 + v.value * 0.92,
+    transform: [{ scale: 0.65 + v.value * 0.35 }],
+  }));
+  return (
+    <Animated.Text
+      style={[
+        {
+          position: 'absolute',
+          left: `${spec.left}%`,
+          top: `${spec.top}%`,
+          fontSize: spec.size,
+          color: palette.primary,
+          textShadowColor: palette.primary,
+          textShadowRadius: 6,
+        },
+        style,
+      ]}
+    >
+      ★
+    </Animated.Text>
+  );
+}
+
+function StarField({ count, reduceMotion }: { count: number; reduceMotion: boolean }) {
+  const stars = useMemo(() => makeStars(count), [count]);
+  return (
+    <View pointerEvents="none" className="absolute inset-0">
+      {stars.map((s, i) => (
+        <TwinkleStar key={i} spec={s} reduceMotion={reduceMotion} />
+      ))}
+    </View>
+  );
+}
+
 export default function HomeScreen() {
   const router = useRouter();
   // 나의 레시피 화면과 같은 쿼리 키(sort:'LATEST')를 써서 캐시를 공유 → 탭 진입 즉시 표시.
   const { data } = useRecipes({ sort: 'LATEST' });
   const recipes = data?.recipes ?? [];
   useIngredients(); // 재료관리 탭 워밍업(staleTime Infinity라 세션당 1회만 fetch)
+  const reduceMotion = useReduceMotion();
+  const starCount = data?.totalCount ?? recipes.length; // 내가 만든 레시피 수 = 밤하늘 별 수
   const [hasStar, setHasStar] = useState(true);
   const [reco, setReco] = useState(RECO[0]);
   const [open, setOpen] = useState(false);
@@ -58,6 +136,8 @@ export default function HomeScreen() {
           style={StyleSheet.absoluteFill}
           contentFit="cover"
         />
+        {/* 레시피 수만큼 반짝이는 별 */}
+        <StarField count={starCount} reduceMotion={reduceMotion} />
         {/* 바닥 돔 — 하단 전체 */}
         <Image
           source={require('../assets/images/notify-bottom.png')}

@@ -45,8 +45,16 @@ function makeStars(count: number): StarSpec[] {
   }));
 }
 
-// 별 하나 — 투명↔불투명을 천천히 왕복(반짝임). reduce-motion이면 은은히 고정.
-function TwinkleStar({ spec, reduceMotion }: { spec: StarSpec; reduceMotion: boolean }) {
+// 별 하나 — 투명↔불투명을 천천히 왕복(반짝임). 탭하면 매핑된 레시피를 연다.
+function TwinkleStar({
+  spec,
+  reduceMotion,
+  onPress,
+}: {
+  spec: StarSpec;
+  reduceMotion: boolean;
+  onPress: () => void;
+}) {
   const v = useSharedValue(reduceMotion ? 0.8 : 0);
   useEffect(() => {
     if (reduceMotion) return;
@@ -67,24 +75,44 @@ function TwinkleStar({ spec, reduceMotion }: { spec: StarSpec; reduceMotion: boo
     transform: [{ scale: 0.65 + v.value * 0.35 }],
   }));
   return (
-    <Animated.View
-      style={[{ position: 'absolute', left: `${spec.left}%`, top: `${spec.top}%` }, style]}
+    <Pressable
+      onPress={onPress}
+      hitSlop={16}
+      accessibilityRole="button"
+      accessibilityLabel="레시피 별"
+      style={{ position: 'absolute', left: `${spec.left}%`, top: `${spec.top}%` }}
     >
-      <Image
-        source={require('../assets/images/star.png')}
-        style={{ width: spec.size, height: spec.size }}
-        contentFit="contain"
-      />
-    </Animated.View>
+      <Animated.View style={style}>
+        <Image
+          source={require('../assets/images/star.png')}
+          style={{ width: spec.size, height: spec.size }}
+          contentFit="contain"
+        />
+      </Animated.View>
+    </Pressable>
   );
 }
 
-function StarField({ count, reduceMotion }: { count: number; reduceMotion: boolean }) {
-  const stars = useMemo(() => makeStars(count), [count]);
+// 레시피 1개당 별 1개(로드된 목록). 탭하면 onPick(recipe).
+function StarField({
+  recipes,
+  reduceMotion,
+  onPick,
+}: {
+  recipes: RecipeListItem[];
+  reduceMotion: boolean;
+  onPick: (r: RecipeListItem) => void;
+}) {
+  const stars = useMemo(() => makeStars(recipes.length), [recipes.length]);
   return (
-    <View pointerEvents="none" className="absolute inset-0">
+    <View pointerEvents="box-none" className="absolute inset-0">
       {stars.map((s, i) => (
-        <TwinkleStar key={i} spec={s} reduceMotion={reduceMotion} />
+        <TwinkleStar
+          key={i}
+          spec={s}
+          reduceMotion={reduceMotion}
+          onPress={() => onPick(recipes[i])}
+        />
       ))}
     </View>
   );
@@ -96,8 +124,7 @@ export default function HomeScreen() {
   const { data } = useRecipes({ sort: 'LATEST' });
   const recipes = data?.recipes ?? [];
   useIngredients(); // 재료관리 탭 워밍업(staleTime Infinity라 세션당 1회만 fetch)
-  const reduceMotion = useReduceMotion();
-  const starCount = data?.totalCount ?? recipes.length; // 내가 만든 레시피 수 = 밤하늘 별 수
+  const reduceMotion = useReduceMotion(); // 밤하늘 별 = 내 레시피 수(1개당 1개, 탭 시 팝업)
   const [hasStar, setHasStar] = useState(true);
   const [reco, setReco] = useState(RECO[0]);
   const [open, setOpen] = useState(false);
@@ -129,8 +156,6 @@ export default function HomeScreen() {
           style={StyleSheet.absoluteFill}
           contentFit="cover"
         />
-        {/* 레시피 수만큼 반짝이는 별 */}
-        <StarField count={starCount} reduceMotion={reduceMotion} />
         {/* 바닥 돔 — 하단 전체 */}
         <Image
           source={require('../assets/images/notify-bottom.png')}
@@ -154,6 +179,9 @@ export default function HomeScreen() {
 
       {/* 빈 하늘 더블탭 영역 */}
       <Pressable className="absolute inset-0" onPress={onSkyTap} accessibilityLabel="밤하늘" />
+
+      {/* 레시피 별 — 탭하면 그 레시피가 팝업으로 (더블탭 하늘 위 레이어) */}
+      <StarField recipes={recipes} reduceMotion={reduceMotion} onPick={setRecommend} />
 
       <SafeAreaView className="flex-1" edges={['top', 'bottom']} pointerEvents="box-none">
         {/* 상단: 별따먹자 + 별 진행도 */}

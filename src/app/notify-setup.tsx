@@ -52,7 +52,12 @@ export default function NotifySetupScreen() {
   };
 
   return (
-    <Screen title="" back bgImage={require('../assets/images/terms-bg.png')}>
+    <Screen
+      title=""
+      back
+      bgImage={require('../assets/images/terms-bg.png')}
+      bgBottomImage={require('../assets/images/notify-bottom.png')}
+    >
       <View className="flex-1">
         {/* 제목 + 부제 */}
         <Text className="mt-2 text-[24px] font-bold leading-[31px] text-foreground">
@@ -90,8 +95,8 @@ export default function NotifySetupScreen() {
           </View>
         </View>
 
-        {/* 마스코트 */}
-        <View className="flex-1 items-center justify-center">
+        {/* 마스코트 — 하단 바닥 이미지 위쪽에 위치 */}
+        <View className="flex-1 items-center justify-end pb-2">
           <Image
             source={require('../assets/images/notify-mascot.png')}
             style={{ width: 160, height: 120 }}
@@ -116,7 +121,7 @@ export default function NotifySetupScreen() {
               canSubmit ? 'text-ink' : 'text-body-muted'
             }`}
           >
-            완료하기
+            확인
           </Text>
         </Pressable>
         <Pressable
@@ -125,7 +130,7 @@ export default function NotifySetupScreen() {
           hitSlop={8}
           className="self-center py-1 active:opacity-70"
         >
-          <Text className="text-[14px] font-medium leading-[18px] text-muted">취소할게요</Text>
+          <Text className="text-[14px] font-medium leading-[18px] text-muted">다르게 할게요</Text>
         </Pressable>
       </View>
     </Screen>

@@ -25,6 +25,8 @@ export type ScreenProps = {
   contentClassName?: string;
   /** Full-bleed background image behind content (e.g. require('...')). */
   bgImage?: ImageSource | number;
+  /** Decorative image pinned to the bottom edge, behind content (402×257 기준). */
+  bgBottomImage?: ImageSource | number;
 };
 
 /**
@@ -48,11 +50,27 @@ export function Screen({
   scrollRef,
   contentClassName,
   bgImage,
+  bgBottomImage,
 }: ScreenProps) {
   return (
     <View className="flex-1 bg-background">
       {bgImage ? (
         <Image source={bgImage} style={StyleSheet.absoluteFill} contentFit="cover" />
+      ) : null}
+      {bgBottomImage ? (
+        <Image
+          source={bgBottomImage}
+          style={{
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            bottom: 0,
+            width: '100%',
+            aspectRatio: 402 / 257,
+          }}
+          contentFit="cover"
+          pointerEvents="none"
+        />
       ) : null}
       <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
         {title != null ? (

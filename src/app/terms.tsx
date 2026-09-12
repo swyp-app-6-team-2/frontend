@@ -4,15 +4,15 @@ import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 
 import { AppText, Chevron, Screen } from '@/components/ui';
-import { palette } from '@/constants/tokens';
 
 // 서비스 이용 동의 — 소셜 로그인 후 신규 회원 가입 절차(약관 동의). Figma 619:9650.
-type Key = 'age' | 'tos' | 'privacy' | 'marketing';
+type Key = 'age' | 'tos' | 'privacy' | 'notify' | 'marketing';
 
 const ITEMS: { key: Key; label: string }[] = [
   { key: 'age', label: '(필수) 만 14세 이상입니다.' },
   { key: 'tos', label: '(필수) 서비스 이용약관' },
   { key: 'privacy', label: '(필수) 개인정보 처리방침' },
+  { key: 'notify', label: '(선택) 서비스 알림 수신 동의' },
   { key: 'marketing', label: '(선택) 마케팅 정보 수신동의' },
 ];
 const REQUIRED: Key[] = ['age', 'tos', 'privacy'];
@@ -38,6 +38,7 @@ export default function TermsScreen() {
     age: false,
     tos: false,
     privacy: false,
+    notify: false,
     marketing: false,
   });
 
@@ -47,7 +48,7 @@ export default function TermsScreen() {
   const toggle = (k: Key) => setChecked((p) => ({ ...p, [k]: !p[k] }));
   const toggleAll = () => {
     const next = !allOn;
-    setChecked({ age: next, tos: next, privacy: next, marketing: next });
+    setChecked({ age: next, tos: next, privacy: next, notify: next, marketing: next });
   };
 
   const onSubmit = () => {
@@ -80,8 +81,8 @@ export default function TermsScreen() {
             </Text>
           </Pressable>
 
-          {/* 구분선 */}
-          <View className="h-px bg-disabled" />
+          {/* 구분선 (Figma #989AA0 계열) */}
+          <View className="h-px bg-muted" />
 
           {/* 개별 항목 (gap 32) */}
           <View className="gap-8">
@@ -111,14 +112,13 @@ export default function TermsScreen() {
           disabled={!canSubmit}
           accessibilityRole="button"
           accessibilityState={{ disabled: !canSubmit }}
-          className={`h-[52px] items-center justify-center rounded-pill active:opacity-90 ${
-            canSubmit ? 'bg-primary' : ''
+          className={`h-[52px] items-center justify-center rounded-[30px] active:opacity-90 ${
+            canSubmit ? 'bg-primary' : 'bg-disabled'
           }`}
-          style={canSubmit ? undefined : { borderWidth: 1, borderColor: palette.disabledLine }}
         >
           <Text
             className={`text-[16px] font-semibold leading-[21px] ${
-              canSubmit ? 'text-ink' : 'text-disabled'
+              canSubmit ? 'text-ink' : 'text-body-muted'
             }`}
           >
             완료하기

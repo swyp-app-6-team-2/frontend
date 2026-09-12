@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import ReanimatedSwipeable, {
   type SwipeableMethods,
@@ -9,6 +9,7 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withTiming,
+  type SharedValue,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -403,37 +404,71 @@ function TimeSheet({
   );
 }
 
-// 알람 행 — 왼쪽으로 밀면 오른쪽에 X(삭제)가 드러난다. 탭(편집 모드)하면 시간 시트.
+// 스와이프 진행도(0→1)에 따라 커지며 페이드인되는 원형 삭제 버튼.
+function DeleteAction({
+  progress,
+  onPress,
+  label,
+}: {
+  progress: SharedValue<number>;
+  onPress: () => void;
+  label: string;
+}) {
+  const style = useAnimatedStyle(() => {
+    const p = Math.min(1, progress.value);
+    return { opacity: p, transform: [{ scale: 0.5 + 0.5 * p }] };
+  });
+  return (
+    <Animated.View style={style} className="h-full justify-center pl-3">
+      <Pressable
+        onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        className="h-11 w-11 items-center justify-center rounded-full bg-error active:opacity-80"
+      >
+        <Feather name="x" size={22} color={palette.foreground} />
+      </Pressable>
+    </Animated.View>
+  );
+}
+
+// 알람 행 — 제목 입력 + 시간(탭하면 시트) + 왼쪽 스와이프 삭제.
 function AlarmRow({
   alarm,
   editing,
   onPress,
   onDelete,
+  onChangeLabel,
 }: {
-  alarm: { label: string; time: string };
+  alarm: { id: string; label: string; time: string };
   editing: boolean;
   onPress: () => void;
   onDelete: () => void;
+  onChangeLabel: (text: string) => void;
 }) {
   const ref = useRef<SwipeableMethods>(null);
   return (
     <View className="gap-2">
-      <Text className="text-[16px] leading-[21px] text-muted">{alarm.label}</Text>
+      <TextInput
+        value={alarm.label}
+        onChangeText={onChangeLabel}
+        editable={editing}
+        placeholder="알림 제목을 입력해주세요"
+        placeholderTextColor={palette.muted}
+        className="p-0 text-[16px] leading-[21px] text-muted"
+      />
       <ReanimatedSwipeable
         ref={ref}
-        renderRightActions={() => (
-          <Pressable
+        renderRightActions={(progress) => (
+          <DeleteAction
+            progress={progress}
+            label={`${alarm.label || '알람'} 삭제`}
             onPress={() => {
               fireHaptic('warning');
               ref.current?.close();
               onDelete();
             }}
-            accessibilityRole="button"
-            accessibilityLabel={`${alarm.label} 삭제`}
-            className="ml-2 w-[54px] items-center justify-center rounded-pill bg-field active:opacity-80"
-          >
-            <Feather name="x" size={20} color={palette.muted} />
-          </Pressable>
+          />
         )}
         rightThreshold={40}
         overshootRight={false}
@@ -441,7 +476,7 @@ function AlarmRow({
       >
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={`${alarm.label} 시간 ${alarm.time}`}
+          accessibilityLabel={`${alarm.label || '알람'} 시간 ${alarm.time}`}
           disabled={!editing}
           onPress={onPress}
           className={`flex-row items-center gap-2.5 rounded-pill bg-field px-4 py-2.5 active:opacity-80 ${
@@ -462,10 +497,11 @@ export default function NotificationsScreen() {
   const [editing, setEditing] = useState(false);
   const [days, setDays] = useState<Set<number>>(() => new Set([0, 1, 2])); // 기본 일·월·화
   const [alarms, setAlarms] = useState([
-    { label: '아침 알람', time: '오전 8:00' },
-    { label: '점심 알람', time: '오후 12:00' },
-    { label: '저녁 알람', time: '오후 6:00' },
+    { id: 'a1', label: '아침 알람', time: '오전 8:00' },
+    { id: 'a2', label: '점심 알람', time: '오후 12:00' },
+    { id: 'a3', label: '저녁 알람', time: '오후 6:00' },
   ]);
+  const nextId = useRef(4); // 새 알람 고유 id 생성용
   const [sheetFor, setSheetFor] = useState<number | null>(null);
 
   const toggleDay = (i: number) =>
@@ -504,11 +540,14 @@ export default function NotificationsScreen() {
           {/* 알람 시간 — 탭(편집)하면 시간 시트, 왼쪽으로 밀면 X로 삭제 */}
           {alarms.map((a, i) => (
             <AlarmRow
-              key={a.label}
+              key={a.id}
               alarm={a}
               editing={editing}
               onPress={() => setSheetFor(i)}
               onDelete={() => setAlarms((prev) => prev.filter((_, k) => k !== i))}
+              onChangeLabel={(text) =>
+                setAlarms((prev) => prev.map((al, k) => (k === i ? { ...al, label: text } : al)))
+              }
             />
           ))}
 
@@ -520,7 +559,7 @@ export default function NotificationsScreen() {
             onPress={() =>
               setAlarms((prev) => [
                 ...prev,
-                { label: `알람 ${prev.length + 1}`, time: '오전 9:00' },
+                { id: `a${nextId.current++}`, label: '', time: '오전 9:00' },
               ])
             }
             className={`h-12 flex-row items-center justify-center gap-1 rounded-pill border border-disabled ${

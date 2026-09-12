@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Alert, Pressable, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -51,8 +51,13 @@ export default function HomeScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      {/* 지평선(돔) 바닥 + 캐릭터 */}
+      {/* 구름 배경 + 바닥 돔 + 캐릭터 */}
       <View pointerEvents="none" className="absolute inset-0">
+        <Image
+          source={require('../assets/images/sky-bg.png')}
+          style={StyleSheet.absoluteFill}
+          contentFit="cover"
+        />
         {/* 바닥 돔 — 하단 전체 */}
         <Image
           source={require('../assets/images/notify-bottom.png')}
@@ -66,7 +71,7 @@ export default function HomeScreen() {
           }}
           contentFit="cover"
         />
-        {/* 캐릭터 — 돔 위 왼쪽(추천 드롭다운과 겹치지 않게) */}
+        {/* 캐릭터 — 바닥 위 왼쪽(추천 드롭다운과 겹치지 않게) */}
         <Image
           source={require('../assets/images/mascot-blob.png')}
           style={{ position: 'absolute', left: '14%', bottom: 138, width: 110, height: 110 }}

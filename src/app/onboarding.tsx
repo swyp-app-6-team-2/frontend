@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
@@ -88,6 +88,12 @@ function NightSky() {
   const insets = useSafeAreaInsets();
   return (
     <View pointerEvents="none" className="absolute inset-0">
+      {/* 구름 배경 (홈과 동일) */}
+      <Image
+        source={require('../assets/images/sky-bg.png')}
+        style={StyleSheet.absoluteFill}
+        contentFit="cover"
+      />
       {/* 홈 헤더 (배경) */}
       <View
         className="absolute left-5 right-5 flex-row items-center justify-between"
@@ -107,6 +113,12 @@ function NightSky() {
           contentFit="cover"
         />
       </View>
+      {/* 캐릭터 — 홈과 동일 좌표/크기 */}
+      <Image
+        source={require('../assets/images/mascot-blob.png')}
+        style={{ position: 'absolute', left: '14%', bottom: 138, width: 110, height: 110 }}
+        contentFit="contain"
+      />
     </View>
   );
 }
@@ -433,12 +445,7 @@ export default function OnboardingScreen() {
         ) : s.spot === 'dropdown' ? (
           // 뭐 먹을지 — 추천 드롭다운 펼침(강조 패널 + 토글 버튼)
           <View className="pb-3" pointerEvents="box-none">
-            <View className="flex-row items-end justify-between" pointerEvents="box-none">
-              <Image
-                source={require('../assets/images/mascot-blob.png')}
-                style={{ width: 68, height: 64, opacity: 0.4 }}
-                contentFit="contain"
-              />
+            <View className="flex-row items-end justify-end" pointerEvents="box-none">
               <View className="mb-10 items-end gap-2" pointerEvents="box-none">
                 {/* 강조된 옵션 패널 — 눌러야 온보딩 끝 (랜덤=흰색, 내재료=dim) */}
                 <Pressable
@@ -490,12 +497,7 @@ export default function OnboardingScreen() {
         ) : (
           // 밤하늘 — 드롭다운 dim 닫힘 (강조는 상단 별 스포트라이트)
           <View className="pb-3" pointerEvents="none">
-            <View className="flex-row items-end justify-between">
-              <Image
-                source={require('../assets/images/mascot-blob.png')}
-                style={{ width: 68, height: 64, opacity: 0.4 }}
-                contentFit="contain"
-              />
+            <View className="flex-row items-end justify-end">
               <View className="mb-10 flex-row items-center gap-2 rounded-pill border border-foreground/15 bg-surface/50 px-4 py-3">
                 <Text className="font-medium text-foreground/50">랜덤으로 골라줘</Text>
                 <Text className="text-muted/50">▼</Text>

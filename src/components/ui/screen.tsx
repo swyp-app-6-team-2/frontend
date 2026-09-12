@@ -1,5 +1,6 @@
 import type { ReactNode, Ref } from 'react';
-import { ScrollView, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
+import { Image, type ImageSource } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ScreenHeader } from './screen-header';
@@ -22,6 +23,8 @@ export type ScreenProps = {
   scrollRef?: Ref<ScrollView>;
   /** Extra classes on the body container / scroll content. */
   contentClassName?: string;
+  /** Full-bleed background image behind content (e.g. require('...')). */
+  bgImage?: ImageSource | number;
 };
 
 /**
@@ -44,9 +47,13 @@ export function Screen({
   scroll,
   scrollRef,
   contentClassName,
+  bgImage,
 }: ScreenProps) {
   return (
     <View className="flex-1 bg-background">
+      {bgImage ? (
+        <Image source={bgImage} style={StyleSheet.absoluteFill} contentFit="cover" />
+      ) : null}
       <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
         {title != null ? (
           <ScreenHeader

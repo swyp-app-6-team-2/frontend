@@ -58,7 +58,7 @@ export default function TermsScreen() {
   };
 
   return (
-    <Screen title="" back>
+    <Screen title="" back bgImage={require('../assets/images/terms-bg.png')}>
       <View className="flex-1">
         {/* 제목 */}
         <AppText variant="title" className="mt-2">

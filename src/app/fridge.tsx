@@ -15,6 +15,7 @@ import { palette } from '@/constants/tokens';
 import { useIngredients } from '@/hooks/use-api';
 import { useEnteringOnce } from '@/hooks/use-entering-once';
 import type { IngredientCategory } from '@/lib/api/types';
+import { addMyIngredients, useMyIngredientIds } from '@/lib/my-ingredients';
 
 // 재료관리 — 검색 + 카테고리 칩 + 재료 그리드. 재료 마스터(GET /ingredients) 연결.
 export default function FridgeScreen() {
@@ -27,29 +28,52 @@ export default function FridgeScreen() {
   const query = q.trim().toLowerCase();
   const animate = useEnteringOnce('fridge');
 
+  // 선택한 재료 id 집합. 1개 이상 선택 시 등록하기 활성화.
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const toggleSelect = (id: number) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
+  const onRegister = () => {
+    if (selected.size === 0) return;
+    // 세션 store에 담는다. 백엔드 '내 재료 저장' API가 생기면 여기서 서버 전송으로 교체.
+    addMyIngredients([...selected]);
+    router.back();
+  };
+
   const { data, isLoading, isError } = useIngredients();
   const items = useMemo(() => data?.ingredients ?? [], [data]);
+  // 이미 담은 재료는 추가 화면에서 제외한다. (세션 store — 백엔드 저장 API 생기면 교체)
+  const owned = useMyIngredientIds();
+  const available = useMemo(
+    () => items.filter((it) => !owned.has(it.ingredientId)),
+    [items, owned],
+  );
 
   // 칩: 전체 + 항목이 있는 카테고리만. category=null 이 전체.
   const chips = useMemo(() => {
     const withItems = INGREDIENT_CATEGORY_ORDER.filter((cat) =>
-      items.some((it) => it.categoryCode === cat),
+      available.some((it) => it.categoryCode === cat),
     );
     return [
-      { category: null as IngredientCategory | null, label: '전체', count: items.length },
+      { category: null as IngredientCategory | null, label: '전체', count: available.length },
       ...withItems.map((cat) => ({
         category: cat,
         label: INGREDIENT_CATEGORY_LABEL[cat],
-        count: items.filter((it) => it.categoryCode === cat).length,
+        count: available.filter((it) => it.categoryCode === cat).length,
       })),
     ];
-  }, [items]);
+  }, [available]);
 
   const selectedCategory = chips[active]?.category ?? null;
   // 카테고리 + 검색어(이름/별칭) 클라이언트 필터. 백엔드는 재료 검색을 주지 않는다.
   const visible = useMemo(
     () =>
-      items.filter((it) => {
+      available.filter((it) => {
         if (selectedCategory && it.categoryCode !== selectedCategory) return false;
         if (
           query &&
@@ -59,7 +83,7 @@ export default function FridgeScreen() {
           return false;
         return true;
       }),
-    [items, selectedCategory, query],
+    [available, selectedCategory, query],
   );
 
   // 선택한 칩이 가로 스크롤 가운데로 오도록
@@ -152,7 +176,17 @@ export default function FridgeScreen() {
                           animate ? FadeInDown.delay(staggerDelay(idx)).springify() : undefined
                         }
                       >
-                        <View className="aspect-[110/83] w-full items-center justify-center gap-2 rounded-[12px] bg-popup-button">
+                        <PressableScale
+                          onPress={() => toggleSelect(item.ingredientId)}
+                          haptic="selection"
+                          accessibilityRole="button"
+                          accessibilityState={{ selected: selected.has(item.ingredientId) }}
+                          className={`aspect-[110/83] w-full items-center justify-center gap-2 rounded-[12px] border-2 bg-popup-button ${
+                            selected.has(item.ingredientId)
+                              ? 'border-primary'
+                              : 'border-transparent'
+                          }`}
+                        >
                           {/* 백엔드 재료 아이콘(iconUrl) 우선, 없으면 카테고리 이모지 폴백 */}
                           {item.iconUrl ? (
                             <Image
@@ -172,7 +206,7 @@ export default function FridgeScreen() {
                           >
                             {item.name}
                           </Text>
-                        </View>
+                        </PressableScale>
                       </Animated.View>
                     );
                   })}
@@ -184,14 +218,22 @@ export default function FridgeScreen() {
       </View>
 
       <View className="gap-1 pb-6">
-        <Button label="완료하기" onPress={() => router.back()} />
+        <Button
+          label={selected.size ? `등록하기 (${selected.size})` : '등록하기'}
+          disabled={selected.size === 0}
+          onPress={onRegister}
+        />
         <PressableScale
-          onPress={() => router.back()}
+          onPress={() => router.push('/add-ingredient')}
           haptic="light"
           accessibilityRole="button"
+          accessibilityLabel="재료가 없어요, 직접 입력할게요"
           className="items-center py-3"
         >
-          <Text className="text-[14px] leading-[18px] text-muted">취소할게요</Text>
+          <Text className="text-[14px] leading-[18px] text-muted">
+            재료가 없어요,{' '}
+            <Text className="font-medium text-foreground underline">직접 입력할게요</Text>
+          </Text>
         </PressableScale>
       </View>
     </Screen>

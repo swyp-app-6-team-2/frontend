@@ -77,12 +77,12 @@ flowchart LR
   <tr>
     <td align="center"><b>재료관리(내 냉장고)</b></td>
     <td align="center"><b>재료 추가하기</b></td>
-    <td align="center"><b>레시피 등록 방법</b></td>
+    <td></td>
   </tr>
   <tr>
     <td><img src="docs/screenshots/ingredients.png" width="240" alt="재료관리 — 카테고리별 재료 태그" /></td>
     <td><img src="docs/screenshots/fridge.png" width="240" alt="재료 추가하기 — 카테고리 필터 + 다중 선택" /></td>
-    <td><img src="docs/screenshots/add-recipe.png" width="240" alt="레시피 등록 방법 — URL·이미지·직접" /></td>
+    <td></td>
   </tr>
 </table>
 

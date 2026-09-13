@@ -1,0 +1,51 @@
+name: Discord push notify (main)
+
+# main에 푸시될 때마다 Discord로 커밋 알림을 보낸다.
+# 사용 전 저장소 Secret에 DISCORD_WEBHOOK(디스코드 채널 웹훅 URL)을 추가해야 한다.
+#   Settings → Secrets and variables → Actions → New repository secret
+#   Name: DISCORD_WEBHOOK  /  Value: https://discord.com/api/webhooks/xxx/yyy  (끝에 /github 붙이지 말 것)
+on:
+  push:
+    branches: [main]
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Discord notification
+        # 시크릿이 없으면 조용히 건너뛴다(빨간 실패 대신 통과).
+        if: ${{ secrets.DISCORD_WEBHOOK != '' }}
+        env:
+          WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+          COMMITS: ${{ toJSON(github.event.commits) }}
+          PUSHER: ${{ github.event.pusher.name }}
+          COMPARE: ${{ github.event.compare }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          # 커밋 목록 → "• 메시지 첫 줄 (짧은해시)" (최대 10개, 초과분은 요약)
+          desc=$(printf '%s' "$COMMITS" | jq -r '
+            (.[:10] | map("• " + (.message | split("\n")[0]) + " (`" + .id[:7] + "`)") | join("\n"))
+            + (if length > 10 then "\n… 외 \(length - 10)개" else "" end)
+          ')
+          count=$(printf '%s' "$COMMITS" | jq 'length')
+
+          payload=$(jq -n \
+            --arg desc "$desc" \
+            --arg pusher "$PUSHER" \
+            --arg compare "$COMPARE" \
+            --arg repo "$REPO" \
+            --argjson count "$count" \
+            '{
+              username: "별따먹자 GitHub",
+              embeds: [{
+                title: "🚀 \($repo) · main에 \($count)개 커밋 푸시",
+                url: $compare,
+                description: (if $desc == "" then "(커밋 정보 없음)" else $desc end),
+                color: 16766039,
+                footer: { text: "pushed by \($pusher)" }
+              }]
+            }')
+
+          curl -sf -H "Content-Type: application/json" -X POST "$WEBHOOK" -d "$payload"

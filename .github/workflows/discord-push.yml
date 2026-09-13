@@ -13,8 +13,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Send Discord notification
-        # 시크릿이 없으면 조용히 건너뛴다(빨간 실패 대신 통과).
-        if: ${{ secrets.DISCORD_WEBHOOK != '' }}
         env:
           WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
           COMMITS: ${{ toJSON(github.event.commits) }}
@@ -23,6 +21,8 @@ jobs:
           REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
+          # 시크릿이 없으면 조용히 건너뛴다(빨간 실패 대신 통과).
+          if [ -z "${WEBHOOK:-}" ]; then echo "DISCORD_WEBHOOK 미설정 — 알림 생략"; exit 0; fi
 
           # 커밋 목록 → "• 메시지 첫 줄 (짧은해시)" (최대 10개, 초과분은 요약)
           desc=$(printf '%s' "$COMMITS" | jq -r '

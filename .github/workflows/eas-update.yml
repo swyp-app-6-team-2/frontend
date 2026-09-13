@@ -54,7 +54,7 @@ jobs:
           echo "msg=$msg" >> "$GITHUB_OUTPUT"
 
       - name: Notify Discord
-        if: ${{ always() && secrets.DISCORD_WEBHOOK != '' }}
+        if: ${{ always() }}
         env:
           WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
           STATUS: ${{ job.status }}
@@ -63,6 +63,7 @@ jobs:
           ACTOR: ${{ github.actor }}
         run: |
           set -euo pipefail
+          if [ -z "${WEBHOOK:-}" ]; then echo "DISCORD_WEBHOOK 미설정 — 알림 생략"; exit 0; fi
           if [ "$STATUS" = "success" ]; then
             title="📡 OTA 업데이트 배포됨 ($BRANCH)"
             color=5763719

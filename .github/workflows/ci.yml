@@ -30,6 +30,10 @@ jobs:
       - name: Install deps
         run: pnpm install --frozen-lockfile
 
+      # expo-env.d.ts는 gitignore(로컬에서 expo가 생성)라 CI엔 없어 CSS 모듈 타입이 빠진다. 재생성.
+      - name: Generate expo env types
+        run: echo '/// <reference types="expo/types" />' > expo-env.d.ts
+
       - name: Typecheck
         run: pnpm typecheck
 

@@ -53,7 +53,7 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       - name: Notify Discord
-        if: ${{ always() && secrets.DISCORD_WEBHOOK != '' }}
+        if: ${{ always() }}
         env:
           WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
           STATUS: ${{ job.status }}
@@ -63,6 +63,7 @@ jobs:
           ACTOR: ${{ github.actor }}
         run: |
           set -euo pipefail
+          if [ -z "${WEBHOOK:-}" ]; then echo "DISCORD_WEBHOOK 미설정 — 알림 생략"; exit 0; fi
           if [ "$STATUS" = "success" ]; then
             title="✅ iOS 빌드 성공 ($PROFILE)"
             color=5763719

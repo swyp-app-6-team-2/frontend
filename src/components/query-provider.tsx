@@ -2,6 +2,7 @@ import { useEffect, type ReactNode } from 'react';
 import { AppState, Platform, type AppStateStatus } from 'react-native';
 import { focusManager, QueryClientProvider } from '@tanstack/react-query';
 
+import { setTokens } from '@/lib/api/auth-token';
 import { queryClient } from '@/lib/query-client';
 
 // RN에는 브라우저 "window focus"가 없어 refetchOnWindowFocus가 동작하려면
@@ -17,6 +18,18 @@ export function QueryProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const sub = AppState.addEventListener('change', onAppStateChange);
     return () => sub.remove();
+  }, []);
+
+  // 개발용: 소셜 로그인 없이도 인증 필요한 API(레시피·재료 등)를 테스트하기 위해
+  // 더미 accessToken을 주입한다. 백엔드마다 JWT secret이 달라 서명이 맞는 토큰만 통과하므로,
+  // 현재 바라보는 백엔드(로컬/dev)에 맞춰 .env.local의 알맞은 토큰을 고른다.
+  useEffect(() => {
+    const host = process.env.EXPO_PUBLIC_API_BASE_URL ?? '';
+    const isLocal = /localhost|127\.0\.0\.1|10\.0\.2\.2|192\.168\.|172\.\d/.test(host);
+    const token = isLocal
+      ? process.env.EXPO_PUBLIC_LOCAL_ACCESS_TOKEN
+      : process.env.EXPO_PUBLIC_DEV_ACCESS_TOKEN;
+    if (__DEV__ && token) setTokens({ accessToken: token });
   }, []);
 
   return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;

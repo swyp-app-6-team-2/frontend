@@ -9,6 +9,11 @@ if (__DEV__ && !HOST) {
   console.warn('[api] EXPO_PUBLIC_API_BASE_URL 미설정 — API 요청이 실패합니다. .env에 설정하세요.');
 }
 
+// 개발 중 어느 백엔드(로컬/dev)에 붙었는지 한눈에. 서버 전환 시 헷갈림 방지.
+if (__DEV__) {
+  console.log(`[api] BASE = ${BASE}`);
+}
+
 /**
  * API 실패를 표준화한 에러. 화면은 HTTP status가 아니라 `code`로 분기한다.
  * - code: 도메인/공통 에러코드(예 "RECIPE_NOT_FOUND"). MVC/인증 표준 실패는 null.

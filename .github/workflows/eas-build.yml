@@ -1,0 +1,80 @@
+name: EAS build (iOS) + Discord
+
+# 수동 실행(Actions 탭 → Run workflow) → EAS iOS 빌드 → 완료되면 Discord로 ipa 링크 알림.
+# 필요한 Secret:
+#   EXPO_TOKEN     — Expo 액세스 토큰 (expo.dev → Account → Access tokens)
+#   DISCORD_WEBHOOK — 디스코드 채널 웹훅 URL (선택: 없으면 알림만 생략)
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: 'EAS build profile'
+        type: choice
+        options: [production, preview]
+        default: production
+
+jobs:
+  build:
+    name: EAS build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install deps
+        run: pnpm install --frozen-lockfile
+
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: EAS build (wait for completion)
+        id: build
+        env:
+          PROFILE: ${{ inputs.profile }}
+        run: |
+          set -euo pipefail
+          # --json + 기본 대기(=완료까지) → 완료된 빌드 객체 배열 출력
+          eas build --platform ios --profile "$PROFILE" --non-interactive --json > build.json
+          ipa=$(jq -r '.[0].artifacts.applicationArchiveUrl // .[0].artifacts.buildUrl // ""' build.json)
+          page=$(jq -r 'if .[0].id then "https://expo.dev/accounts/\(.[0].project.ownerAccount.name)/projects/\(.[0].project.slug)/builds/\(.[0].id)" else "" end' build.json)
+          {
+            echo "ipa=$ipa"
+            echo "page=$page"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Notify Discord
+        if: ${{ always() && secrets.DISCORD_WEBHOOK != '' }}
+        env:
+          WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+          STATUS: ${{ job.status }}
+          PROFILE: ${{ inputs.profile }}
+          IPA: ${{ steps.build.outputs.ipa }}
+          PAGE: ${{ steps.build.outputs.page }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          set -euo pipefail
+          if [ "$STATUS" = "success" ]; then
+            title="✅ iOS 빌드 성공 ($PROFILE)"
+            color=5763719
+          else
+            title="❌ iOS 빌드 실패 ($PROFILE)"
+            color=15548997
+          fi
+          links=""
+          [ -n "$IPA" ] && links="[ipa 다운로드]($IPA)"
+          [ -n "$PAGE" ] && links="$links${links:+  ·  }[빌드 페이지]($PAGE)"
+          [ -z "$links" ] && links="(빌드 아티팩트 링크 없음)"
+          payload=$(jq -n \
+            --arg title "$title" --arg desc "$links" --arg actor "$ACTOR" --argjson color "$color" \
+            '{ username: "별따먹자 EAS", embeds: [{ title: $title, description: $desc, color: $color, footer: { text: ("triggered by " + $actor) } }] }')
+          curl -sf -H "Content-Type: application/json" -X POST "$WEBHOOK" -d "$payload"

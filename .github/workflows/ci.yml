@@ -1,0 +1,37 @@
+name: CI
+
+# PR과 main 푸시마다 타입체크 + 린트를 돌려 깨진 코드를 막는다.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# 같은 브랜치/PR에서 새 커밋이 오면 이전 실행은 취소(러너 절약).
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: typecheck + lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install deps
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Lint
+        run: pnpm lint

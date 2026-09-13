@@ -1,0 +1,76 @@
+name: EAS Update (OTA)
+
+# JS·에셋만 바뀐 걸 빌드 없이 즉시 배포(OTA). 수동 실행(Actions → Run workflow).
+# ⚠️ 네이티브(모듈 추가·app.json 네이티브 설정)가 바뀐 커밋은 OTA로 안 되고 새 빌드가 필요.
+#    runtimeVersion=appVersion 정책이라 앱 버전이 맞는 빌드에만 업데이트가 도달한다.
+# 필요한 Secret: EXPO_TOKEN (필수), DISCORD_WEBHOOK (선택)
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'EAS branch (= 빌드 프로필 channel)'
+        type: choice
+        options: [production, preview]
+        default: production
+      message:
+        description: '업데이트 메시지 (비우면 마지막 커밋 제목)'
+        type: string
+        default: ''
+
+jobs:
+  update:
+    name: publish OTA
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install deps
+        run: pnpm install --frozen-lockfile
+
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Publish update
+        id: publish
+        env:
+          BRANCH: ${{ inputs.branch }}
+          MSG: ${{ inputs.message }}
+        run: |
+          set -euo pipefail
+          msg="$MSG"
+          [ -z "$msg" ] && msg="$(git log -1 --pretty=%s)"
+          eas update --branch "$BRANCH" --message "$msg" --non-interactive
+          echo "msg=$msg" >> "$GITHUB_OUTPUT"
+
+      - name: Notify Discord
+        if: ${{ always() && secrets.DISCORD_WEBHOOK != '' }}
+        env:
+          WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+          STATUS: ${{ job.status }}
+          BRANCH: ${{ inputs.branch }}
+          MSG: ${{ steps.publish.outputs.msg }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          set -euo pipefail
+          if [ "$STATUS" = "success" ]; then
+            title="📡 OTA 업데이트 배포됨 ($BRANCH)"
+            color=5763719
+          else
+            title="❌ OTA 배포 실패 ($BRANCH)"
+            color=15548997
+          fi
+          payload=$(jq -n \
+            --arg title "$title" --arg msg "${MSG:-(메시지 없음)}" --arg actor "$ACTOR" --argjson color "$color" \
+            '{ username: "별따먹자 OTA", embeds: [{ title: $title, description: $msg, color: $color, footer: { text: ("by " + $actor) } }] }')
+          curl -sf -H "Content-Type: application/json" -X POST "$WEBHOOK" -d "$payload"

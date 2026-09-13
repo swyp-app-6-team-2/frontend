@@ -13,6 +13,9 @@
       "supportsTablet": true,
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
+      },
+      "runtimeVersion": {
+        "policy": "appVersion"
       }
     },
     "android": {
@@ -23,7 +26,11 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "output": "static",
@@ -75,6 +82,9 @@
         "projectId": "79f3b953-0651-4384-91dd-bc878b19dc19"
       }
     },
-    "owner": "leeseunghwan123"
+    "owner": "leeseunghwan123",
+    "updates": {
+      "url": "https://u.expo.dev/79f3b953-0651-4384-91dd-bc878b19dc19"
+    }
   }
 }

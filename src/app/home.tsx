@@ -14,12 +14,14 @@ import Animated, {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { RecommendPopup } from '@/components/recommend-popup';
+import { SlotAddedPopup } from '@/components/slot-added-popup';
 import { TabBar } from '@/components/tab-bar';
 import { AppText } from '@/components/ui';
 import { palette } from '@/constants/tokens';
 import { useIngredients, useRecipes } from '@/hooks/use-api';
 import { useReduceMotion } from '@/hooks/use-reduce-motion';
 import type { RecipeListItem } from '@/lib/api/types';
+import { dismissSlotAdded, useSlotJustAdded } from '@/lib/slot-ads';
 
 const RECO = ['랜덤으로 골라줘', '내재료로 골라줘'];
 
@@ -33,16 +35,28 @@ function pickRandomRecipe(recipes: RecipeListItem[], excludeId?: number): Recipe
 
 // 레시피 수만큼 밤하늘에 흩뿌리는 반짝이별 — 시야를 안 가리게 상단~중앙 하늘 영역에만.
 const MAX_STARS = 24;
-type StarSpec = { left: number; top: number; size: number; delay: number; dur: number };
+type StarSpec = {
+  left: number;
+  top: number;
+  size: number;
+  bright: number;
+  delay: number;
+  dur: number;
+};
 // 모듈 레벨(react-compiler가 렌더 내 Math.random을 막는다). 위치는 무작위·비겹침 지향.
+// Figma: 별 = radial 글로우 2종 — 큰별 60px(밝게) / 작은별 40px(흐리게).
 function makeStars(count: number): StarSpec[] {
-  return Array.from({ length: Math.min(Math.max(count, 0), MAX_STARS) }, () => ({
-    left: 6 + Math.random() * 86, // 6%~92%
-    top: 15 + Math.random() * 48, // 15%~63% (제목 아래 ~ 캐릭터/드롭다운 위)
-    size: 10 + Math.random() * 12, // 10~22
-    delay: Math.random() * 2200,
-    dur: 1600 + Math.random() * 1600, // 1.6~3.2s 반짝임 주기
-  }));
+  return Array.from({ length: Math.min(Math.max(count, 0), MAX_STARS) }, () => {
+    const big = Math.random() < 0.4; // 큰별 약 40%
+    return {
+      left: 14 + Math.random() * 56, // 14%~70% (큰 별이 좌우 가장자리에 안 붙게 안쪽으로)
+      top: 15 + Math.random() * 48, // 15%~63% (제목 아래 ~ 캐릭터/드롭다운 위)
+      size: big ? 60 : 40, // 큰별 60 / 작은별 40
+      bright: big ? 1 : 0.45, // 큰별 밝게 / 작은별 흐리게
+      delay: Math.random() * 2200,
+      dur: 1600 + Math.random() * 1600, // 1.6~3.2s 반짝임 주기
+    };
+  });
 }
 
 // 별 하나 — 투명↔불투명을 천천히 왕복(반짝임). 탭하면 매핑된 레시피를 연다.
@@ -71,7 +85,8 @@ function TwinkleStar({
     );
   }, [reduceMotion, v, spec.delay, spec.dur]);
   const style = useAnimatedStyle(() => ({
-    opacity: 0.08 + v.value * 0.92,
+    // 큰별/작은별 밝기 차이(spec.bright)를 반짝임 위에 곱한다.
+    opacity: (0.08 + v.value * 0.92) * spec.bright,
     transform: [{ scale: 0.65 + v.value * 0.35 }],
   }));
   return (
@@ -125,6 +140,7 @@ export default function HomeScreen() {
   const recipes = data?.recipes ?? [];
   useIngredients(); // 재료관리 탭 워밍업(staleTime Infinity라 세션당 1회만 fetch)
   const reduceMotion = useReduceMotion(); // 밤하늘 별 = 내 레시피 수(1개당 1개, 탭 시 팝업)
+  const slotAdded = useSlotJustAdded(); // 슬롯 확장에서 광고 시청 후 복귀 → 성공 팝업
   const [hasStar, setHasStar] = useState(true);
   const [reco, setReco] = useState(RECO[0]);
   const [open, setOpen] = useState(false);
@@ -261,6 +277,9 @@ export default function HomeScreen() {
           onClose={() => setRecommend(null)}
         />
       ) : null}
+
+      {/* 슬롯 확장에서 광고 시청 후 복귀 시 성공 팝업 */}
+      <SlotAddedPopup visible={slotAdded} onClose={dismissSlotAdded} />
     </View>
   );
 }

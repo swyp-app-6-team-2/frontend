@@ -77,7 +77,7 @@ export default function MyScreen() {
             <Pressable
               className="rounded-pill border border-primary bg-surface px-4 py-2.5 active:opacity-80"
               accessibilityRole="button"
-              onPress={() => router.push('/slot-full')}
+              onPress={() => router.push('/slot-expand')}
             >
               <AppText variant="chip">별 확장</AppText>
             </Pressable>

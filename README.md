@@ -109,7 +109,7 @@ graph TD
     EP["endpoints.ts / types.ts<br/>API 계약"]
     AT["auth-token.ts / social-auth.ts<br/>JWT · 카카오/네이버/Google"]
   end
-  BE["백엔드 API<br/>dev-api.starpick.cloud · localhost:8080"]
+  BE["백엔드 API<br/>(dev · local)"]
 
   R --> C
   R --> Q
@@ -161,7 +161,7 @@ pnpm install
 ```bash
 pnpm start          # dev client 서버 (기본)
 pnpm start:local    # 로컬 백엔드(localhost:8080) 연결 + 캐시 클리어
-pnpm start:dev      # dev 백엔드(dev-api.starpick.cloud) 연결 + 캐시 클리어
+pnpm start:dev      # dev 백엔드 연결 + 캐시 클리어
 ```
 
 > 💡 서버 전환은 `EXPO_PUBLIC_API_BASE_URL` 인라인 env로 동작합니다. `.env.local`에 같은 키가 있으면 스크립트 값을 **덮어쓰니** 전환이 안 될 때 확인하세요. 실제 적용값은 콘솔의 `[api] BASE=` 로그로 확인할 수 있습니다.
@@ -254,7 +254,7 @@ global.css                  # 색상 CSS 변수 (다크 토큰)
 | 표시명 | **별따먹자** |
 | iOS 번들 ID / Android 패키지 | `com.byeolddameokja.app` |
 | 딥링크 scheme | `orca://` |
-| EAS slug / owner | `orca` / `leeseunghwan123` |
+| EAS slug | `orca` _(owner 계정은 비공개)_ |
 
 ---
 
@@ -268,7 +268,7 @@ global.css                  # 색상 CSS 변수 (다크 토큰)
 | [api-spec.md](./api-spec.md) | 백엔드 API 계약 |
 | [CLAUDE.md](./CLAUDE.md) | 에이전트/기여자 작업 규칙 |
 
-> 화면 픽셀 스펙의 최종 출처는 **Figma 확정 디자인 `619:9650`**(fileKey `13cTHGZBezIIZI0zKbiFV9`), 플로우 로직은 `499:406`.
+> 화면 픽셀 스펙의 최종 출처는 **팀 Figma 확정 디자인**입니다 (파일 링크·키는 팀 내부 공유).
 
 ---
 

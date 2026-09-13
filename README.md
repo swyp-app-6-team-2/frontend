@@ -61,6 +61,35 @@ flowchart LR
 
 ---
 
+## 📱 주요 화면
+
+<table>
+  <tr>
+    <td align="center"><b>홈 · 별 진행도</b></td>
+    <td align="center"><b>나의 레시피</b></td>
+    <td align="center"><b>요리 완료 ⭐</b></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/home.png" width="240" alt="홈 화면 — 별 캐릭터와 5/10 별 진행도" /></td>
+    <td><img src="docs/screenshots/recipes.png" width="240" alt="나의 레시피 목록 — 검색·필터·카드 그리드" /></td>
+    <td><img src="docs/screenshots/cook-complete.png" width="240" alt="요리 완료 — 별에 불이 켜졌어요" /></td>
+  </tr>
+  <tr>
+    <td align="center"><b>재료관리(내 냉장고)</b></td>
+    <td align="center"><b>재료 추가하기</b></td>
+    <td align="center"><b>레시피 등록 방법</b></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/ingredients.png" width="240" alt="재료관리 — 카테고리별 재료 태그" /></td>
+    <td><img src="docs/screenshots/fridge.png" width="240" alt="재료 추가하기 — 카테고리 필터 + 다중 선택" /></td>
+    <td><img src="docs/screenshots/add-recipe.png" width="240" alt="레시피 등록 방법 — URL·이미지·직접" /></td>
+  </tr>
+</table>
+
+> 다크 전용 디자인 · 실제 앱 화면(iOS) 캡처. 화면은 계속 다듬는 중입니다.
+
+---
+
 ## 🏗️ 아키텍처
 
 파일 기반 라우팅(`expo-router`) 위에서, 화면은 **공통 컴포넌트**를 조합하고, 서버 상태는 **React Query**를 통해 `src/lib/api` 레이어에서 백엔드와 통신합니다.

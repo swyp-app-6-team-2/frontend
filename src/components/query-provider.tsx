@@ -29,7 +29,15 @@ export function QueryProvider({ children }: { children: ReactNode }) {
     const token = isLocal
       ? process.env.EXPO_PUBLIC_LOCAL_ACCESS_TOKEN
       : process.env.EXPO_PUBLIC_DEV_ACCESS_TOKEN;
-    if (__DEV__ && token) setTokens({ accessToken: token });
+    if (__DEV__ && token) {
+      setTokens({ accessToken: token });
+      return;
+    }
+    // 데모 배포(TestFlight) 빌드: EXPO_PUBLIC_DEMO_TOKEN이 설정된 경우에만 로그인 우회 주입.
+    // 팀 내부 데모 전용 — 모두 같은 계정 데이터를 공유한다.
+    // ⚠️ 데모 종료 후 EAS env(production)에서 EXPO_PUBLIC_DEMO_TOKEN을 반드시 제거할 것.
+    const demoToken = process.env.EXPO_PUBLIC_DEMO_TOKEN;
+    if (demoToken) setTokens({ accessToken: demoToken });
   }, []);
 
   return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;

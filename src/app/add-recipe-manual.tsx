@@ -15,6 +15,15 @@ import { ImagePickerUnavailableError, pickSquareImage, type PickedImage } from '
 // 냉장고에 있는 재료 추천 (탭하면 재료 행에 추가)
 const OWNED = ['브로콜리', '새우', '대파', '계란', '다진 마늘', '설탕', '소금', '후추'];
 
+// 조리시간 프리셋 (분) — 단일 선택
+const COOK_TIMES = [
+  { label: '1분', value: 1 },
+  { label: '5분', value: 5 },
+  { label: '10분', value: 10 },
+  { label: '30분', value: 30 },
+  { label: '1시간', value: 60 },
+];
+
 type Ingredient = { name: string; qty: string };
 
 // 점선 추가 버튼 (재료 추가 / 단계 추가 공용)
@@ -48,7 +57,22 @@ export default function AddRecipeManualScreen() {
   const create = useCreateRecipe();
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState<RecipeCategory>('KOREAN');
+  const [cookHour, setCookHour] = useState(''); // 조리시간 — 시
+  const [cookMin, setCookMin] = useState(''); // 조리시간 — 분
   const [servings, setServings] = useState('');
+  const cookMinutes = (Number(cookHour) || 0) * 60 + (Number(cookMin) || 0);
+  // 프리셋 칩 → 현재 조리시간에 누적으로 더한다
+  const addCookPreset = (mins: number) => {
+    const total = cookMinutes + mins;
+    const h = Math.floor(total / 60);
+    const m = total % 60;
+    setCookHour(h ? String(h) : '');
+    setCookMin(m ? String(m) : '');
+  };
+  const resetCookTime = () => {
+    setCookHour('');
+    setCookMin('');
+  };
   const [ingredients, setIngredients] = useState<Ingredient[]>([{ name: '', qty: '' }]);
   const [steps, setSteps] = useState<string[]>(['']);
   const [cover, setCover] = useState<PickedImage | null>(null);
@@ -101,6 +125,7 @@ export default function AddRecipeManualScreen() {
       const res = await create.mutateAsync({
         title: title.trim(),
         categoryCode: category,
+        cookTimeMinutes: cookMinutes > 0 ? cookMinutes : undefined,
         coverImageKey,
         servings: servings ? Number(servings) : undefined,
         ingredients: ingredients
@@ -208,6 +233,72 @@ export default function AddRecipeManualScreen() {
               </Pressable>
             );
           })}
+        </View>
+      </View>
+
+      {/* 조리시간 — 시/분 직접 입력 2칸 + 프리셋 칩 + 초기화 · 위 마진 24 = screen gap16 + mt-2 */}
+      <View className="mt-2 gap-2">
+        <View className="flex-row items-center justify-between py-2 pl-2 pr-4">
+          <AppText variant="body" className="text-foreground">
+            조리시간
+          </AppText>
+          <Pressable
+            onPress={resetCookTime}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="조리시간 초기화"
+            className="flex-row items-center gap-1 active:opacity-80"
+          >
+            <Feather name="rotate-ccw" size={16} color={palette.muted} />
+            <Text className="text-[14px] leading-[17px] text-muted">초기화</Text>
+          </Pressable>
+        </View>
+
+        {/* 시간/분 직접 입력 (Figma: 173×44 pill 2칸) — 우측정렬 숫자 + 접미사 */}
+        <View className="flex-row gap-2">
+          <View className="h-11 flex-1 flex-row items-center gap-[10px] rounded-pill bg-field px-4">
+            <TextInput
+              className="flex-1 text-foreground"
+              style={{ fontSize: 16, lineHeight: 21, textAlign: 'right' }}
+              placeholder="0"
+              placeholderTextColor={palette.muted}
+              keyboardType="number-pad"
+              value={cookHour}
+              onChangeText={(t) => setCookHour(t.replace(/[^0-9]/g, ''))}
+            />
+            <AppText variant="body" className="font-normal text-foreground">
+              시간
+            </AppText>
+          </View>
+          <View className="h-11 flex-1 flex-row items-center gap-[10px] rounded-pill bg-field px-4">
+            <TextInput
+              className="flex-1 text-foreground"
+              style={{ fontSize: 16, lineHeight: 21, textAlign: 'right' }}
+              placeholder="0"
+              placeholderTextColor={palette.muted}
+              keyboardType="number-pad"
+              value={cookMin}
+              onChangeText={(t) => setCookMin(t.replace(/[^0-9]/g, ''))}
+            />
+            <AppText variant="body" className="font-normal text-foreground">
+              분
+            </AppText>
+          </View>
+        </View>
+
+        {/* 빠른 선택 — 탭할 때마다 조리시간에 누적으로 더한다 */}
+        <View className="flex-row flex-wrap gap-2">
+          {COOK_TIMES.map((t) => (
+            <Pressable
+              key={t.value}
+              onPress={() => addCookPreset(t.value)}
+              accessibilityRole="button"
+              accessibilityLabel={`조리시간 ${t.label} 추가`}
+              className="h-9 items-center justify-center rounded-pill border border-field px-4 active:opacity-80"
+            >
+              <Text className="text-[12px] leading-[14px] text-foreground">+{t.label}</Text>
+            </Pressable>
+          ))}
         </View>
       </View>
 

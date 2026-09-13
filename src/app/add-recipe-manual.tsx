@@ -1,13 +1,13 @@
 import { useRef, useState } from 'react';
 import { Alert, Pressable, Text, TextInput, View, type ScrollView } from 'react-native';
 import { Image } from 'expo-image';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 
 import { AppText, Button, Screen, SearchBar } from '@/components/ui';
 import { RECIPE_CATEGORY_LABEL, RECIPE_CATEGORY_ORDER } from '@/constants/labels';
 import { palette } from '@/constants/tokens';
-import { useCreateRecipe } from '@/hooks/use-api';
+import { useCreateRecipe, useRecipe, useUpdateRecipe } from '@/hooks/use-api';
 import { ApiError, uploadImage } from '@/lib/api';
 import type { RecipeCategory } from '@/lib/api/types';
 import { ImagePickerUnavailableError, pickSquareImage, type PickedImage } from '@/lib/pick-image';
@@ -55,6 +55,12 @@ export default function AddRecipeManualScreen() {
   const router = useRouter();
   const scrollRef = useRef<ScrollView>(null);
   const create = useCreateRecipe();
+  // id 파라미터가 있으면 '수정' 모드 — 기존 레시피를 불러와 프리필하고 PATCH로 저장.
+  const { id } = useLocalSearchParams<{ id?: string }>();
+  const editId = id ? Number(id) : null;
+  const isEdit = editId != null && Number.isFinite(editId);
+  const { data: existing } = useRecipe(isEdit ? editId : null);
+  const update = useUpdateRecipe(isEdit ? editId : 0);
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState<RecipeCategory>('KOREAN');
   const [cookHour, setCookHour] = useState(''); // 조리시간 — 시
@@ -76,7 +82,28 @@ export default function AddRecipeManualScreen() {
   const [ingredients, setIngredients] = useState<Ingredient[]>([{ name: '', qty: '' }]);
   const [steps, setSteps] = useState<string[]>(['']);
   const [cover, setCover] = useState<PickedImage | null>(null);
+  const [coverUrl, setCoverUrl] = useState<string | null>(null); // 수정 모드 기존 원격 이미지
   const [uploading, setUploading] = useState(false);
+  const [seededId, setSeededId] = useState<number | null>(null);
+
+  // 수정 모드: 기존 레시피가 로드되면 폼에 한 번 프리필 (원본 보존).
+  // effect가 아니라 렌더 중 조정 — 비동기 데이터로 상태를 초기화하는 React 공식 패턴.
+  if (existing && existing.recipeId !== seededId) {
+    setSeededId(existing.recipeId);
+    setTitle(existing.title);
+    setCategory(existing.categoryCode);
+    const mins = existing.cookTimeMinutes ?? 0;
+    setCookHour(mins >= 60 ? String(Math.floor(mins / 60)) : '');
+    setCookMin(mins % 60 ? String(mins % 60) : '');
+    setServings(existing.servings ? String(existing.servings) : '');
+    setIngredients(
+      existing.ingredients.length
+        ? existing.ingredients.map((i) => ({ name: i.name, qty: i.amountText ?? '' }))
+        : [{ name: '', qty: '' }],
+    );
+    setSteps(existing.steps.length ? existing.steps.map((s) => s.content) : ['']);
+    setCoverUrl(existing.coverImageUrl);
+  }
 
   // 대표 사진 선택 — 네이티브 모듈 없으면(리빌드 전) 안내 후 무시.
   const onPickCover = async () => {
@@ -121,19 +148,36 @@ export default function AddRecipeManualScreen() {
       }
     }
 
+    const ingredientList = ingredients
+      .filter((i) => i.name.trim())
+      .map((i) => ({ name: i.name.trim(), amountText: i.qty.trim() || undefined }));
+    const stepList = steps.filter((s) => s.trim()).map((s) => ({ content: s.trim() }));
+
     try {
-      const res = await create.mutateAsync({
-        title: title.trim(),
-        categoryCode: category,
-        cookTimeMinutes: cookMinutes > 0 ? cookMinutes : undefined,
-        coverImageKey,
-        servings: servings ? Number(servings) : undefined,
-        ingredients: ingredients
-          .filter((i) => i.name.trim())
-          .map((i) => ({ name: i.name.trim(), amountText: i.qty.trim() || undefined })),
-        steps: steps.filter((s) => s.trim()).map((s) => ({ content: s.trim() })),
-      });
-      router.replace({ pathname: '/recipe-view', params: { id: String(res.recipeId) } });
+      if (isEdit) {
+        // PATCH: 폼 값으로 갱신. 새 사진이 없으면 coverImageKey 미전달 → 기존 이미지 유지.
+        await update.mutateAsync({
+          title: title.trim(),
+          categoryCode: category,
+          cookTimeMinutes: cookMinutes > 0 ? cookMinutes : null,
+          coverImageKey,
+          servings: servings ? Number(servings) : undefined,
+          ingredients: ingredientList,
+          steps: stepList,
+        });
+        router.replace({ pathname: '/recipe-view', params: { id: String(editId) } });
+      } else {
+        const res = await create.mutateAsync({
+          title: title.trim(),
+          categoryCode: category,
+          cookTimeMinutes: cookMinutes > 0 ? cookMinutes : undefined,
+          coverImageKey,
+          servings: servings ? Number(servings) : undefined,
+          ingredients: ingredientList,
+          steps: stepList,
+        });
+        router.replace({ pathname: '/recipe-view', params: { id: String(res.recipeId) } });
+      }
     } catch (e) {
       Alert.alert('저장 실패', e instanceof ApiError ? e.message : '잠시 후 다시 시도해주세요.');
     }
@@ -164,9 +208,9 @@ export default function AddRecipeManualScreen() {
 
   return (
     <Screen
-      title="레시피 직접 입력"
+      title={isEdit ? '레시피 수정' : '레시피 직접 입력'}
       close
-      onClose={() => router.replace('/home')}
+      onClose={() => (isEdit ? router.back() : router.replace('/home'))}
       scroll
       scrollRef={scrollRef}
     >
@@ -175,11 +219,11 @@ export default function AddRecipeManualScreen() {
         onPress={onPickCover}
         className="aspect-square w-full items-center justify-center overflow-hidden rounded-[12px] bg-field active:opacity-80"
         accessibilityRole="button"
-        accessibilityLabel={cover ? '대표 사진 변경' : '대표 사진 추가'}
+        accessibilityLabel={cover || coverUrl ? '대표 사진 변경' : '대표 사진 추가'}
       >
-        {cover ? (
+        {cover || coverUrl ? (
           <Image
-            source={{ uri: cover.uri }}
+            source={{ uri: (cover?.uri ?? coverUrl)! }}
             style={{ width: '100%', height: '100%' }}
             contentFit="cover"
           />
@@ -435,9 +479,9 @@ export default function AddRecipeManualScreen() {
       </View>
 
       <Button
-        label={uploading ? '사진 업로드 중…' : '저장하기'}
+        label={uploading ? '사진 업로드 중…' : isEdit ? '수정 완료' : '저장하기'}
         onPress={onSave}
-        disabled={create.isPending || uploading}
+        disabled={create.isPending || update.isPending || uploading}
       />
     </Screen>
   );

@@ -71,14 +71,26 @@ export default function RecipeViewScreen() {
       title=""
       back
       headerRight={
-        <Pressable
-          onPress={onDelete}
-          hitSlop={8}
-          accessibilityRole="button"
-          accessibilityLabel="삭제"
-        >
-          <Feather name="trash-2" size={22} color={palette.muted} />
-        </Pressable>
+        <View className="flex-row items-center gap-4">
+          <Pressable
+            onPress={() =>
+              router.push({ pathname: '/add-recipe-manual', params: { id: String(recipeId) } })
+            }
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="수정하기"
+          >
+            <Text className="text-[16px] leading-[19px] text-foreground">수정하기</Text>
+          </Pressable>
+          <Pressable
+            onPress={onDelete}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="삭제"
+          >
+            <Feather name="trash-2" size={22} color={palette.muted} />
+          </Pressable>
+        </View>
       }
     >
       <View className="flex-1">

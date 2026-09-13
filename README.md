@@ -8,11 +8,6 @@ _"저장"이 아니라 "해먹었다"는 완료 기록으로 요리 실행을 �
 
 <br />
 
-<img src="docs/screenshots/hero-login.png" width="260" alt="별따먹자 시작 화면 — 나의 레시피가 별이 된다" />
-
-<br />
-<br />
-
 [![Expo SDK](https://img.shields.io/badge/Expo-SDK_57-000020?logo=expo&logoColor=white)](https://docs.expo.dev/versions/v57.0.0/)
 [![React Native](https://img.shields.io/badge/React_Native-0.86-61DAFB?logo=react&logoColor=white)](https://reactnative.dev/)
 [![React](https://img.shields.io/badge/React-19-149ECA?logo=react&logoColor=white)](https://react.dev/)
@@ -82,12 +77,12 @@ flowchart LR
   <tr>
     <td align="center"><b>재료관리(내 냉장고)</b></td>
     <td align="center"><b>재료 추가하기</b></td>
-    <td></td>
+    <td align="center"><b>로그인 · 시작</b></td>
   </tr>
   <tr>
     <td><img src="docs/screenshots/ingredients.png" width="240" alt="재료관리 — 카테고리별 재료 태그" /></td>
     <td><img src="docs/screenshots/fridge.png" width="240" alt="재료 추가하기 — 카테고리 필터 + 다중 선택" /></td>
-    <td></td>
+    <td><img src="docs/screenshots/login.png" width="240" alt="로그인 — SNS 계정으로 간편 가입 (카카오·네이버·구글·애플)" /></td>
   </tr>
 </table>
 

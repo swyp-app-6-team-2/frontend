@@ -119,5 +119,7 @@ export type Ingredient = {
   name: string;
   categoryCode: IngredientCategory;
   aliases: string[];
+  /** 재료별 아이콘 이미지(webp). 백엔드가 iconBaseUrl로 생성. 없으면 카테고리 이모지로 폴백. */
+  iconUrl?: string;
 };
 export type IngredientListResponse = { ingredients: Ingredient[] };

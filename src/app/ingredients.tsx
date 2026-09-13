@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
+import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -34,7 +35,17 @@ function IngredientChip({
       accessibilityState={{ selected: owned }}
       className="h-9 flex-row items-center gap-1.5 rounded-pill bg-field px-4"
     >
-      <Text className="text-[14px]">{INGREDIENT_CATEGORY_EMOJI[ing.categoryCode]}</Text>
+      {/* 백엔드 재료 아이콘(iconUrl) 우선, 없으면 카테고리 이모지로 폴백 */}
+      {ing.iconUrl ? (
+        <Image
+          source={{ uri: ing.iconUrl }}
+          style={{ width: 18, height: 18, opacity: owned ? 1 : 0.4 }}
+          contentFit="contain"
+          transition={150}
+        />
+      ) : (
+        <Text className="text-[14px]">{INGREDIENT_CATEGORY_EMOJI[ing.categoryCode]}</Text>
+      )}
       <Text className={`text-[14px] leading-[17px] ${owned ? 'text-foreground' : 'text-muted'}`}>
         {ing.name}
       </Text>
@@ -42,7 +53,7 @@ function IngredientChip({
   );
 }
 
-// 재료관리 — 카테고리별 섹션 + 재료 칩(가로 스크롤). + FAB → 재료 추가하기.
+// 재료관리 — 카테고리별 섹션 + 재료 칩. + FAB → 재료 추가하기(/fridge).
 export default function IngredientsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();

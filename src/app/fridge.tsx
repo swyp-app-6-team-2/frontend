@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, ScrollView, Text, useWindowDimensions, View } from 'react-native';
+import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
@@ -151,13 +152,23 @@ export default function FridgeScreen() {
                           animate ? FadeInDown.delay(staggerDelay(idx)).springify() : undefined
                         }
                       >
-                        <View className="aspect-[110/83] w-full items-center justify-center gap-1 rounded-[12px] bg-popup-button">
-                          <Text className="text-[20px]">
-                            {INGREDIENT_CATEGORY_EMOJI[item.categoryCode]}
-                          </Text>
+                        <View className="aspect-[110/83] w-full items-center justify-center gap-2 rounded-[12px] bg-popup-button">
+                          {/* 백엔드 재료 아이콘(iconUrl) 우선, 없으면 카테고리 이모지 폴백 */}
+                          {item.iconUrl ? (
+                            <Image
+                              source={{ uri: item.iconUrl }}
+                              style={{ width: 28, height: 28 }}
+                              contentFit="contain"
+                              transition={150}
+                            />
+                          ) : (
+                            <Text className="text-[20px]">
+                              {INGREDIENT_CATEGORY_EMOJI[item.categoryCode]}
+                            </Text>
+                          )}
                           <Text
                             numberOfLines={1}
-                            className="text-[16px] font-medium leading-[21px] text-foreground"
+                            className="text-[14px] font-medium leading-[18px] text-foreground"
                           >
                             {item.name}
                           </Text>
@@ -172,8 +183,16 @@ export default function FridgeScreen() {
         </ScrollView>
       </View>
 
-      <View className="pb-8">
-        <Button label="등록하기" onPress={() => router.back()} />
+      <View className="gap-1 pb-6">
+        <Button label="완료하기" onPress={() => router.back()} />
+        <PressableScale
+          onPress={() => router.back()}
+          haptic="light"
+          accessibilityRole="button"
+          className="items-center py-3"
+        >
+          <Text className="text-[14px] leading-[18px] text-muted">취소할게요</Text>
+        </PressableScale>
       </View>
     </Screen>
   );

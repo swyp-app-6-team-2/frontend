@@ -8,6 +8,11 @@ _"저장"이 아니라 "해먹었다"는 완료 기록으로 요리 실행을 �
 
 <br />
 
+<img src="docs/screenshots/hero-login.png" width="260" alt="별따먹자 시작 화면 — 나의 레시피가 별이 된다" />
+
+<br />
+<br />
+
 [![Expo SDK](https://img.shields.io/badge/Expo-SDK_57-000020?logo=expo&logoColor=white)](https://docs.expo.dev/versions/v57.0.0/)
 [![React Native](https://img.shields.io/badge/React_Native-0.86-61DAFB?logo=react&logoColor=white)](https://reactnative.dev/)
 [![React](https://img.shields.io/badge/React-19-149ECA?logo=react&logoColor=white)](https://react.dev/)

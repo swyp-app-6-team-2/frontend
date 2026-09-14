@@ -8,6 +8,7 @@ import { ApiError } from '@/lib/api';
 import {
   API_PROVIDER,
   getSocialAuthToken,
+  SocialAuthCanceledError,
   SocialAuthNotConfiguredError,
   type SocialProvider,
 } from '@/lib/social-auth';
@@ -35,11 +36,12 @@ export default function LoginScreen() {
   const socialLogin = useSocialLogin();
 
   // 백엔드 로그인 + 신규/기존 분기.
-  const finishLogin = async (provider: string, authToken: string) => {
+  const finishLogin = async (provider: string, authToken: string, nonce?: string) => {
     try {
-      const res = await socialLogin.mutateAsync({ provider, authToken });
+      const res = await socialLogin.mutateAsync({ provider, authToken, nonce });
       if (res.requiresTermsAgreement) {
-        router.push('/terms'); // 신규 → 약관 (signupToken은 응답에)
+        // 신규 → 약관. signupToken을 넘겨 약관 화면이 가입 완료(POST /auth/signup)에 사용.
+        router.push({ pathname: '/terms', params: { signupToken: res.signupToken ?? '' } });
       } else {
         router.replace('/home'); // 기존 → 홈 (accessToken은 훅이 저장)
       }
@@ -49,11 +51,12 @@ export default function LoginScreen() {
   };
 
   const onProvider = async (provider: SocialProvider) => {
-    // 구글/카카오/네이버 — 네이티브 SDK 로그인. 애플은 스텁(dev에선 온보딩 폴백).
+    // 카카오/네이버/구글/애플 — 각 네이티브 SDK 로그인. 리빌드 전엔 미연동 폴백.
     try {
-      const authToken = await getSocialAuthToken(provider);
-      await finishLogin(API_PROVIDER[provider], authToken);
+      const { authToken, nonce } = await getSocialAuthToken(provider);
+      await finishLogin(API_PROVIDER[provider], authToken, nonce);
     } catch (e) {
+      if (e instanceof SocialAuthCanceledError) return; // 사용자가 닫음 — 조용히 무시
       if (e instanceof SocialAuthNotConfiguredError) {
         if (__DEV__) router.replace('/onboarding');
         return;

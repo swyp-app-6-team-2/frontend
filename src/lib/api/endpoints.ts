@@ -11,6 +11,8 @@ import type {
   RecipeListParams,
   RecipeListResponse,
   RecipeUpdateRequest,
+  SignupRequest,
+  SignupResponse,
   SocialLoginRequest,
   SocialLoginResponse,
   UploadPurpose,
@@ -21,6 +23,9 @@ import type {
 export const authApi = {
   socialLogin: (body: SocialLoginRequest) =>
     apiFetch<SocialLoginResponse>('/auth/social-login', { method: 'POST', body, auth: false }),
+  // 신규 사용자 가입 완료 — signupToken은 social-login이 반환한 값. accessToken 불필요.
+  signup: (body: SignupRequest) =>
+    apiFetch<SignupResponse>('/auth/signup', { method: 'POST', body, auth: false }),
 };
 
 // ── User / Profile ────────────────────────────────────────────

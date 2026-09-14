@@ -1,9 +1,11 @@
 import { useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Alert, Pressable, Text, View } from 'react-native';
 import { Image } from 'expo-image';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { AppText, Chevron, Screen } from '@/components/ui';
+import { useSignup } from '@/hooks/use-api';
+import { ApiError } from '@/lib/api';
 
 // 서비스 이용 동의 — 소셜 로그인 후 신규 회원 가입 절차(약관 동의). Figma 619:9650.
 type Key = 'age' | 'tos' | 'privacy' | 'notify' | 'marketing';
@@ -34,6 +36,9 @@ function CheckMark({ on }: { on: boolean }) {
 
 export default function TermsScreen() {
   const router = useRouter();
+  // 로그인 화면이 넘겨준 signupToken(신규 소셜 사용자 식별). 없으면 정상 진입이 아님.
+  const { signupToken } = useLocalSearchParams<{ signupToken?: string }>();
+  const signup = useSignup();
   const [checked, setChecked] = useState<Record<Key, boolean>>({
     age: false,
     tos: false,
@@ -51,11 +56,29 @@ export default function TermsScreen() {
     setChecked({ age: next, tos: next, privacy: next, notify: next, marketing: next });
   };
 
-  const onSubmit = () => {
-    if (!canSubmit) return;
-    // TODO: 회원가입 완료 API(signupToken + 동의내역)가 백엔드에 생기면 호출.
-    // 신규 가입 흐름: 약관 → 알림 시간대 설정.
-    router.replace('/notify-setup');
+  const onSubmit = async () => {
+    if (!canSubmit || signup.isPending) return;
+    if (!signupToken) {
+      Alert.alert('세션 만료', '로그인을 다시 진행해주세요.', [
+        { text: '확인', onPress: () => router.replace('/login') },
+      ]);
+      return;
+    }
+    // 백엔드 필드 매핑: notify=서비스 알림(serviceAgreed), marketing=마케팅 수신.
+    try {
+      await signup.mutateAsync({
+        signupToken,
+        ageOver14Agreed: checked.age,
+        serviceTermsAgreed: checked.tos,
+        privacyAgreed: checked.privacy,
+        marketingAgreed: checked.marketing,
+        serviceAgreed: checked.notify,
+      });
+      // 가입 완료 → 토큰 저장됨(useSignup). 신규 가입 흐름: 약관 → 알림 시간대 설정.
+      router.replace('/notify-setup');
+    } catch (e) {
+      Alert.alert('가입 실패', e instanceof ApiError ? e.message : '잠시 후 다시 시도해주세요.');
+    }
   };
 
   return (
@@ -109,9 +132,9 @@ export default function TermsScreen() {
       <View className="pb-8 pt-4">
         <Pressable
           onPress={onSubmit}
-          disabled={!canSubmit}
+          disabled={!canSubmit || signup.isPending}
           accessibilityRole="button"
-          accessibilityState={{ disabled: !canSubmit }}
+          accessibilityState={{ disabled: !canSubmit || signup.isPending }}
           className={`h-[52px] items-center justify-center rounded-[30px] active:opacity-90 ${
             canSubmit ? 'bg-primary' : 'bg-disabled'
           }`}

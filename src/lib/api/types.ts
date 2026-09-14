@@ -19,7 +19,8 @@ export type UploadPurpose = 'RECIPE_COVER' | 'COOK_HISTORY_PHOTO' | 'INGESTION_I
 export type ImageContentType = 'image/jpeg' | 'image/png' | 'image/webp';
 
 // ── Auth ──────────────────────────────────────────────────────
-export type SocialLoginRequest = { provider: string; authToken: string };
+// nonce: 애플만 사용(identityToken의 nonce 클레임과 원문 비교). 다른 provider는 미전달.
+export type SocialLoginRequest = { provider: string; authToken: string; nonce?: string };
 export type SocialLoginResponse = {
   requiresTermsAgreement: boolean;
   userId?: number;
@@ -27,6 +28,21 @@ export type SocialLoginResponse = {
   refreshToken?: string;
   signupToken?: string;
 };
+
+// 신규 소셜 사용자 가입 완료. 필수 3동의(age/tos/privacy)는 true여야 백엔드가 통과시킨다.
+export type SignupRequest = {
+  signupToken: string;
+  ageOver14Agreed: boolean;
+  serviceTermsAgreed: boolean;
+  privacyAgreed: boolean;
+  marketingAgreed: boolean;
+  serviceAgreed: boolean;
+};
+export type SignupResponse = { userId: number; accessToken: string; refreshToken: string };
+
+// 토큰 재발급. 성공 시 이전 refreshToken은 폐기(회전).
+export type TokenRefreshRequest = { refreshToken: string };
+export type TokenRefreshResponse = { accessToken: string; refreshToken: string };
 
 // ── User / Profile ────────────────────────────────────────────
 // 현재 프로필 조회. 백엔드 엔드포인트(GET /users/me)는 미구현 — 생기면 그대로 붙는다.

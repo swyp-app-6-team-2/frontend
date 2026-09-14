@@ -7,6 +7,7 @@ import type {
   RecipeCreateRequest,
   RecipeListParams,
   RecipeUpdateRequest,
+  SignupRequest,
   SocialLoginRequest,
 } from '@/lib/api/types';
 
@@ -103,6 +104,16 @@ export function useSocialLogin() {
       if (res.accessToken) {
         setTokens({ accessToken: res.accessToken, refreshToken: res.refreshToken ?? null });
       }
+    },
+  });
+}
+
+// 신규 가입 완료(약관 화면). 성공 시 토큰 저장 → 이후 요청이 인증된다.
+export function useSignup() {
+  return useMutation({
+    mutationFn: (body: SignupRequest) => authApi.signup(body),
+    onSuccess: (res) => {
+      setTokens({ accessToken: res.accessToken, refreshToken: res.refreshToken });
     },
   });
 }

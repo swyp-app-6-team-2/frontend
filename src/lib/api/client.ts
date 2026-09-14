@@ -1,5 +1,11 @@
-import { getAccessToken } from './auth-token';
-import type { ApiResponse, ErrorData } from './types';
+import {
+  clearTokens,
+  emitAuthExpired,
+  getAccessToken,
+  getRefreshToken,
+  setTokens,
+} from './auth-token';
+import type { ApiResponse, ErrorData, TokenRefreshResponse } from './types';
 
 // 배포 환경별 호스트는 EXPO_PUBLIC_API_BASE_URL로 주입. (예: https://api.example.com)
 const HOST = (process.env.EXPO_PUBLIC_API_BASE_URL ?? '').replace(/\/+$/, '');
@@ -49,26 +55,68 @@ export type ApiFetchOptions = {
   signal?: AbortSignal;
 };
 
+// 진행 중인 재발급 요청. 동시에 401이 여러 개 나도 한 번만 재발급하도록 공유(single-flight).
+let refreshing: Promise<boolean> | null = null;
+
+function refreshTokens(): Promise<boolean> {
+  if (!refreshing) refreshing = doRefresh().finally(() => (refreshing = null));
+  return refreshing;
+}
+
+/**
+ * refreshToken으로 새 토큰을 받아 저장. apiFetch를 거치지 않고 raw fetch로 호출한다
+ * (여기서 apiFetch를 쓰면 401 인터셉터가 다시 돌아 무한 재귀가 된다).
+ */
+async function doRefresh(): Promise<boolean> {
+  const rt = getRefreshToken();
+  if (!rt) return false;
+  try {
+    const res = await fetch(`${BASE}/auth/token/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ refreshToken: rt }),
+    });
+    if (!res.ok) return false;
+    const text = await res.text();
+    const data = text ? (JSON.parse(text) as ApiResponse<TokenRefreshResponse>).data : null;
+    if (!data?.accessToken) return false;
+    setTokens({ accessToken: data.accessToken, refreshToken: data.refreshToken });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * 공통 요청기. envelope를 벗겨 `data`만 반환하고, 실패 시 ApiError를 던진다.
  * 성공이지만 data가 없는 응답(수정/삭제 등)은 null을 반환한다.
+ * 인증 요청이 401이면 refreshToken으로 1회 재발급 후 원 요청을 재시도한다.
  */
 export async function apiFetch<T>(path: string, opts: ApiFetchOptions = {}): Promise<T> {
   const { method = 'GET', body, query, auth = true, signal } = opts;
+  const bodyStr = body !== undefined ? JSON.stringify(body) : undefined;
 
-  const headers: Record<string, string> = { Accept: 'application/json' };
-  if (body !== undefined) headers['Content-Type'] = 'application/json';
-  if (auth) {
-    const token = getAccessToken();
-    if (token) headers.Authorization = `Bearer ${token}`;
+  const send = () => {
+    const headers: Record<string, string> = { Accept: 'application/json' };
+    if (body !== undefined) headers['Content-Type'] = 'application/json';
+    if (auth) {
+      const token = getAccessToken();
+      if (token) headers.Authorization = `Bearer ${token}`;
+    }
+    return fetch(`${BASE}${path}${buildQuery(query)}`, { method, headers, body: bodyStr, signal });
+  };
+
+  let res = await send();
+
+  // 인증 요청이 401 → 재발급 시도. 성공하면 새 토큰으로 1회 재요청, 실패하면 세션 종료 통지.
+  if (res.status === 401 && auth && getRefreshToken()) {
+    if (await refreshTokens()) {
+      res = await send();
+    } else {
+      clearTokens();
+      emitAuthExpired();
+    }
   }
-
-  const res = await fetch(`${BASE}${path}${buildQuery(query)}`, {
-    method,
-    headers,
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-    signal,
-  });
 
   // envelope 파싱 (본문 없는 성공/실패도 안전하게)
   const text = await res.text();

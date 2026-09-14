@@ -7,6 +7,7 @@ name: Discord push notify (main)
 on:
   push:
     branches: [main]
+  workflow_dispatch: # 수동 실행(Actions 탭 → Run workflow) — 시크릿/웹훅 점검용
 
 jobs:
   notify:

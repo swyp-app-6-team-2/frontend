@@ -1,3 +1,5 @@
+import * as Device from 'expo-device';
+
 import type { ImageContentType } from './api/types';
 
 export type PickedImage = { uri: string; contentType: ImageContentType };
@@ -17,6 +19,15 @@ const ALLOWED: Record<string, ImageContentType> = {
   'image/png': 'image/png',
   'image/webp': 'image/webp',
 };
+
+// 실기기 여부. expo-device 네이티브가 없어 접근이 실패하면 안전하게 false(크롭 생략)로 본다.
+function isRealDevice(): boolean {
+  try {
+    return Device.isDevice;
+  } catch {
+    return false;
+  }
+}
 
 function resolveContentType(mimeType: string | undefined, uri: string): ImageContentType {
   if (mimeType && ALLOWED[mimeType]) return ALLOWED[mimeType];
@@ -57,10 +68,14 @@ export async function pickImage(opts: PickImageOptions = {}): Promise<PickedImag
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) return null;
 
+    // allowsEditing=true는 iOS에서 구형 UIImagePickerController(내장 크롭)를 띄우는데,
+    // 시뮬레이터/에뮬레이터에선 이 피커가 크래시(MobileSlideShow 종료)한다.
+    // → 실기기에서만 크롭 사용. 시뮬레이터에선 생략(표시는 어차피 정사각 cover-fit).
+    const allowsEditing = (opts.allowsEditing ?? false) && isRealDevice();
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
-      allowsEditing: opts.allowsEditing ?? false,
-      aspect: opts.aspect,
+      allowsEditing,
+      aspect: allowsEditing ? opts.aspect : undefined,
       quality: 0.8,
     });
     if (result.canceled || !result.assets?.length) return null;

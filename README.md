@@ -40,7 +40,7 @@ _"저장"이 아니라 "해먹었다"는 완료 기록으로 요리 실행을 �
 | 🧊 **재료 관리(내 냉장고)** | 보유 재료 · 유통기한 임박 관리 · 재료 추가(카테고리 필터) |
 | ➕ **3경로 등록** | URL/영상 → AI 분석 · 이미지 → OCR · 직접 입력 폼 (모두 하나의 `Recipe`로 수렴) |
 | 🏠 **홈 / 마이** | 별 진행도 · 추천 · 임박 요약 / 저장 슬롯 사용량 · 설정 |
-| 🔐 **소셜 로그인** | 카카오 · 네이버 · Google |
+| 🔐 **소셜 로그인** | 카카오 · 네이버 · Google · Apple · 신규 가입(약관 동의) · 토큰 자동 재발급 |
 
 ### 핵심 사용자 여정
 
@@ -107,7 +107,7 @@ graph TD
   subgraph "데이터 레이어 (src/lib/api)"
     CL["client.ts<br/>fetch 래퍼 + BASE URL"]
     EP["endpoints.ts / types.ts<br/>API 계약"]
-    AT["auth-token.ts / social-auth.ts<br/>JWT · 카카오/네이버/Google"]
+    AT["auth-token.ts / social-auth.ts<br/>JWT(자동 재발급) · 카카오/네이버/Google/Apple"]
   end
   BE["백엔드 API<br/>(dev · local)"]
 
@@ -137,7 +137,7 @@ graph TD
 | **스타일** | NativeWind v4 + Tailwind v3 (다크 전용 토큰) |
 | **서버 상태** | @tanstack/react-query |
 | **모션 / UX** | react-native-reanimated 4 · expo-haptics |
-| **인증** | expo-auth-session · 카카오/네이버/Google 네이티브 SDK |
+| **인증** | 카카오/네이버/Google/Apple 네이티브 SDK · JWT 자동 재발급 |
 | **이미지** | expo-image · expo-image-picker |
 | **툴링** | pnpm · TypeScript 6 · ESLint **v9 고정** · Prettier |
 | **빌드 / 배포** | EAS Build & Submit |

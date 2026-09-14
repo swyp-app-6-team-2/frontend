@@ -67,6 +67,7 @@ async function getNaverAccessToken(): Promise<string> {
     disableNaverAppAuthIOS: false,
   });
   const res = await NaverLogin.login();
+  if (res.failureResponse?.isCancel) throw new SocialAuthCanceledError('naver');
   if (!res.isSuccess || !res.successResponse?.accessToken) {
     throw new Error('네이버 로그인에 실패했어요.');
   }
@@ -79,13 +80,14 @@ async function getGoogleIdToken(): Promise<string> {
   const { GoogleSignin } = await import('@react-native-google-signin/google-signin');
   GoogleSignin.configure({
     iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
-    // webClientId를 주면 idToken aud가 웹 client id로 찍힌다. 그런데 dev 백엔드 GOOGLE_CLIENT_ID가
-    // iOS client id라 aud 불일치로 401 난다. webClientId를 빼면 iOS에선 aud=iosClientId가 되어 맞는다.
-    // (백엔드가 웹 client id로 검증하도록 바뀌면 webClientId를 다시 넣어야 한다.)
+    // webClientId를 주면 idToken aud가 웹 client id로 찍힌다. dev 백엔드 GOOGLE_CLIENT_ID가
+    // 웹 client id(...-a9pkan...)라, webClientId를 넣어야 aud가 맞아 검증 통과(200)한다.
+    webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
   });
   const res = await GoogleSignin.signIn();
+  if (res.type === 'cancelled') throw new SocialAuthCanceledError('google');
   if (res.type !== 'success' || !res.data.idToken) {
-    throw new Error('구글 로그인이 취소되었거나 실패했어요.');
+    throw new Error('구글 로그인에 실패했어요.');
   }
   return res.data.idToken;
 }

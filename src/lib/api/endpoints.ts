@@ -3,6 +3,9 @@ import type {
   CookHistoryCreateRequest,
   CookHistoryItem,
   ImageContentType,
+  IngestionJobCreateRequest,
+  IngestionJobCreateResponse,
+  IngestionJobResponse,
   IngredientListResponse,
   MeResponse,
   RecipeCreateRequest,
@@ -73,4 +76,13 @@ export const cookingApi = {
 // ── Ingredient ────────────────────────────────────────────────
 export const ingredientApi = {
   list: () => apiFetch<IngredientListResponse>('/ingredients'),
+};
+
+// ── Ingestion (레시피 분석) ────────────────────────────────────
+export const ingestionApi = {
+  // 분석 요청(202) → jobId 반환. 이후 get(id)로 상태를 폴링한다.
+  create: (body: IngestionJobCreateRequest) =>
+    apiFetch<IngestionJobCreateResponse>('/ingestion-jobs', { method: 'POST', body }),
+  get: (ingestionJobId: number) =>
+    apiFetch<IngestionJobResponse>(`/ingestion-jobs/${ingestionJobId}`),
 };

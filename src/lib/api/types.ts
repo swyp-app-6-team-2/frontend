@@ -112,6 +112,35 @@ export type CookHistoryItem = {
   memo: string | null;
 };
 
+// ── Ingestion (레시피 분석) ────────────────────────────────────
+export type IngestionInputType = 'URL' | 'IMAGE';
+export type IngestionJobStatus = 'QUEUED' | 'PROCESSING' | 'RESULT_READY' | 'FAILED' | 'EXPIRED';
+export type IngestionFailureCode =
+  'SOURCE_UNAVAILABLE' | 'CONTENT_NOT_RECOGNIZED' | 'MULTIPLE_RECIPES' | 'PROCESSING_FAILED';
+
+// AI가 정리한 레시피 초안. 필드는 AI가 못 채우면 null일 수 있다(내용 확인 화면에서 사용자가 보정).
+export type RecipeDraft = {
+  title: string | null;
+  categoryCode: RecipeCategory | null;
+  cookTimeMinutes: number | null;
+  servings: number | null;
+  ingredients: { ingredientId: number | null; name: string; amountText: string | null }[];
+  steps: { content: string }[];
+};
+
+// 백엔드가 URL·IMAGE 중 정확히 하나만 허용(@AssertTrue) → 타입으로 XOR 강제.
+export type IngestionJobCreateRequest =
+  { inputType: 'URL'; url: string } | { inputType: 'IMAGE'; inputImageKeys: string[] };
+export type IngestionJobCreateResponse = { ingestionJobId: number };
+export type IngestionJobResponse = {
+  ingestionJobId: number;
+  inputType: IngestionInputType;
+  status: IngestionJobStatus;
+  previewImageUrl: string | null;
+  result: RecipeDraft | null;
+  failureCode: IngestionFailureCode | null;
+};
+
 // ── Ingredient ────────────────────────────────────────────────
 export type Ingredient = {
   ingredientId: number;

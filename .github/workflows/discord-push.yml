@@ -7,6 +7,7 @@ name: Discord push notify (main)
 on:
   push:
     branches: [main]
+  workflow_dispatch: # 수동 실행(Actions 탭 → Run workflow) — 시크릿/웹훅 점검용
 
 jobs:
   notify:
@@ -25,11 +26,13 @@ jobs:
           if [ -z "${WEBHOOK:-}" ]; then echo "DISCORD_WEBHOOK 미설정 — 알림 생략"; exit 0; fi
 
           # 커밋 목록 → "• 메시지 첫 줄 (짧은해시)" (최대 10개, 초과분은 요약)
+          # workflow_dispatch(수동)에는 commits가 null이므로 (. // [])로 방어.
           desc=$(printf '%s' "$COMMITS" | jq -r '
-            (.[:10] | map("• " + (.message | split("\n")[0]) + " (`" + .id[:7] + "`)") | join("\n"))
-            + (if length > 10 then "\n… 외 \(length - 10)개" else "" end)
+            (. // []) as $c
+            | ($c[:10] | map("• " + (.message | split("\n")[0]) + " (`" + .id[:7] + "`)") | join("\n"))
+            + (if ($c | length) > 10 then "\n… 외 \(($c | length) - 10)개" else "" end)
           ')
-          count=$(printf '%s' "$COMMITS" | jq 'length')
+          count=$(printf '%s' "$COMMITS" | jq '(. // []) | length')
 
           payload=$(jq -n \
             --arg desc "$desc" \

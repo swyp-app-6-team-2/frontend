@@ -19,7 +19,8 @@ export type UploadPurpose = 'RECIPE_COVER' | 'COOK_HISTORY_PHOTO' | 'INGESTION_I
 export type ImageContentType = 'image/jpeg' | 'image/png' | 'image/webp';
 
 // ── Auth ──────────────────────────────────────────────────────
-export type SocialLoginRequest = { provider: string; authToken: string };
+// nonce: 애플만 사용(identityToken의 nonce 클레임과 원문 비교). 다른 provider는 미전달.
+export type SocialLoginRequest = { provider: string; authToken: string; nonce?: string };
 export type SocialLoginResponse = {
   requiresTermsAgreement: boolean;
   userId?: number;
@@ -27,6 +28,21 @@ export type SocialLoginResponse = {
   refreshToken?: string;
   signupToken?: string;
 };
+
+// 신규 소셜 사용자 가입 완료. 필수 3동의(age/tos/privacy)는 true여야 백엔드가 통과시킨다.
+export type SignupRequest = {
+  signupToken: string;
+  ageOver14Agreed: boolean;
+  serviceTermsAgreed: boolean;
+  privacyAgreed: boolean;
+  marketingAgreed: boolean;
+  serviceAgreed: boolean;
+};
+export type SignupResponse = { userId: number; accessToken: string; refreshToken: string };
+
+// 토큰 재발급. 성공 시 이전 refreshToken은 폐기(회전).
+export type TokenRefreshRequest = { refreshToken: string };
+export type TokenRefreshResponse = { accessToken: string; refreshToken: string };
 
 // ── User / Profile ────────────────────────────────────────────
 // 현재 프로필 조회. 백엔드 엔드포인트(GET /users/me)는 미구현 — 생기면 그대로 붙는다.
@@ -110,6 +126,35 @@ export type CookHistoryItem = {
   cookedAt: string; // ISO8601 UTC
   photoUrl: string | null;
   memo: string | null;
+};
+
+// ── Ingestion (레시피 분석) ────────────────────────────────────
+export type IngestionInputType = 'URL' | 'IMAGE';
+export type IngestionJobStatus = 'QUEUED' | 'PROCESSING' | 'RESULT_READY' | 'FAILED' | 'EXPIRED';
+export type IngestionFailureCode =
+  'SOURCE_UNAVAILABLE' | 'CONTENT_NOT_RECOGNIZED' | 'MULTIPLE_RECIPES' | 'PROCESSING_FAILED';
+
+// AI가 정리한 레시피 초안. 필드는 AI가 못 채우면 null일 수 있다(내용 확인 화면에서 사용자가 보정).
+export type RecipeDraft = {
+  title: string | null;
+  categoryCode: RecipeCategory | null;
+  cookTimeMinutes: number | null;
+  servings: number | null;
+  ingredients: { ingredientId: number | null; name: string; amountText: string | null }[];
+  steps: { content: string }[];
+};
+
+// 백엔드가 URL·IMAGE 중 정확히 하나만 허용(@AssertTrue) → 타입으로 XOR 강제.
+export type IngestionJobCreateRequest =
+  { inputType: 'URL'; url: string } | { inputType: 'IMAGE'; inputImageKeys: string[] };
+export type IngestionJobCreateResponse = { ingestionJobId: number };
+export type IngestionJobResponse = {
+  ingestionJobId: number;
+  inputType: IngestionInputType;
+  status: IngestionJobStatus;
+  previewImageUrl: string | null;
+  result: RecipeDraft | null;
+  failureCode: IngestionFailureCode | null;
 };
 
 // ── Ingredient ────────────────────────────────────────────────

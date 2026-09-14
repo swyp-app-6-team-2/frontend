@@ -9,7 +9,7 @@ import { RECIPE_CATEGORY_LABEL, RECIPE_CATEGORY_ORDER } from '@/constants/labels
 import { palette } from '@/constants/tokens';
 import { useCreateRecipe, useRecipe, useUpdateRecipe } from '@/hooks/use-api';
 import { ApiError, uploadImage } from '@/lib/api';
-import type { RecipeCategory } from '@/lib/api/types';
+import type { RecipeCategory, RecipeDraft } from '@/lib/api/types';
 import { ImagePickerUnavailableError, pickSquareImage, type PickedImage } from '@/lib/pick-image';
 
 // 냉장고에 있는 재료 추천 (탭하면 재료 행에 추가)
@@ -56,7 +56,8 @@ export default function AddRecipeManualScreen() {
   const scrollRef = useRef<ScrollView>(null);
   const create = useCreateRecipe();
   // id 파라미터가 있으면 '수정' 모드 — 기존 레시피를 불러와 프리필하고 PATCH로 저장.
-  const { id } = useLocalSearchParams<{ id?: string }>();
+  // draft 파라미터(레시피 분석 결과)가 있으면 '내용 확인' 모드 — AI 초안을 프리필하고 신규 생성.
+  const { id, draft: draftParam } = useLocalSearchParams<{ id?: string; draft?: string }>();
   const editId = id ? Number(id) : null;
   const isEdit = editId != null && Number.isFinite(editId);
   const { data: existing } = useRecipe(isEdit ? editId : null);
@@ -85,6 +86,7 @@ export default function AddRecipeManualScreen() {
   const [coverUrl, setCoverUrl] = useState<string | null>(null); // 수정 모드 기존 원격 이미지
   const [uploading, setUploading] = useState(false);
   const [seededId, setSeededId] = useState<number | null>(null);
+  const [draftSeeded, setDraftSeeded] = useState(false);
 
   // 수정 모드: 기존 레시피가 로드되면 폼에 한 번 프리필 (원본 보존).
   // effect가 아니라 렌더 중 조정 — 비동기 데이터로 상태를 초기화하는 React 공식 패턴.
@@ -103,6 +105,29 @@ export default function AddRecipeManualScreen() {
     );
     setSteps(existing.steps.length ? existing.steps.map((s) => s.content) : ['']);
     setCoverUrl(existing.coverImageUrl);
+  }
+
+  // 내용 확인 모드: 분석 초안(draft)을 폼에 한 번 프리필. AI가 못 채운 필드는 빈 값 유지.
+  // (수정 모드가 아닐 때만. 렌더 중 조정 — draftSeeded로 1회만.)
+  if (!isEdit && !draftSeeded && draftParam) {
+    setDraftSeeded(true);
+    try {
+      const d = JSON.parse(draftParam) as RecipeDraft | null;
+      if (d) {
+        if (d.title) setTitle(d.title);
+        if (d.categoryCode) setCategory(d.categoryCode);
+        const mins = d.cookTimeMinutes ?? 0;
+        setCookHour(mins >= 60 ? String(Math.floor(mins / 60)) : '');
+        setCookMin(mins % 60 ? String(mins % 60) : '');
+        if (d.servings) setServings(String(d.servings));
+        if (d.ingredients?.length) {
+          setIngredients(d.ingredients.map((i) => ({ name: i.name, qty: i.amountText ?? '' })));
+        }
+        if (d.steps?.length) setSteps(d.steps.map((s) => s.content));
+      }
+    } catch {
+      // draft 파싱 실패 — 빈 폼으로 직접 입력하도록 둔다.
+    }
   }
 
   // 대표 사진 선택 — 네이티브 모듈 없으면(리빌드 전) 안내 후 무시.

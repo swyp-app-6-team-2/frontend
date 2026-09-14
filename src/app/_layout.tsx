@@ -1,11 +1,13 @@
+import { useEffect } from 'react';
 import { LogBox, useColorScheme } from 'react-native';
-import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
+import { DarkTheme, DefaultTheme, Stack, ThemeProvider, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { QueryProvider } from '@/components/query-provider';
 import { useReduceMotion } from '@/hooks/use-reduce-motion';
+import { setOnAuthExpired } from '@/lib/api';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -25,6 +27,14 @@ export default function RootLayout() {
   // 어색하므로 개별로 'none' 유지(전환 없이 즉시 교체).
   const reduceMotion = useReduceMotion();
   const animation = reduceMotion ? 'none' : 'fade';
+
+  // 토큰 재발급까지 실패하면(세션 만료) 로그인 화면으로. client.ts가 이 콜백을 호출한다.
+  const router = useRouter();
+  useEffect(() => {
+    setOnAuthExpired(() => router.replace('/login'));
+    return () => setOnAuthExpired(null);
+  }, [router]);
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <QueryProvider>

@@ -1,9 +1,14 @@
-name: EAS build (iOS) + Discord
+name: EAS build (iOS) + Firebase App Distribution + Discord
 
-# 수동 실행(Actions 탭 → Run workflow) → EAS iOS 빌드 → 완료되면 Discord로 ipa 링크 알림.
+# 수동 실행(Actions 탭 → Run workflow) → EAS iOS 빌드 → 완료되면
+#   ① Firebase App Distribution에 자동 업로드(팀원에게 새 빌드 알림) → ② Discord로 링크 알림.
 # 필요한 Secret:
-#   EXPO_TOKEN     — Expo 액세스 토큰 (expo.dev → Account → Access tokens)
-#   DISCORD_WEBHOOK — 디스코드 채널 웹훅 URL (선택: 없으면 알림만 생략)
+#   EXPO_TOKEN               — Expo 액세스 토큰 (expo.dev → Account → Access tokens)
+#   DISCORD_WEBHOOK          — 디스코드 채널 웹훅 URL (선택: 없으면 알림만 생략)
+#   FIREBASE_IOS_APP_ID      — Firebase 콘솔 iOS 앱 ID (예: 1:123...:ios:abcd) (선택: 없으면 업로드 생략)
+#   FIREBASE_SERVICE_ACCOUNT — "Firebase App Distribution Admin" 역할 서비스계정 JSON 전체 (선택)
+# 주의: Firebase 업로드는 preview(ad-hoc) 프로필에서만 동작 — production은 App Store용 ipa라 설치 불가.
+# 팀원 그룹은 Firebase 콘솔 → App Distribution → Testers & Groups 에서 alias "team" 으로 미리 생성.
 on:
   workflow_dispatch:
     inputs:
@@ -52,6 +57,36 @@ jobs:
             echo "page=$page"
           } >> "$GITHUB_OUTPUT"
 
+      - name: Upload to Firebase App Distribution
+        id: firebase
+        if: ${{ success() && steps.build.outputs.ipa != '' }}
+        env:
+          FIREBASE_APP_ID: ${{ secrets.FIREBASE_IOS_APP_ID }}
+          SA_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          IPA_URL: ${{ steps.build.outputs.ipa }}
+          PROFILE: ${{ inputs.profile }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          set -euo pipefail
+          if [ -z "${FIREBASE_APP_ID:-}" ] || [ -z "${SA_JSON:-}" ]; then
+            echo "FIREBASE_IOS_APP_ID / FIREBASE_SERVICE_ACCOUNT 미설정 — Firebase 업로드 생략"; exit 0
+          fi
+          if [ "$PROFILE" != "preview" ]; then
+            echo "::warning::profile=$PROFILE 는 App Store용 ipa라 App Distribution 설치 불가 — 업로드 생략. preview로 실행하세요."
+            exit 0
+          fi
+          # 서비스계정 자격증명 파일로 인증
+          printf '%s' "$SA_JSON" > "$RUNNER_TEMP/sa.json"
+          export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json"
+          # EAS 아티팩트(ipa)를 로컬로 내려받아 업로드
+          curl -fSL "$IPA_URL" -o "$RUNNER_TEMP/app.ipa"
+          notes="[$PROFILE] $(git log -1 --pretty='%s') — @$ACTOR"
+          npx --yes firebase-tools appdistribution:distribute "$RUNNER_TEMP/app.ipa" \
+            --app "$FIREBASE_APP_ID" \
+            --groups "team" \
+            --release-notes "$notes"
+          echo "distributed=1" >> "$GITHUB_OUTPUT"
+
       - name: Notify Discord
         if: ${{ always() }}
         env:
@@ -60,6 +95,7 @@ jobs:
           PROFILE: ${{ inputs.profile }}
           IPA: ${{ steps.build.outputs.ipa }}
           PAGE: ${{ steps.build.outputs.page }}
+          FIREBASE: ${{ steps.firebase.outputs.distributed }}
           ACTOR: ${{ github.actor }}
         run: |
           set -euo pipefail
@@ -75,6 +111,7 @@ jobs:
           [ -n "$IPA" ] && links="[ipa 다운로드]($IPA)"
           [ -n "$PAGE" ] && links="$links${links:+  ·  }[빌드 페이지]($PAGE)"
           [ -z "$links" ] && links="(빌드 아티팩트 링크 없음)"
+          [ "${FIREBASE:-}" = "1" ] && links="$links"$'\n'"📲 Firebase App Distribution 팀 배포 완료 — App Tester에서 확인"
           payload=$(jq -n \
             --arg title "$title" --arg desc "$links" --arg actor "$ACTOR" --argjson color "$color" \
             '{ username: "별따먹자 EAS", embeds: [{ title: $title, description: $desc, color: $color, footer: { text: ("triggered by " + $actor) } }] }')

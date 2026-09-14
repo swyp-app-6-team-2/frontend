@@ -1,10 +1,12 @@
 import { useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Alert, Pressable, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 
 import { AppText, Button, Screen, SearchBar } from '@/components/ui';
 import { palette } from '@/constants/tokens';
+import { useCreateIngestionJob } from '@/hooks/use-api';
+import { ApiError } from '@/lib/api';
 
 // 클립보드 감지 목업 — 실제로는 Clipboard.getStringAsync() 로 교체.
 const CLIPBOARD_URL = 'https://www.youtube.com/shorts/ldslYEbl...';
@@ -12,10 +14,26 @@ const CLIPBOARD_URL = 'https://www.youtube.com/shorts/ldslYEbl...';
 // 16 URL로 등록 — 링크 입력 → AI 분석 로딩으로.
 export default function AddRecipeUrlScreen() {
   const router = useRouter();
+  const createJob = useCreateIngestionJob();
   const [url, setUrl] = useState('');
   const [showPaste, setShowPaste] = useState(true);
 
   const canSubmit = url.trim().length > 0;
+
+  const onSubmit = async () => {
+    try {
+      const { ingestionJobId } = await createJob.mutateAsync({
+        inputType: 'URL',
+        url: url.trim(),
+      });
+      router.push({
+        pathname: '/add-recipe-loading',
+        params: { jobId: String(ingestionJobId), inputType: 'URL' },
+      });
+    } catch (e) {
+      Alert.alert('요청 실패', e instanceof ApiError ? e.message : '잠시 후 다시 시도해주세요.');
+    }
+  };
 
   return (
     <Screen title="URL로 등록" back>
@@ -71,11 +89,7 @@ export default function AddRecipeUrlScreen() {
       </View>
 
       <View className="pb-4">
-        <Button
-          label="등록하기"
-          disabled={!canSubmit}
-          onPress={() => router.push('/add-recipe-loading')}
-        />
+        <Button label="등록하기" disabled={!canSubmit || createJob.isPending} onPress={onSubmit} />
       </View>
     </Screen>
   );

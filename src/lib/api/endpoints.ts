@@ -3,6 +3,9 @@ import type {
   CookHistoryCreateRequest,
   CookHistoryItem,
   ImageContentType,
+  IngestionJobCreateRequest,
+  IngestionJobCreateResponse,
+  IngestionJobResponse,
   IngredientListResponse,
   MeResponse,
   RecipeCreateRequest,
@@ -11,6 +14,8 @@ import type {
   RecipeListParams,
   RecipeListResponse,
   RecipeUpdateRequest,
+  SignupRequest,
+  SignupResponse,
   SocialLoginRequest,
   SocialLoginResponse,
   UploadPurpose,
@@ -21,6 +26,9 @@ import type {
 export const authApi = {
   socialLogin: (body: SocialLoginRequest) =>
     apiFetch<SocialLoginResponse>('/auth/social-login', { method: 'POST', body, auth: false }),
+  // 신규 사용자 가입 완료 — signupToken은 social-login이 반환한 값. accessToken 불필요.
+  signup: (body: SignupRequest) =>
+    apiFetch<SignupResponse>('/auth/signup', { method: 'POST', body, auth: false }),
 };
 
 // ── User / Profile ────────────────────────────────────────────
@@ -73,4 +81,13 @@ export const cookingApi = {
 // ── Ingredient ────────────────────────────────────────────────
 export const ingredientApi = {
   list: () => apiFetch<IngredientListResponse>('/ingredients'),
+};
+
+// ── Ingestion (레시피 분석) ────────────────────────────────────
+export const ingestionApi = {
+  // 분석 요청(202) → jobId 반환. 이후 get(id)로 상태를 폴링한다.
+  create: (body: IngestionJobCreateRequest) =>
+    apiFetch<IngestionJobCreateResponse>('/ingestion-jobs', { method: 'POST', body }),
+  get: (ingestionJobId: number) =>
+    apiFetch<IngestionJobResponse>(`/ingestion-jobs/${ingestionJobId}`),
 };

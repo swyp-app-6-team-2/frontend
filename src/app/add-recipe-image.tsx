@@ -6,12 +6,41 @@ import { Feather } from '@expo/vector-icons';
 
 import { AppText, Button, Screen } from '@/components/ui';
 import { palette } from '@/constants/tokens';
+import { useCreateIngestionJob } from '@/hooks/use-api';
+import { ApiError, uploadImage } from '@/lib/api';
 import { ImagePickerUnavailableError, pickImage, type PickedImage } from '@/lib/pick-image';
 
 // 17 이미지로 등록 — 캡처 이미지 업로드 → OCR 로딩으로.
 export default function AddRecipeImageScreen() {
   const router = useRouter();
+  const createJob = useCreateIngestionJob();
   const [images, setImages] = useState<PickedImage[]>([]);
+  const [uploading, setUploading] = useState(false);
+
+  // 선택한 사진들을 INGESTION_INPUT으로 업로드 → objectKey들로 분석 요청 → 로딩(폴링) 화면.
+  const onSubmit = async () => {
+    setUploading(true);
+    try {
+      const inputImageKeys = await Promise.all(
+        images.map((img) => uploadImage('INGESTION_INPUT', img)),
+      );
+      const { ingestionJobId } = await createJob.mutateAsync({
+        inputType: 'IMAGE',
+        inputImageKeys,
+      });
+      router.push({
+        pathname: '/add-recipe-loading',
+        params: { jobId: String(ingestionJobId), inputType: 'IMAGE' },
+      });
+    } catch (e) {
+      Alert.alert(
+        '요청 실패',
+        e instanceof ApiError ? e.message : '사진 업로드 또는 요청에 실패했어요.',
+      );
+    } finally {
+      setUploading(false);
+    }
+  };
 
   // 갤러리에서 원본 사진 선택(OCR용이라 크롭 안 함). 여러 장은 반복 탭.
   const addImage = async () => {
@@ -95,9 +124,9 @@ export default function AddRecipeImageScreen() {
 
       <View className="pb-4">
         <Button
-          label="등록하기"
-          disabled={images.length === 0}
-          onPress={() => router.push('/add-recipe-loading')}
+          label={uploading ? '업로드 중…' : '등록하기'}
+          disabled={images.length === 0 || uploading || createJob.isPending}
+          onPress={onSubmit}
         />
       </View>
     </Screen>

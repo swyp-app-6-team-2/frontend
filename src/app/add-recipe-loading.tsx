@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import Animated, {
   cancelAnimation,
   Easing,
@@ -12,6 +12,7 @@ import Animated, {
 
 import { AppText, Screen } from '@/components/ui';
 import { palette } from '@/constants/tokens';
+import { useIngestionJob } from '@/hooks/use-api';
 import { useReduceMotion } from '@/hooks/use-reduce-motion';
 
 // 인디케이터 세그먼트 폭(트랙 대비 비율)
@@ -20,9 +21,33 @@ const SEG = 0.4;
 // 16-2 콘텐츠 확인 중 — AI가 영상/이미지를 레시피로 정리하는 로딩.
 export default function AddRecipeLoadingScreen() {
   const router = useRouter();
+  const { jobId, inputType } = useLocalSearchParams<{ jobId?: string; inputType?: string }>();
+  const numJobId = jobId ? Number(jobId) : null;
+  const isImage = inputType === 'IMAGE';
+  const { data: job, isError } = useIngestionJob(numJobId);
   const reduceMotion = useReduceMotion();
   const [trackW, setTrackW] = useState(0);
   const progress = useSharedValue(0); // 0→1 왕복(무한)
+
+  // 폴링 결과에 따라 분기: 성공 → 내용 확인(수동 폼 프리필), 실패/만료 → 실패 안내.
+  // 네트워크 에러(isError)도 실패로 간주. inputType으로 URL/이미지 실패 화면을 고른다.
+  const status = job?.status;
+  useEffect(() => {
+    if (status === 'RESULT_READY') {
+      router.replace({
+        pathname: '/add-recipe-manual',
+        params: {
+          draft: JSON.stringify(job?.result ?? null),
+          previewImageUrl: job?.previewImageUrl ?? '',
+        },
+      });
+    } else if (status === 'FAILED' || status === 'EXPIRED' || isError) {
+      router.replace({
+        pathname: isImage ? '/ocr-failed' : '/url-failed',
+        params: { code: job?.failureCode ?? '' },
+      });
+    }
+  }, [status, isError, isImage, job?.result, job?.previewImageUrl, job?.failureCode, router]);
 
   // 진행 상황이 "살아있음"을 보여주는 무한 인디케이터. 실제 진행률 API가
   // 붙으면 withRepeat 대신 withTiming(progress)로 교체(백엔드 연동 지점).
@@ -41,7 +66,7 @@ export default function AddRecipeLoadingScreen() {
   }));
 
   return (
-    <Screen title="URL로 등록" back>
+    <Screen title={isImage ? '이미지로 등록' : 'URL로 등록'} back>
       <View className="flex-1 items-center justify-center gap-8">
         <View className="h-56 w-full items-center justify-center rounded-card border border-dashed border-foreground/15">
           <AppText variant="chip" className="text-muted">
@@ -50,7 +75,9 @@ export default function AddRecipeLoadingScreen() {
         </View>
 
         <AppText variant="body" className="text-center text-muted">
-          AI가 영상 속 재료와 조리 순서를{'\n'}레시피로 정리하고 있어요
+          {isImage
+            ? 'AI가 이미지 속 재료와 조리 순서를\n레시피로 정리하고 있어요'
+            : 'AI가 영상 속 재료와 조리 순서를\n레시피로 정리하고 있어요'}
         </AppText>
 
         {/* 진행 바 — reduce-motion이면 정적 부분 채움, 아니면 움직이는 인디케이터 */}
@@ -77,13 +104,7 @@ export default function AddRecipeLoadingScreen() {
       </View>
 
       <View className="items-end pb-4">
-        <Text
-          className="text-chip text-muted"
-          onPress={() => router.replace('/recipe-detail')}
-          accessibilityRole="button"
-        >
-          0/1
-        </Text>
+        <Text className="text-chip text-muted">{status === 'QUEUED' ? '대기 중' : '분석 중'}</Text>
       </View>
     </Screen>
   );

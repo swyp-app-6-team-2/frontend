@@ -1,9 +1,17 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { setTokens } from '@/lib/api/auth-token';
-import { authApi, cookingApi, ingredientApi, recipeApi, userApi } from '@/lib/api/endpoints';
+import {
+  authApi,
+  cookingApi,
+  ingestionApi,
+  ingredientApi,
+  recipeApi,
+  userApi,
+} from '@/lib/api/endpoints';
 import type {
   CookHistoryCreateRequest,
+  IngestionJobCreateRequest,
   RecipeCreateRequest,
   RecipeListParams,
   RecipeUpdateRequest,
@@ -17,6 +25,7 @@ export const queryKeys = {
   recipe: (recipeId: number) => ['recipe', recipeId] as const,
   cookHistories: (recipeId: number) => ['cook-histories', recipeId] as const,
   ingredients: () => ['ingredients'] as const,
+  ingestionJob: (jobId: number) => ['ingestion-job', jobId] as const,
   me: () => ['me'] as const,
 };
 
@@ -57,6 +66,20 @@ export function useIngredients() {
     queryKey: queryKeys.ingredients(),
     queryFn: ingredientApi.list,
     staleTime: Infinity,
+  });
+}
+
+// 레시피 분석 작업 폴링. QUEUED/PROCESSING 동안만 refetch, terminal 상태면 자동 정지.
+export function useIngestionJob(jobId: number | null | undefined) {
+  return useQuery({
+    queryKey: queryKeys.ingestionJob(jobId as number),
+    queryFn: () => ingestionApi.get(jobId as number),
+    enabled: jobId != null,
+    refetchInterval: (query) => {
+      const status = query.state.data?.status;
+      const done = status === 'RESULT_READY' || status === 'FAILED' || status === 'EXPIRED';
+      return done ? false : 2000;
+    },
   });
 }
 
@@ -105,6 +128,13 @@ export function useSocialLogin() {
         setTokens({ accessToken: res.accessToken, refreshToken: res.refreshToken ?? null });
       }
     },
+  });
+}
+
+// 레시피 분석 요청. 성공 시 jobId를 받아 로딩 화면에서 폴링한다.
+export function useCreateIngestionJob() {
+  return useMutation({
+    mutationFn: (body: IngestionJobCreateRequest) => ingestionApi.create(body),
   });
 }
 

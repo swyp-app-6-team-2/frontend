@@ -51,7 +51,7 @@ export function ScreenHeader({ title, back, close, onClose, right }: ScreenHeade
         >
           <Image
             source={require('../../assets/images/ic-close.png')}
-            style={{ width: 20, height: 20 }}
+            style={{ width: 16, height: 16 }}
             tintColor={palette.foreground}
             contentFit="contain"
           />

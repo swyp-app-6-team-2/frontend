@@ -14,6 +14,11 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import {
+  INQUIRY_TYPE_LABEL,
+  InquiryTypeSheet,
+  type InquiryType,
+} from '@/components/inquiry-type-sheet';
 import { AlertDialog, AppText, PressableScale, ScreenHeader } from '@/components/ui';
 import { palette } from '@/constants/tokens';
 import { fireHaptic } from '@/lib/haptics';
@@ -40,6 +45,12 @@ export default function InquiryScreen() {
   const initialTab = params.tab === 'history' ? 1 : 0; // inquiry-success에서 오면 내역 탭
   const [tab, setTab] = useState(initialTab); // 0=작성, 1=내역
   const [confirm, setConfirm] = useState<null | 'leave' | 'submit'>(null); // 확인 팝업
+  const [type, setType] = useState<InquiryType | null>(null); // 문의유형 선택값
+  const [typeSheet, setTypeSheet] = useState(false); // 문의유형 선택 시트
+  const [title, setTitle] = useState(''); // 제목(필수)
+  const [content, setContent] = useState(''); // 문의내용(필수, 최소 10자)
+  // 제목·내용은 필수, 내용은 공백 제외 10자 이상이어야 접수 가능.
+  const canSubmit = title.trim().length > 0 && content.trim().length >= 10;
 
   const goTab = (i: number) => {
     fireHaptic('selection');
@@ -97,10 +108,17 @@ export default function InquiryScreen() {
                 <Pressable
                   className="flex-row items-center justify-between rounded-pill bg-field px-4 py-2.5 active:opacity-80"
                   accessibilityRole="button"
-                  onPress={() => {}}
+                  accessibilityState={{ expanded: typeSheet }}
+                  onPress={() => {
+                    fireHaptic('selection');
+                    setTypeSheet(true);
+                  }}
                 >
-                  <AppText variant="body" className="font-normal text-muted">
-                    문의 유형을 선택해주세요.
+                  <AppText
+                    variant="body"
+                    className={type ? 'font-normal text-foreground' : 'font-normal text-muted'}
+                  >
+                    {type ? INQUIRY_TYPE_LABEL[type] : '문의 유형을 선택해주세요.'}
                   </AppText>
                   <Text className="text-muted" style={{ fontSize: 12 }}>
                     ▾
@@ -108,29 +126,41 @@ export default function InquiryScreen() {
                 </Pressable>
               </View>
 
-              {/* 닉네임 */}
+              {/* 제목 (필수) */}
               <View className="gap-2">
-                <AppText variant="body">닉네임</AppText>
+                <AppText variant="body">제목</AppText>
                 <View className="rounded-pill bg-field px-4 py-2.5">
                   <TextInput
                     className="text-foreground"
                     style={{ fontSize: 16, lineHeight: 21, paddingVertical: 0 }}
-                    placeholder="닉네임을 입력해주세요"
+                    placeholder="제목을 입력해주세요"
                     placeholderTextColor={palette.muted}
+                    value={title}
+                    onChangeText={setTitle}
                   />
                 </View>
               </View>
 
-              {/* 내용 (멀티라인) */}
-              <View className="h-[177px] rounded-[12px] bg-field px-4 py-2.5">
-                <TextInput
-                  className="flex-1 text-foreground"
-                  style={{ fontSize: 16, lineHeight: 21 }}
-                  placeholder="내용을 입력해 주세요"
-                  placeholderTextColor={palette.muted}
-                  multiline
-                  textAlignVertical="top"
-                />
+              {/* 문의내용 (멀티라인, 필수·최소 10자) */}
+              <View className="gap-2">
+                <AppText variant="body">문의내용</AppText>
+                <View className="h-[177px] rounded-[12px] bg-field px-4 py-2.5">
+                  <TextInput
+                    className="flex-1 text-foreground"
+                    style={{ fontSize: 16, lineHeight: 21 }}
+                    placeholder="내용을 입력해 주세요"
+                    placeholderTextColor={palette.muted}
+                    multiline
+                    textAlignVertical="top"
+                    value={content}
+                    onChangeText={setContent}
+                  />
+                </View>
+                {content.trim().length > 0 && content.trim().length < 10 ? (
+                  <Text className="text-[13px] leading-[17px] text-muted">
+                    최소 10자 이상 입력해주세요.
+                  </Text>
+                ) : null}
               </View>
 
               {/* 사진첨부 */}
@@ -159,11 +189,19 @@ export default function InquiryScreen() {
                 <Text className="text-body font-semibold text-popup-button-text">취소</Text>
               </Pressable>
               <Pressable
-                className="h-[52px] flex-1 items-center justify-center rounded-[30px] bg-primary active:opacity-90"
+                className={`h-[52px] flex-1 items-center justify-center rounded-[30px] active:opacity-90 ${
+                  canSubmit ? 'bg-primary' : 'bg-disabled'
+                }`}
                 accessibilityRole="button"
+                accessibilityState={{ disabled: !canSubmit }}
+                disabled={!canSubmit}
                 onPress={() => setConfirm('submit')}
               >
-                <Text className="text-body font-semibold text-ink">문의 접수</Text>
+                <Text
+                  className={`text-body font-semibold ${canSubmit ? 'text-ink' : 'text-muted'}`}
+                >
+                  문의 접수
+                </Text>
               </Pressable>
             </View>
           </View>
@@ -205,6 +243,18 @@ export default function InquiryScreen() {
           </View>
         </ScrollView>
       </SafeAreaView>
+
+      {/* 문의유형 선택 시트 */}
+      {typeSheet ? (
+        <InquiryTypeSheet
+          selected={type}
+          onCancel={() => setTypeSheet(false)}
+          onApply={(t) => {
+            setType(t);
+            setTypeSheet(false);
+          }}
+        />
+      ) : null}
 
       {/* 확인 팝업 — 취소(작성 중단) / 문의 접수 */}
       {confirm ? (

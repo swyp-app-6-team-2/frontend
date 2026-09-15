@@ -9,5 +9,6 @@ export { Screen, type ScreenProps } from './screen';
 export { ScreenHeader, type ScreenHeaderProps } from './screen-header';
 export { SearchBar, type SearchBarProps } from './search-bar';
 export { Section, type SectionProps } from './section';
+export { SheetShell, type SheetShellProps } from './sheet-shell';
 export { SectionTitle, type SectionTitleProps } from './section-title';
 export { Tag, type TagProps } from './tag';

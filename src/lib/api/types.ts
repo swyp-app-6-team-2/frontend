@@ -115,7 +115,7 @@ export type RecipeDetailResponse = {
   memo: string | null;
   ingredients: { ingredientId: number | null; name: string; amountText: string | null }[];
   steps: { content: string }[];
-  source: null; // Ingestion 전까지 항상 null
+  source: string | null; // 원본(URL) — Ingestion 전까지 런타임 항상 null
 };
 
 export type RecipeListParams = { page?: number; size?: number; sort?: RecipeListSort };

@@ -157,6 +157,13 @@ export default function IngredientsScreen() {
           onPress={() => router.push('/fridge')}
           haptic="light"
           className="h-14 w-14 items-center justify-center rounded-full bg-primary"
+          style={{
+            shadowColor: '#000000',
+            shadowOpacity: 0.35,
+            shadowRadius: 40,
+            shadowOffset: { width: 0, height: 20 },
+            elevation: 12,
+          }}
           accessibilityRole="button"
           accessibilityLabel="재료 추가하기"
         >

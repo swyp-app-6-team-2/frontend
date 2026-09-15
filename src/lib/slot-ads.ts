@@ -41,6 +41,16 @@ export function useCanWatchAd(): boolean {
   return useSyncExternalStore(subscribe, canWatchAd, canWatchAd);
 }
 
+/** 오늘 남은 광고 시청 가능 횟수. */
+export function remainingWatches(): number {
+  return DAILY_LIMIT - watchedToday;
+}
+/** 남은 시청 횟수 구독('잔여 시청 한도'). 총 한도는 AD_DAILY_LIMIT. */
+export function useRemainingWatches(): number {
+  return useSyncExternalStore(subscribe, remainingWatches, remainingWatches);
+}
+export const AD_DAILY_LIMIT = DAILY_LIMIT;
+
 /** 방금 슬롯이 추가됐는지 구독(홈 팝업). */
 export function useSlotJustAdded(): boolean {
   return useSyncExternalStore(

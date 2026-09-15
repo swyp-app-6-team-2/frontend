@@ -8,6 +8,9 @@ import { PressableScale } from './pressable-scale';
 
 export type DialogTone = 'neutral' | 'danger' | 'primary';
 
+/** 등장 햅틱 — 경고성(기본)/축하성. */
+export type DialogHaptic = 'warning' | 'success';
+
 // 카드 등장 — 아래서 살짝 올라오며 스프링 팝. reduce-motion은 기본값이 자동 존중.
 const cardEntering = FadeInDown.springify().damping(18).mass(0.85);
 
@@ -27,17 +30,28 @@ export type AlertDialogProps = {
   title?: string;
   /** 본문 — `\n` 으로 두 줄. */
   message: string;
-  /** 1~2개 버튼, 왼→오. */
+  /** 1~2개 버튼, 왼→오. 1개면 카드 폭에 꽉 차게. */
   actions: DialogAction[];
+  /** 등장 시 햅틱 — 기본 'warning'(경고 팝업). 축하 팝업은 'success'. */
+  haptic?: DialogHaptic;
 };
 
 // 중앙 정렬 경고 팝업 — Figma 팝업창 스펙(카드 370 / padding 30·18·20 / gap 26 / radius 20).
 // url-failed · ocr-failed · slot-full 세 화면이 아이콘/문구만 다르고 구조가 같아 공통화.
-export function AlertDialog({ icon, mascot, title, message, actions }: AlertDialogProps) {
-  // 경고성 팝업 등장 시 부드러운 알림 햅틱.
+export function AlertDialog({
+  icon,
+  mascot,
+  title,
+  message,
+  actions,
+  haptic = 'warning',
+}: AlertDialogProps) {
+  // 팝업 등장 시 햅틱(경고성 기본, 축하 팝업은 success).
   useEffect(() => {
-    fireHaptic('warning');
-  }, []);
+    fireHaptic(haptic);
+  }, [haptic]);
+
+  const single = actions.length === 1; // 단일 버튼 → 카드 폭 전체
 
   return (
     <View className="flex-1 items-center justify-center px-[10px]">
@@ -111,8 +125,11 @@ export function AlertDialog({ icon, mascot, title, message, actions }: AlertDial
             </View>
           </View>
 
-          {/* Frame 286: 버튼 행 (gap 12) */}
-          <View className="flex-row justify-center" style={{ gap: 12 }}>
+          {/* Frame 286: 버튼 행 (gap 12). 단일 버튼은 카드 폭 전체(self-stretch) */}
+          <View
+            className={`flex-row justify-center ${single ? 'self-stretch' : ''}`}
+            style={{ gap: 12 }}
+          >
             {actions.map((a) => {
               const tone = a.tone ?? 'neutral';
               const bg =
@@ -132,7 +149,7 @@ export function AlertDialog({ icon, mascot, title, message, actions }: AlertDial
                   key={a.label}
                   onPress={a.onPress}
                   accessibilityRole="button"
-                  className={`h-[52px] w-[150px] items-center justify-center rounded-[30px] ${bg}`}
+                  className={`h-[52px] ${single ? 'flex-1' : 'w-[150px]'} items-center justify-center rounded-[30px] ${bg}`}
                 >
                   <Text
                     className={`font-semibold ${textColor}`}

@@ -16,7 +16,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { RecommendPopup } from '@/components/recommend-popup';
 import { SlotAddedPopup } from '@/components/slot-added-popup';
 import { TabBar } from '@/components/tab-bar';
-import { AppText } from '@/components/ui';
 import { palette } from '@/constants/tokens';
 import { useIngredients, useRecipes } from '@/hooks/use-api';
 import { useReduceMotion } from '@/hooks/use-reduce-motion';
@@ -146,6 +145,8 @@ export default function HomeScreen() {
   const [open, setOpen] = useState(false);
   const [recommend, setRecommend] = useState<RecipeListItem | null>(null);
   const lastTap = useRef(0);
+  // 남은 별 개수 — 별 데이터 레이어 생기면 서버 값으로 교체(현재 placeholder).
+  const remainingStars = 10;
 
   // 추천 옵션 선택 → 랜덤 레시피 팝업 (저장 레시피 없으면 안내)
   const onRecommend = (label: string) => {
@@ -205,10 +206,23 @@ export default function HomeScreen() {
           className="flex-row items-center justify-between px-screen pt-2"
           pointerEvents="box-none"
         >
-          <AppText variant="title">별따먹자</AppText>
-          <View className="flex-row items-center gap-1 rounded-pill border border-primary/40 bg-surface/60 px-3 py-1">
-            <Text className="text-primary">★</Text>
-            <Text className="font-bold text-foreground">5/10</Text>
+          <Image
+            source={require('../assets/images/home-title.png')}
+            style={{ width: 84, height: 24 }}
+            contentFit="contain"
+            accessibilityLabel="별따먹자"
+          />
+          {/* 남은 별 칩 — Figma: 골드 테두리 pill(#1E1E20) + 별 아이콘 15 + '남은 별' + 개수 */}
+          <View className="h-[38px] flex-row items-center gap-1 rounded-pill border border-primary bg-star-chip px-4">
+            <Image
+              source={require('../assets/images/star-chip.png')}
+              style={{ width: 15, height: 15 }}
+              contentFit="contain"
+            />
+            <Text className="text-[14px] font-medium leading-[18px] text-foreground">남은 별</Text>
+            <Text className="text-[14px] font-medium leading-[18px] text-foreground">
+              {remainingStars}
+            </Text>
           </View>
         </View>
 

@@ -15,7 +15,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AlertDialog, AppText, Button, Screen } from '@/components/ui';
+import { AppText, Button, Screen } from '@/components/ui';
 import { RECIPE_CATEGORY_LABEL } from '@/constants/labels';
 import { palette } from '@/constants/tokens';
 import {
@@ -338,34 +338,88 @@ export default function RecipeViewScreen() {
         </Pressable>
       </Modal>
 
-      {/* 요리 완료 축하 팝업 — 마스코트 + 골드 확인 버튼. 확인 시 별 점등 화면으로.
-          전체화면 Modal로 띄워 AlertDialog(자체 dim + flex-1 중앙정렬)가 화면 전체를 덮게 한다. */}
+      {/* 요리 완료 축하 팝업 — Figma: dim(background@85%) + 중앙 카드(마스코트 상단 겹침) + 골드 확인 버튼.
+          전체화면 확보 위해 명시적 window 크기 View에 인라인 스타일로 구현. */}
       <Modal visible={showComplete} transparent statusBarTranslucent animationType="fade">
-        {/* Modal 자식은 flex-1이 화면을 못 채우므로 명시적 window 크기로 전체화면 확보 → dim·중앙정렬·버튼 정상 */}
-        <View style={{ width: winW, height: winH }}>
-          <AlertDialog
-            mascot={
-              <Image
-                source={require('../assets/images/mascot-cook-complete.png')}
-                style={{ width: 166, height: 143 }}
-                contentFit="contain"
-              />
-            }
-            title="요리를 완료하였어요!"
-            message={'맛있는 한 끼 완성!\n오늘의 요리가 기록됐어요'}
-            haptic="success"
-            actions={[
-              {
-                label: '확인',
-                tone: 'primary',
-                onPress: () =>
-                  router.replace({
-                    pathname: '/cook-complete',
-                    params: { title: data?.title ?? '' },
-                  }),
-              },
-            ]}
-          />
+        <View
+          style={{
+            width: winW,
+            height: winH,
+            alignItems: 'center',
+            justifyContent: 'center',
+            paddingHorizontal: 10,
+            backgroundColor: 'rgba(6,10,25,0.85)', // background(#060A19) 85% dim
+          }}
+        >
+          <View style={{ width: '100%', maxWidth: 362, alignItems: 'center' }}>
+            {/* 마스코트 — 카드 상단에 걸쳐 얹힘 */}
+            <Image
+              source={require('../assets/images/mascot-cook-complete.png')}
+              style={{ width: 166, height: 143, marginBottom: -44, zIndex: 2 }}
+              contentFit="contain"
+            />
+            {/* 카드 */}
+            <View
+              style={{
+                width: '100%',
+                alignItems: 'center',
+                gap: 26,
+                paddingTop: 48,
+                paddingHorizontal: 18,
+                paddingBottom: 20,
+                borderRadius: 20,
+                backgroundColor: palette.field,
+                shadowColor: '#000',
+                shadowOpacity: 0.35,
+                shadowRadius: 40,
+                shadowOffset: { width: 0, height: 20 },
+                elevation: 12,
+              }}
+            >
+              <View style={{ alignItems: 'center', gap: 12 }}>
+                <Text
+                  style={{
+                    fontSize: 22,
+                    lineHeight: 29,
+                    fontWeight: '700',
+                    color: palette.foreground,
+                    textAlign: 'center',
+                  }}
+                >
+                  요리를 완료하였어요!
+                </Text>
+                <Text
+                  style={{
+                    fontSize: 16,
+                    lineHeight: 21,
+                    fontWeight: '500',
+                    color: palette.bodyMuted,
+                    textAlign: 'center',
+                  }}
+                >
+                  {'맛있는 한 끼 완성!\n오늘의 요리가 기록됐어요'}
+                </Text>
+              </View>
+              <Pressable
+                onPress={() => setShowComplete(false)}
+                accessibilityRole="button"
+                style={{
+                  height: 52,
+                  alignSelf: 'stretch',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: 30,
+                  backgroundColor: palette.primary,
+                }}
+              >
+                <Text
+                  style={{ fontSize: 16, lineHeight: 21, fontWeight: '600', color: palette.ink }}
+                >
+                  확인
+                </Text>
+              </Pressable>
+            </View>
+          </View>
         </View>
       </Modal>
     </Screen>

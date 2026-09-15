@@ -26,6 +26,7 @@ export const palette = {
   recoPanel: '#181F42',
   slot: '#36398A',
   recoButton: '#0C1033',
+  starChip: '#1E1E20',
   success: '#2FA96B',
   error: '#FF6B5E',
   info: '#2BAEFF',

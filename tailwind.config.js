@@ -29,6 +29,7 @@ module.exports = {
         'reco-panel': token('--color-reco-panel'),
         slot: token('--color-slot'),
         'reco-button': token('--color-reco-button'),
+        'star-chip': token('--color-star-chip'),
         success: token('--color-success'),
         error: token('--color-error'),
         info: token('--color-info'),

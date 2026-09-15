@@ -1,7 +1,9 @@
 import { useRef, useState } from 'react';
 import {
+  Image,
   Pressable,
   ScrollView,
+  StyleSheet,
   Text,
   TextInput,
   useWindowDimensions,
@@ -12,12 +14,12 @@ import {
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { AppText, PressableScale, ScreenHeader } from '@/components/ui';
+import { AlertDialog, AppText, PressableScale, ScreenHeader } from '@/components/ui';
 import { palette } from '@/constants/tokens';
 import { fireHaptic } from '@/lib/haptics';
 
-// 문의내역 목업 — status: 답변완료(success) / 접수(disabled)
-type Inquiry = { status: '답변완료' | '접수'; date: string; text: string };
+// 문의내역 목업 — status: 답변완료(success) / 접수 완료(disabled)
+type Inquiry = { status: '답변완료' | '접수 완료'; date: string; text: string };
 
 const HISTORY: Inquiry[] = [
   {
@@ -25,8 +27,8 @@ const HISTORY: Inquiry[] = [
     date: '2026.08.16 18:45',
     text: '미디엄팩을 결제했는데 슬롯 개수가 그대로예요. 확인 부탁드려요.',
   },
-  { status: '접수', date: '2026.07.02 11:20', text: '환불 문의 드립니다.' },
-  { status: '접수', date: '2026.07.02 11:20', text: '환불 문의 드립니다.' },
+  { status: '접수 완료', date: '2026.07.02 11:20', text: '환불 문의 드립니다.' },
+  { status: '접수 완료', date: '2026.07.02 11:20', text: '환불 문의 드립니다.' },
 ];
 
 // 문의하기 — 작성 폼 / 문의내역 확인 (좌우 페이징 스와이프).
@@ -35,6 +37,7 @@ export default function InquiryScreen() {
   const { width } = useWindowDimensions();
   const pagerRef = useRef<ScrollView>(null);
   const [tab, setTab] = useState(0); // 0=작성, 1=내역
+  const [confirm, setConfirm] = useState<null | 'leave' | 'submit'>(null); // 확인 팝업
 
   const goTab = (i: number) => {
     fireHaptic('selection');
@@ -116,7 +119,7 @@ export default function InquiryScreen() {
               </View>
 
               {/* 내용 (멀티라인) */}
-              <View className="h-[177px] rounded-card bg-field px-4 py-2.5">
+              <View className="h-[177px] rounded-[12px] bg-field px-4 py-2.5">
                 <TextInput
                   className="flex-1 text-foreground"
                   style={{ fontSize: 16, lineHeight: 21 }}
@@ -131,7 +134,7 @@ export default function InquiryScreen() {
               <View className="gap-2">
                 <AppText variant="body">사진첨부</AppText>
                 <Pressable
-                  className="h-[100px] w-[100px] items-center justify-center rounded-card border border-dashed border-disabled active:opacity-80"
+                  className="h-[100px] w-[100px] items-center justify-center rounded-[12px] border border-dashed border-disabled active:opacity-80"
                   accessibilityRole="button"
                   accessibilityLabel="사진 첨부"
                   onPress={() => {}}
@@ -148,17 +151,14 @@ export default function InquiryScreen() {
               <Pressable
                 className="h-[52px] flex-1 items-center justify-center rounded-[30px] bg-popup-button active:opacity-90"
                 accessibilityRole="button"
-                onPress={() => router.back()}
+                onPress={() => setConfirm('leave')}
               >
                 <Text className="text-body font-semibold text-popup-button-text">취소</Text>
               </Pressable>
               <Pressable
                 className="h-[52px] flex-1 items-center justify-center rounded-[30px] bg-primary active:opacity-90"
                 accessibilityRole="button"
-                onPress={() => {
-                  fireHaptic('success');
-                  router.back();
-                }}
+                onPress={() => setConfirm('submit')}
               >
                 <Text className="text-body font-semibold text-ink">문의 접수</Text>
               </Pressable>
@@ -202,6 +202,44 @@ export default function InquiryScreen() {
           </View>
         </ScrollView>
       </SafeAreaView>
+
+      {/* 확인 팝업 — 취소(작성 중단) / 문의 접수 */}
+      {confirm ? (
+        <View style={StyleSheet.absoluteFill}>
+          {confirm === 'leave' ? (
+            <AlertDialog
+              mascot={
+                <Image
+                  source={require('../assets/images/mascot-inquiry.png')}
+                  style={{ width: 150, height: 129 }}
+                  resizeMode="contain"
+                />
+              }
+              title="문의를 중단하고 나가시겠어요?"
+              message="작성한 내용은 모두 사라져요"
+              actions={[
+                { label: '취소', onPress: () => setConfirm(null) },
+                { label: '나가기', tone: 'primary', onPress: () => router.back() },
+              ]}
+            />
+          ) : (
+            <AlertDialog
+              message={'작성한 내용으로\n문의를 접수할까요?'}
+              actions={[
+                { label: '취소', onPress: () => setConfirm(null) },
+                {
+                  label: '접수',
+                  tone: 'primary',
+                  onPress: () => {
+                    fireHaptic('success');
+                    router.replace('/inquiry-success');
+                  },
+                },
+              ]}
+            />
+          )}
+        </View>
+      ) : null}
     </View>
   );
 }

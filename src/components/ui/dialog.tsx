@@ -21,6 +21,8 @@ export type DialogAction = {
 export type AlertDialogProps = {
   /** 아이콘 원(60·Error 15%) 안에 들어갈 요소 — 없으면 아이콘 생략(예: 로그아웃 확인). */
   icon?: ReactNode;
+  /** 카드 상단에 걸쳐 얹히는 마스코트(예: 문의 중단 확인) — 카드 위로 살짝 겹쳐 표시. */
+  mascot?: ReactNode;
   /** 제목(Bold 22) — 없으면 생략하고 message를 강조(18px 흰색)로 표시. */
   title?: string;
   /** 본문 — `\n` 으로 두 줄. */
@@ -31,7 +33,7 @@ export type AlertDialogProps = {
 
 // 중앙 정렬 경고 팝업 — Figma 팝업창 스펙(카드 370 / padding 30·18·20 / gap 26 / radius 20).
 // url-failed · ocr-failed · slot-full 세 화면이 아이콘/문구만 다르고 구조가 같아 공통화.
-export function AlertDialog({ icon, title, message, actions }: AlertDialogProps) {
+export function AlertDialog({ icon, mascot, title, message, actions }: AlertDialogProps) {
   // 경고성 팝업 등장 시 부드러운 알림 햅틱.
   useEffect(() => {
     fireHaptic('warning');
@@ -50,11 +52,21 @@ export function AlertDialog({ icon, title, message, actions }: AlertDialogProps)
 
       {/* 팝업창 카드 — 애니메이션은 바깥 Animated.View(레이아웃은 inline style),
           시각 스타일(className)은 안쪽 View로 분리해 NativeWind 충돌 회피 */}
-      <Animated.View entering={cardEntering} style={{ width: '100%', maxWidth: 370 }}>
+      <Animated.View
+        entering={cardEntering}
+        style={{ width: '100%', maxWidth: 370, alignItems: 'center' }}
+      >
+        {/* Frame 1437264172: 마스코트 — 카드 상단에 걸쳐 얹힘(zIndex로 카드 위, 하단은 겹침) */}
+        {mascot ? (
+          <View pointerEvents="none" style={{ zIndex: 2, marginBottom: -44 }}>
+            {mascot}
+          </View>
+        ) : null}
+
         <View
           className="w-full items-center rounded-[20px] bg-field"
           style={{
-            paddingTop: 30,
+            paddingTop: mascot ? 48 : 30,
             paddingHorizontal: 18,
             paddingBottom: 20,
             gap: 26,

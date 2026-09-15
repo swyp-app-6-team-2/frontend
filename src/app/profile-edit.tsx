@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Pressable, Text, TextInput, View } from 'react-native';
+import { Pressable, TextInput, View } from 'react-native';
+import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 
 import { AppText, Button, Screen } from '@/components/ui';
@@ -14,7 +15,7 @@ export default function ProfileEditScreen() {
   return (
     <Screen title="프로필 수정" back>
       <View className="flex-1">
-        {/* 프로필 사진 (120x120) + 카메라 아이콘 — 이미지 자산 없음, 이모지 임시 */}
+        {/* 프로필 사진 (120x120) + 카메라 아이콘 */}
         <View className="items-center pt-12">
           <Pressable
             className="h-[120px] w-[120px] items-center justify-center rounded-full bg-disabled active:opacity-80"
@@ -22,7 +23,11 @@ export default function ProfileEditScreen() {
             accessibilityLabel="프로필 사진 변경"
             onPress={() => {}}
           >
-            <Text style={{ fontSize: 26 }}>📷</Text>
+            <Image
+              source={require('../assets/images/ic-photo-camera.png')}
+              style={{ width: 32, height: 32 }}
+              contentFit="contain"
+            />
           </Pressable>
         </View>
 

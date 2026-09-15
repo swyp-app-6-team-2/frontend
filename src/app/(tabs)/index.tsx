@@ -11,6 +11,22 @@ import { ListRow, Screen } from '@/components/ui';
  */
 const PAGES: { href: Href; label: string }[] = [
   { href: '/login', label: '로그인' },
+  {
+    href: { pathname: '/login-failed', params: { provider: 'kakao' } },
+    label: '↳ 로그인 실패(카카오)',
+  },
+  {
+    href: { pathname: '/login-failed', params: { provider: 'naver' } },
+    label: '↳ 로그인 실패(네이버)',
+  },
+  {
+    href: { pathname: '/login-failed', params: { provider: 'google' } },
+    label: '↳ 로그인 실패(구글)',
+  },
+  {
+    href: { pathname: '/login-failed', params: { provider: 'apple' } },
+    label: '↳ 로그인 실패(애플)',
+  },
   { href: '/onboarding', label: '온보딩 튜토리얼' },
   { href: '/home', label: '홈' },
   { href: '/ingredients', label: '재료관리' },

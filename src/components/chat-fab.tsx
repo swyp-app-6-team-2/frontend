@@ -10,21 +10,24 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { Feather } from '@expo/vector-icons';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppText, PressableScale } from '@/components/ui';
 import { palette } from '@/constants/tokens';
 
-// RAG 서버(server.py) 주소. 시뮬레이터는 맥의 localhost에 닿는다.
+// 통합 RAG 서버(unified_server.py) 주소. 시뮬레이터는 맥의 localhost에 닿는다.
 // 실기기에선 맥 LAN IP로 바꾸거나 EXPO_PUBLIC_RAG_URL로 주입.
 const RAG_URL = (process.env.EXPO_PUBLIC_RAG_URL ?? 'http://localhost:8100').replace(/\/+$/, '');
 
-type Msg = { role: 'me' | 'bot'; text: string };
+// 서버가 주는 관련 이미지(CLIP 검색 결과). dataUri는 base64 data URI.
+type BotImage = { name: string; score: number; dataUri: string };
+type Msg = { role: 'me' | 'bot'; text: string; images?: BotImage[] };
 
 const GREETING: Msg = {
   role: 'bot',
-  text: '안녕하세요! 별따먹자 문서 기반으로 답해드려요. 무엇이 궁금하세요?',
+  text: '안녕하세요! 문서 기반으로 답하고, 음식 질문엔 관련 사진도 함께 보여드려요.\n예: “매운 국물 요리”, “달콤한 디저트”',
 };
 
 // 오른쪽 아래 플로팅 채팅 버튼 → 채팅 모달.
@@ -56,7 +59,7 @@ export function ChatFab({ bottom = 90 }: { bottom?: number }) {
         ...m,
         data.error
           ? { role: 'bot', text: `⚠️ 오류: ${data.error}` }
-          : { role: 'bot', text: data.answer ?? '(빈 응답)' },
+          : { role: 'bot', text: data.answer ?? '(빈 응답)', images: data.images },
       ]);
     } catch {
       setMessages((m) => [
@@ -93,10 +96,10 @@ export function ChatFab({ bottom = 90 }: { bottom?: number }) {
                 <View className="h-2.5 w-2.5 rounded-full bg-success" />
                 <View>
                   <AppText variant="body" className="font-bold">
-                    문서 RAG
+                    문서 + 이미지 RAG
                   </AppText>
                   <Text className="text-[12px] leading-[14px] text-muted">
-                    bge-m3 · BM25 · qwen2.5
+                    bge-m3 · BM25 · CLIP · qwen2.5
                   </Text>
                 </View>
                 <Pressable
@@ -134,6 +137,33 @@ export function ChatFab({ bottom = 90 }: { bottom?: number }) {
                         <Text className="text-[14.5px] leading-[22px] text-foreground">
                           {m.text}
                         </Text>
+                        {m.images?.length ? (
+                          <ScrollView
+                            horizontal
+                            showsHorizontalScrollIndicator={false}
+                            className="mt-2.5"
+                            contentContainerClassName="gap-2"
+                          >
+                            {m.images.map((im, j) => (
+                              <View
+                                key={j}
+                                className="overflow-hidden rounded-[10px] border border-disabled-line bg-field"
+                              >
+                                <Image
+                                  source={{ uri: im.dataUri }}
+                                  style={{ width: 104, height: 104 }}
+                                  contentFit="cover"
+                                />
+                                <Text
+                                  numberOfLines={1}
+                                  className="max-w-[104px] px-1.5 py-1 text-[10px] text-muted"
+                                >
+                                  {im.name}
+                                </Text>
+                              </View>
+                            ))}
+                          </ScrollView>
+                        ) : null}
                       </View>
                     </View>
                   ))}
@@ -151,7 +181,7 @@ export function ChatFab({ bottom = 90 }: { bottom?: number }) {
                   <TextInput
                     className="flex-1 rounded-[12px] bg-field px-4 py-2.5 text-foreground"
                     style={{ fontSize: 15, lineHeight: 20 }}
-                    placeholder="문서에 대해 질문하기…"
+                    placeholder="질문하기 (예: 매운 국물 요리)…"
                     placeholderTextColor={palette.muted}
                     value={input}
                     onChangeText={setInput}

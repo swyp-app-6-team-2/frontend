@@ -77,7 +77,8 @@ function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) =>
   );
 }
 
-const ITEM_H = 48;
+// 휠 한 칸 높이 = 행(약 40) + 행간(약 24). 3칸(192)이 Figma 시간 휠(194)·시트 총높이(407)와 맞음.
+const ITEM_H = 64;
 
 // 스냅 스크롤 휠 — 중앙 슬롯 항목만 흰색, 나머지는 disabled. 스크롤에 따라 onChange.
 function Wheel({
@@ -143,12 +144,15 @@ function LoopWheel({
   initialIndex,
   onChange,
   fontSize = 36,
+  centerFontSize,
   width = 56,
 }: {
   items: string[];
   initialIndex: number;
   onChange: (i: number) => void;
   fontSize?: number;
+  /** 중앙(선택) 항목 폰트 크기. Figma는 선택 시:분만 40px, 나머지 36px. */
+  centerFontSize?: number;
   width?: number;
 }) {
   const n = items.length;
@@ -201,7 +205,7 @@ function LoopWheel({
           <View key={k} style={{ height: ITEM_H, alignItems: 'center', justifyContent: 'center' }}>
             <Text
               style={{
-                fontSize,
+                fontSize: k === centerAbs ? (centerFontSize ?? fontSize) : fontSize,
                 fontWeight: '500',
                 color: k === centerAbs ? palette.foreground : palette.disabled,
               }}
@@ -225,11 +229,12 @@ function TimeSheet({
   alarms: { label: string; time: string }[];
   initialIndex: number;
   onCancel: () => void;
-  onConfirm: (times: string[]) => void;
+  onConfirm: (times: string[], title: string) => void;
 }) {
   const insets = useSafeAreaInsets();
-  const [times, setTimes] = useState(() => alarms.map((a) => a.time));
-  const [active, setActive] = useState(initialIndex);
+  const [times] = useState(() => alarms.map((a) => a.time));
+  const [active] = useState(initialIndex);
+  const [title, setTitle] = useState(alarms[active]?.label ?? '');
   const p = parseTime(times[active]);
   const sel = useRef({ ampm: p.ampm, hour: p.hour, min: p.min });
 
@@ -266,22 +271,11 @@ function TimeSheet({
   const overlayStyle = useAnimatedStyle(() => ({ opacity: op.value }));
   const sheetStyle = useAnimatedStyle(() => ({ transform: [{ translateY: ty.value }] }));
 
-  // 다른 알람 칩으로 전환 — 현재 휠 값을 저장 후 그 알람 시간으로 리셋(휠은 key로 리마운트).
-  const switchTo = (i: number) => {
-    if (i === active) return;
-    fireHaptic('selection');
-    const cur = formatTime(sel.current.ampm, sel.current.hour, sel.current.min);
-    setTimes((prev) => prev.map((t, k) => (k === active ? cur : t)));
-    const np = parseTime(times[i]);
-    sel.current = { ampm: np.ampm, hour: np.hour, min: np.min };
-    setActive(i);
-  };
-
   const confirm = () => {
     fireHaptic('success');
     const cur = formatTime(sel.current.ampm, sel.current.hour, sel.current.min);
     const result = times.map((t, k) => (k === active ? cur : t));
-    requestClose(() => onConfirm(result));
+    requestClose(() => onConfirm(result, title));
   };
 
   return (
@@ -316,40 +310,22 @@ function TimeSheet({
             },
           ]}
         >
-          <View className="items-center gap-8 px-5 pt-8">
-            {/* 상단 알람 전환 세그먼트 (Frame 1437264107) */}
-            <View className="w-full flex-row items-center rounded-[105px] bg-field-dark px-5 py-2">
-              {alarms.map((a, i) => {
-                const on = i === active;
-                const short = a.label.replace('알람', '').trim();
-                return (
-                  <Pressable
-                    key={a.label}
-                    onPress={() => switchTo(i)}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: on }}
-                    className={`h-[49px] flex-1 items-center justify-center rounded-[100px] ${
-                      on ? 'bg-field' : ''
-                    }`}
-                    style={
-                      on
-                        ? {
-                            shadowColor: '#050816',
-                            shadowOpacity: 0.25,
-                            shadowRadius: 12,
-                            shadowOffset: { width: 0, height: 0 },
-                          }
-                        : undefined
-                    }
-                  >
-                    <Text
-                      className={`text-[16px] font-medium ${on ? 'text-foreground' : 'text-disabled'}`}
-                    >
-                      {short}
-                    </Text>
-                  </Pressable>
-                );
-              })}
+          <View className="items-center gap-8 px-5 pt-5">
+            {/* 상단 세그먼트 (Frame 1437264107) — 알림 제목 입력. [수정 아이콘] + input. padding 4/24, 높이 57 */}
+            <View className="w-full flex-row items-center gap-4 rounded-[105px] bg-field-dark px-6 py-1">
+              <Image
+                source={require('../assets/images/ic-edit.png')}
+                style={{ width: 24, height: 24 }}
+                tintColor={palette.disabled}
+                contentFit="contain"
+              />
+              <TextInput
+                value={title}
+                onChangeText={setTitle}
+                placeholder="알림 제목을 입력해주세요"
+                placeholderTextColor={palette.disabled}
+                className="h-[49px] flex-1 p-0 text-[16px] font-medium text-foreground"
+              />
             </View>
 
             {/* 시:분 휠 — active 바뀌면 remount되어 그 알람 시간으로 */}
@@ -367,6 +343,7 @@ function TimeSheet({
                 items={HOURS}
                 initialIndex={p.hour}
                 fontSize={36}
+                centerFontSize={40}
                 width={44}
                 onChange={(i) => (sel.current.hour = i)}
               />
@@ -376,6 +353,7 @@ function TimeSheet({
                 items={MINS}
                 initialIndex={p.min}
                 fontSize={36}
+                centerFontSize={40}
                 width={56}
                 onChange={(i) => (sel.current.min = i)}
               />
@@ -462,7 +440,7 @@ function AlarmRow({
         editable={editing}
         placeholder="알림 제목을 입력해주세요"
         placeholderTextColor={palette.muted}
-        className="p-0 text-[16px] leading-[21px] text-muted"
+        className="px-2 py-0 text-[16px] leading-[21px] text-muted"
       />
       <ReanimatedSwipeable
         ref={ref}
@@ -539,7 +517,7 @@ export default function NotificationsScreen() {
             <AppText variant="body">시간 설정</AppText>
             <Pressable accessibilityRole="button" onPress={() => setEditing((e) => !e)} hitSlop={8}>
               <Text className="text-[16px] font-medium text-muted">
-                {editing ? '완료' : '편집'}
+                {editing ? '편집 완료' : '편집'}
               </Text>
             </Pressable>
           </View>
@@ -611,8 +589,14 @@ export default function NotificationsScreen() {
           alarms={alarms}
           initialIndex={sheetFor}
           onCancel={() => setSheetFor(null)}
-          onConfirm={(times) => {
-            setAlarms((prev) => prev.map((a, i) => ({ ...a, time: times[i] })));
+          onConfirm={(times, title) => {
+            setAlarms((prev) =>
+              prev.map((a, i) => ({
+                ...a,
+                time: times[i],
+                label: i === sheetFor ? title : a.label,
+              })),
+            );
             setSheetFor(null);
           }}
         />

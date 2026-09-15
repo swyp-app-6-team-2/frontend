@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Pressable, View, type PressableProps } from 'react-native';
+import { Pressable, View, type PressableProps, type StyleProp, type ViewStyle } from 'react-native';
 import Animated from 'react-native-reanimated';
 
 import { usePressScale } from '@/hooks/use-press-scale';
@@ -11,6 +11,8 @@ export type PressableScaleProps = Omit<PressableProps, 'children' | 'style'> & {
   children: ReactNode;
   /** 시각 스타일 — 내부 View에 적용(애니메이션 transform과 분리해 NativeWind 충돌 회피). */
   className?: string;
+  /** 인라인 시각 스타일 — className과 함께 내부 View에 적용(그림자 등 토큰 밖 값). */
+  style?: StyleProp<ViewStyle>;
   /** 눌림 축소 배율. 기본 0.96. 넓은 행은 0.98 권장. */
   scaleTo?: number;
   /** 누를 때 촉각 피드백. */
@@ -25,6 +27,7 @@ export type PressableScaleProps = Omit<PressableProps, 'children' | 'style'> & {
 export function PressableScale({
   children,
   className,
+  style,
   scaleTo,
   haptic,
   onPressIn,
@@ -45,7 +48,9 @@ export function PressableScale({
       }}
       {...rest}
     >
-      <View className={className}>{children}</View>
+      <View className={className} style={style}>
+        {children}
+      </View>
     </AnimatedPressable>
   );
 }

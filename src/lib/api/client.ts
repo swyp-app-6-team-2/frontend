@@ -1,3 +1,5 @@
+import { File, UploadType } from 'expo-file-system';
+
 import {
   clearTokens,
   emitAuthExpired,
@@ -148,27 +150,30 @@ export async function apiFetch<T>(path: string, opts: ApiFetchOptions = {}): Pro
 /**
  * 발급받은 서명 URL로 이미지 바이너리를 GCS에 직접 PUT.
  * uploadHeaders를 하나도 빠짐없이 그대로 실어야 한다(빠지면 GCS가 거부).
+ *
+ * RN fetch+Blob PUT는 iOS 네이티브(CFNetwork) 계층에서 Content-Type을 빈 값으로
+ * 덮어써 GCS 서명 불일치(SignatureDoesNotMatch)로 403을 낸다. expo-file-system의
+ * 네이티브 업로드(BINARY_CONTENT)는 파일 바이트를 그대로 PUT하며 uploadHeaders를
+ * 손대지 않고 전송하므로 서명 시점의 Content-Type이 보존된다.
  */
 export async function uploadToGcs(
   uploadUrl: string,
   uploadHeaders: Record<string, string>,
   fileUri: string,
 ): Promise<void> {
-  const blob = await (await fetch(fileUri)).blob();
   if (__DEV__) {
-    console.log(
-      `[gcs][diag] PUT start blob.type=${JSON.stringify((blob as { type?: string }).type)} headers=${JSON.stringify(uploadHeaders)}`,
-    );
+    console.log(`[gcs][diag] PUT start uri=${fileUri} headers=${JSON.stringify(uploadHeaders)}`);
   }
-  const res = await fetch(uploadUrl, { method: 'PUT', headers: uploadHeaders, body: blob });
-  if (!res.ok) {
+  const res = await new File(fileUri).upload(uploadUrl, {
+    httpMethod: 'PUT',
+    uploadType: UploadType.BINARY_CONTENT,
+    headers: uploadHeaders,
+  });
+  if (res.status < 200 || res.status >= 300) {
     if (__DEV__) {
-      const errText = await res
-        .clone()
-        .text()
-        .catch(() => '<no body>');
-      console.log(`[gcs][diag] PUT FAILED status=${res.status} body=${errText}`);
+      console.log(`[gcs][diag] PUT FAILED status=${res.status} body=${res.body}`);
     }
     throw new ApiError(res.status, null, `이미지 업로드에 실패했습니다. (${res.status})`);
   }
+  if (__DEV__) console.log(`[gcs][diag] PUT OK status=${res.status}`);
 }

@@ -37,10 +37,11 @@ _"저장"이 아니라 "해먹었다"는 완료 기록으로 요리 실행을 �
 | 축 | 내용 |
 |---|---|
 | 🍳 **나의 레시피** | 저장한 레시피 목록 · 검색 · 필터 · 상세 · **요리 완료 기록(별 점등)** |
-| 🧊 **재료 관리(내 냉장고)** | 보유 재료 · 유통기한 임박 관리 · 재료 추가(카테고리 필터) |
+| 🧊 **재료 관리(내 냉장고)** | 보유 재료 목록·검색(`GET /users/me/ingredients`) · 마스터 533종에서 카테고리 필터로 추가 |
 | ➕ **3경로 등록** | URL/영상 → AI 분석 · 이미지 → OCR · 직접 입력 폼 (모두 하나의 `Recipe`로 수렴) |
-| 🏠 **홈 / 마이** | 별 진행도 · 추천 · 임박 요약 / 저장 슬롯 사용량 · 설정 |
+| 🏠 **홈 / 마이** | 남은 별 · 추천 / 프로필(로그인 provider 배지) · 저장 슬롯 · **알림 설정** · **문의하기** |
 | 🔐 **소셜 로그인** | 카카오 · 네이버 · Google · Apple · 신규 가입(약관 동의) · 토큰 자동 재발급 |
+| 🔔 **알림** | 푸시 알림(FCM) · 알림 시간대 설정 · 딥링크 진입 |
 
 ### 핵심 사용자 여정
 
@@ -70,7 +71,7 @@ flowchart LR
     <td align="center"><b>요리 완료 ⭐</b></td>
   </tr>
   <tr>
-    <td><img src="docs/screenshots/home.png" width="240" alt="홈 화면 — 별 캐릭터와 5/10 별 진행도" /></td>
+    <td><img src="docs/screenshots/home.png" width="240" alt="홈 화면 — 별 캐릭터와 남은 별 칩" /></td>
     <td><img src="docs/screenshots/recipes.png" width="240" alt="나의 레시피 목록 — 검색·필터·카드 그리드" /></td>
     <td><img src="docs/screenshots/cook-complete.png" width="240" alt="요리 완료 — 별에 불이 켜졌어요" /></td>
   </tr>
@@ -102,7 +103,7 @@ graph TD
   end
   subgraph "상태 · 로직"
     Q["React Query<br/>(query-provider · query-client)"]
-    H["src/hooks · src/lib<br/>haptics · pick-image · my-ingredients"]
+    H["src/hooks · src/lib<br/>haptics · pick-image · slot-ads"]
   end
   subgraph "데이터 레이어 (src/lib/api)"
     CL["client.ts<br/>fetch 래퍼 + BASE URL"]
@@ -241,7 +242,7 @@ global.css                  # 색상 CSS 변수 (다크 토큰)
 
 **타이포 (`<AppText variant>`)** — `title`(24 Bold) · `subheading`(22 Bold) · `body`(16 Medium) · `chip`(14 Regular)
 
-**공통 컴포넌트 (`@/components/ui`)** — `AppText` · `Button` · `Chevron` · `Chip` · `ListRow` · `Screen` · `ScreenHeader` · `SearchBar` · `Section` · `SectionTitle` · `Tag`
+**공통 컴포넌트 (`@/components/ui`)** — `AppText` · `Button` · `Chevron` · `Chip` · `AlertDialog` · `ListRow` · `PressableScale` · `Screen` · `ScreenHeader` · `SearchBar` · `Section` · `SectionTitle` · `SheetShell` · `Tag`
 
 > 토큰을 바꾸면 `global.css` · `tailwind.config.js` · `src/constants/tokens.ts` **세 곳을 모두** 맞춰야 합니다.
 

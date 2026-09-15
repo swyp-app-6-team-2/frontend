@@ -1,8 +1,9 @@
-import { Fragment } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from 'react-native';
+import { Fragment, useState } from 'react';
+import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText, Button, Screen } from '@/components/ui';
 import { RECIPE_CATEGORY_LABEL } from '@/constants/labels';
@@ -13,13 +14,22 @@ import { ApiError } from '@/lib/api';
 // 21 레시피 상세 — 저장된 레시피 보기. 목록에서 recipeId를 params.id로 넘겨받는다.
 export default function RecipeViewScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
   const recipeId = Number(id);
   const { data, isLoading, isError } = useRecipe(Number.isFinite(recipeId) ? recipeId : null);
   const createCook = useCreateCookHistory(recipeId);
   const deleteRecipe = useDeleteRecipe();
+  // 헤더 ⋯ 메뉴(수정/삭제) 팝오버 열림 여부.
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  const onEdit = () => {
+    setMenuOpen(false);
+    router.push({ pathname: '/add-recipe-manual', params: { id: String(recipeId) } });
+  };
 
   const onDelete = () => {
+    setMenuOpen(false);
     Alert.alert('레시피 삭제', '이 레시피를 삭제할까요?', [
       { text: '취소', style: 'cancel' },
       {
@@ -71,26 +81,14 @@ export default function RecipeViewScreen() {
       title=""
       back
       headerRight={
-        <View className="flex-row items-center gap-4">
-          <Pressable
-            onPress={() =>
-              router.push({ pathname: '/add-recipe-manual', params: { id: String(recipeId) } })
-            }
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel="수정하기"
-          >
-            <Text className="text-[16px] leading-[19px] text-foreground">수정하기</Text>
-          </Pressable>
-          <Pressable
-            onPress={onDelete}
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel="삭제"
-          >
-            <Feather name="trash-2" size={22} color={palette.muted} />
-          </Pressable>
-        </View>
+        <Pressable
+          onPress={() => setMenuOpen(true)}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="더보기"
+        >
+          <Feather name="more-horizontal" size={24} color={palette.foreground} />
+        </Pressable>
       }
     >
       <View className="flex-1">
@@ -193,6 +191,59 @@ export default function RecipeViewScreen() {
       <View className="pb-8 pt-4">
         <Button label="완료하기" onPress={onComplete} disabled={createCook.isPending} />
       </View>
+
+      {/* 헤더 ⋯ 메뉴 — 헤더 우측 아래 앵커. 바깥 탭하면 닫힘. */}
+      <Modal
+        visible={menuOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setMenuOpen(false)}
+      >
+        <Pressable
+          className="flex-1"
+          onPress={() => setMenuOpen(false)}
+          accessibilityLabel="메뉴 닫기"
+        >
+          <View
+            className="absolute right-5 w-[159px] gap-[15px] rounded-[12px] border border-disabled bg-background p-4"
+            style={{
+              top: insets.top + 72 + 6,
+              shadowColor: '#000',
+              shadowOpacity: 0.3,
+              shadowRadius: 12,
+              shadowOffset: { width: 0, height: 4 },
+              elevation: 8,
+            }}
+          >
+            <Pressable
+              onPress={onEdit}
+              className="flex-row items-center gap-4 active:opacity-70"
+              accessibilityRole="button"
+              accessibilityLabel="수정하기"
+            >
+              <View className="h-9 w-9 items-center justify-center rounded-[8px] bg-field">
+                <Feather name="edit-2" size={24} color={palette.primary} />
+              </View>
+              <AppText variant="body" className="font-normal">
+                수정하기
+              </AppText>
+            </Pressable>
+            <Pressable
+              onPress={onDelete}
+              className="flex-row items-center gap-4 active:opacity-70"
+              accessibilityRole="button"
+              accessibilityLabel="삭제하기"
+            >
+              <View className="h-9 w-9 items-center justify-center rounded-[8px] bg-field">
+                <Feather name="trash-2" size={24} color={palette.primary} />
+              </View>
+              <AppText variant="body" className="font-normal">
+                삭제하기
+              </AppText>
+            </Pressable>
+          </View>
+        </Pressable>
+      </Modal>
     </Screen>
   );
 }

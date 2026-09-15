@@ -102,11 +102,13 @@ export default function InquiryScreen() {
           {/* 페이지 0 — 작성 폼 */}
           <View style={{ width }} className="flex-1">
             <ScrollView contentContainerClassName="gap-6 px-screen pb-6 pt-6">
-              {/* 문의유형 (드롭다운 선택) */}
-              <View className="gap-2">
-                <AppText variant="body">문의유형</AppText>
+              {/* 문의유형 (드롭다운) — Figma: 라벨행(pad 8/16/8/8) + 인풋 h44 + 24 chevron */}
+              <View>
+                <View className="flex-row items-center py-2 pl-2 pr-4">
+                  <AppText variant="body">문의유형</AppText>
+                </View>
                 <Pressable
-                  className="flex-row items-center justify-between rounded-pill bg-field px-4 py-2.5 active:opacity-80"
+                  className="h-[44px] flex-row items-center justify-between rounded-pill bg-field px-4 active:opacity-80"
                   accessibilityRole="button"
                   accessibilityState={{ expanded: typeSheet }}
                   onPress={() => {
@@ -120,18 +122,22 @@ export default function InquiryScreen() {
                   >
                     {type ? INQUIRY_TYPE_LABEL[type] : '문의 유형을 선택해주세요.'}
                   </AppText>
-                  <Text className="text-muted" style={{ fontSize: 12 }}>
-                    ▾
-                  </Text>
+                  <Image
+                    source={require('../assets/images/ic-chevron-down.png')}
+                    style={{ width: 24, height: 24, tintColor: palette.muted }}
+                    resizeMode="contain"
+                  />
                 </Pressable>
               </View>
 
-              {/* 제목 (필수) */}
-              <View className="gap-2">
-                <AppText variant="body">제목</AppText>
-                <View className="rounded-pill bg-field px-4 py-2.5">
+              {/* 제목 (필수) — Figma: 라벨행(pad 8/16/8/8) + pill input h44 */}
+              <View>
+                <View className="flex-row items-center py-2 pl-2 pr-4">
+                  <AppText variant="body">제목</AppText>
+                </View>
+                <View className="h-[44px] flex-row items-center rounded-pill bg-field px-4">
                   <TextInput
-                    className="text-foreground"
+                    className="flex-1 text-foreground"
                     style={{ fontSize: 16, lineHeight: 21, paddingVertical: 0 }}
                     placeholder="제목을 입력해주세요"
                     placeholderTextColor={palette.muted}
@@ -141,9 +147,8 @@ export default function InquiryScreen() {
                 </View>
               </View>
 
-              {/* 문의내용 (멀티라인, 필수·최소 10자) */}
-              <View className="gap-2">
-                <AppText variant="body">문의내용</AppText>
+              {/* 문의내용 (멀티라인, 필수·최소 10자) — Figma: 박스 h177 r12 pad 10/16, 라벨 없음 */}
+              <View>
                 <View className="h-[177px] rounded-[12px] bg-field px-4 py-2.5">
                   <TextInput
                     className="flex-1 text-foreground"
@@ -157,7 +162,7 @@ export default function InquiryScreen() {
                   />
                 </View>
                 {content.trim().length > 0 && content.trim().length < 10 ? (
-                  <Text className="text-[13px] leading-[17px] text-muted">
+                  <Text className="mt-1 pl-2 text-[13px] leading-[17px] text-muted">
                     최소 10자 이상 입력해주세요.
                   </Text>
                 ) : null}

@@ -11,7 +11,7 @@ import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AlertDialog, AppText, PressableScale, ScreenHeader } from '@/components/ui';
@@ -36,7 +36,9 @@ export default function InquiryScreen() {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const pagerRef = useRef<ScrollView>(null);
-  const [tab, setTab] = useState(0); // 0=작성, 1=내역
+  const params = useLocalSearchParams<{ tab?: string }>();
+  const initialTab = params.tab === 'history' ? 1 : 0; // inquiry-success에서 오면 내역 탭
+  const [tab, setTab] = useState(initialTab); // 0=작성, 1=내역
   const [confirm, setConfirm] = useState<null | 'leave' | 'submit'>(null); // 확인 팝업
 
   const goTab = (i: number) => {
@@ -81,6 +83,7 @@ export default function InquiryScreen() {
           ref={pagerRef}
           horizontal
           pagingEnabled
+          contentOffset={{ x: initialTab * width, y: 0 }}
           showsHorizontalScrollIndicator={false}
           onMomentumScrollEnd={onPaged}
           className="flex-1"
@@ -228,7 +231,7 @@ export default function InquiryScreen() {
               actions={[
                 { label: '취소', onPress: () => setConfirm(null) },
                 {
-                  label: '접수',
+                  label: '확인',
                   tone: 'primary',
                   onPress: () => {
                     fireHaptic('success');

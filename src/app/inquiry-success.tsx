@@ -31,9 +31,9 @@ export default function InquirySuccessScreen() {
         <Pressable
           className="h-[52px] items-center justify-center rounded-[30px] bg-primary active:opacity-90"
           accessibilityRole="button"
-          onPress={() => router.back()}
+          onPress={() => router.replace({ pathname: '/inquiry', params: { tab: 'history' } })}
         >
-          <Text className="text-body font-semibold text-ink">완료하기</Text>
+          <Text className="text-body font-semibold text-ink">내 문의내역 보기</Text>
         </Pressable>
       </View>
     </Screen>

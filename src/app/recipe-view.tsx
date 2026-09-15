@@ -1,15 +1,53 @@
 import { Fragment, useState } from 'react';
-import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  Linking,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AppText, Button, Screen } from '@/components/ui';
+import { AlertDialog, AppText, Button, Screen } from '@/components/ui';
 import { RECIPE_CATEGORY_LABEL } from '@/constants/labels';
 import { palette } from '@/constants/tokens';
-import { useCreateCookHistory, useDeleteRecipe, useRecipe } from '@/hooks/use-api';
+import {
+  useCookHistories,
+  useCreateCookHistory,
+  useDeleteRecipe,
+  useRecipe,
+} from '@/hooks/use-api';
 import { ApiError } from '@/lib/api';
+
+// 요리 기록 날짜 표기 — 서버는 UTC ISO만 주고 로컬 포맷·상대시간은 클라가 계산(api-spec).
+const WEEKDAY = ['일', '월', '화', '수', '목', '금', '토'];
+
+function formatCookedDate(iso: string) {
+  const d = new Date(iso);
+  return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일 (${WEEKDAY[d.getDay()]})`;
+}
+
+// "방금 / N시간 전 / N일 전 / N주 전 / N개월 전" — 주·월은 반올림(예: 13일→2주 전).
+function formatRelative(iso: string) {
+  const diff = Math.max(0, Date.now() - new Date(iso).getTime());
+  const minute = 60_000;
+  const hour = 60 * minute;
+  const day = 24 * hour;
+  const week = 7 * day;
+  const month = 30 * day;
+  if (diff < hour) return '방금';
+  if (diff < day) return `${Math.floor(diff / hour)}시간 전`;
+  if (diff < week) return `${Math.floor(diff / day)}일 전`;
+  if (diff < month) return `${Math.round(diff / week)}주 전`;
+  return `${Math.round(diff / month)}개월 전`;
+}
 
 // 21 레시피 상세 — 저장된 레시피 보기. 목록에서 recipeId를 params.id로 넘겨받는다.
 export default function RecipeViewScreen() {
@@ -18,10 +56,14 @@ export default function RecipeViewScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const recipeId = Number(id);
   const { data, isLoading, isError } = useRecipe(Number.isFinite(recipeId) ? recipeId : null);
+  const { data: cookData } = useCookHistories(Number.isFinite(recipeId) ? recipeId : null);
+  const cookHistories = cookData ?? [];
   const createCook = useCreateCookHistory(recipeId);
   const deleteRecipe = useDeleteRecipe();
   // 헤더 ⋯ 메뉴(수정/삭제) 팝오버 열림 여부.
   const [menuOpen, setMenuOpen] = useState(false);
+  // 요리 완료 기록 성공 → 완료 축하 팝업 표시 여부.
+  const [showComplete, setShowComplete] = useState(false);
 
   const onEdit = () => {
     setMenuOpen(false);
@@ -48,7 +90,7 @@ export default function RecipeViewScreen() {
   const onComplete = async () => {
     try {
       await createCook.mutateAsync({});
-      router.replace({ pathname: '/cook-complete', params: { title: data?.title ?? '' } });
+      setShowComplete(true); // 기록 성공 → 완료 축하 팝업. 확인 시 별 점등 화면으로.
     } catch (e) {
       Alert.alert('기록 실패', e instanceof ApiError ? e.message : '다시 시도해주세요.');
     }
@@ -75,6 +117,8 @@ export default function RecipeViewScreen() {
       </Screen>
     );
   }
+
+  const source = data.source; // 클로저에서 좁혀진 값 유지(원본 보기 링크).
 
   return (
     <Screen
@@ -130,6 +174,18 @@ export default function RecipeViewScreen() {
                 {data.cookTimeMinutes != null ? `${data.cookTimeMinutes}분` : '-'}
               </Text>
             </View>
+            {/* 원본 보기 — URL 등록 레시피의 출처 열기. source는 백엔드 Ingestion 전까지 null이라 그때 노출. */}
+            {source ? (
+              <Pressable
+                className="flex-row items-center gap-2 active:opacity-70"
+                accessibilityRole="button"
+                accessibilityLabel="원본 보기"
+                onPress={() => Linking.openURL(source)}
+              >
+                <Feather name="share" size={22} color={palette.muted} />
+                <Text className="text-[16px] leading-[19px] text-foreground">원본 보기</Text>
+              </Pressable>
+            ) : null}
           </View>
 
           {/* 재료 카드 — 이름/수량 행 + 구분선 */}
@@ -157,19 +213,28 @@ export default function RecipeViewScreen() {
               <AppText variant="body" className="mt-9 font-normal">
                 레시피
               </AppText>
-              <View className="mt-4 gap-6">
+              <View className="mt-4 gap-3">
                 {data.steps.map((step, i) => (
-                  <View key={`${i}-${step.content}`} className="flex-row items-start gap-4">
-                    <View
-                      className="h-5 w-5 items-center justify-center rounded-full bg-surface"
-                      style={{ borderWidth: 1, borderColor: palette.primary }}
-                    >
-                      <Text className="text-[14px] leading-[18px] text-primary">{i + 1}</Text>
+                  <Fragment key={`${i}-${step.content}`}>
+                    <View className="flex-row items-start gap-4">
+                      <View
+                        className="h-5 w-5 items-center justify-center rounded-full bg-surface"
+                        style={{ borderWidth: 1, borderColor: palette.primary }}
+                      >
+                        <Text className="text-[14px] leading-[18px] text-primary">{i + 1}</Text>
+                      </View>
+                      <Text className="flex-1 text-[16px] leading-[21px] text-foreground">
+                        {step.content}
+                      </Text>
                     </View>
-                    <Text className="flex-1 text-[16px] leading-[21px] text-foreground">
-                      {step.content}
-                    </Text>
-                  </View>
+                    {/* 단계 사이 연결 점 — 번호 칩 열(20px)에 정렬한 세로 2점 커넥터. */}
+                    {i < data.steps.length - 1 ? (
+                      <View className="w-5 items-center gap-1">
+                        <View className="h-1 w-1 rounded-full bg-disabled" />
+                        <View className="h-1 w-1 rounded-full bg-disabled" />
+                      </View>
+                    ) : null}
+                  </Fragment>
                 ))}
               </View>
             </>
@@ -183,6 +248,33 @@ export default function RecipeViewScreen() {
               </AppText>
               <Text className="mt-4 text-[16px] leading-[21px] text-muted">{data.memo}</Text>
             </>
+          ) : null}
+
+          {/* 요리 기록 — 지금까지 총 N회 완료. 날짜 + 상대시간, 최근 3개월만 표시. */}
+          {cookHistories.length > 0 ? (
+            <View className="mt-9">
+              <Text className="text-[16px] leading-[21px] text-foreground">
+                지금까지 총 {cookHistories.length}회 완료했어요
+              </Text>
+              <View className="mt-5">
+                {cookHistories.map((h, i) => (
+                  <Fragment key={`${h.cookedAt}-${i}`}>
+                    {i > 0 ? <View className="my-5 h-px bg-disabled" /> : null}
+                    <View className="flex-row items-center justify-between">
+                      <Text className="text-[14px] leading-[18px] text-muted">
+                        {formatCookedDate(h.cookedAt)}
+                      </Text>
+                      <Text className="text-[14px] leading-[18px] text-muted">
+                        {formatRelative(h.cookedAt)}
+                      </Text>
+                    </View>
+                  </Fragment>
+                ))}
+              </View>
+              <Text className="mt-5 text-center text-[14px] font-medium leading-[18px] text-body-muted">
+                최근 3개월의 요리 기록만 표시돼요
+              </Text>
+            </View>
           ) : null}
         </ScrollView>
       </View>
@@ -244,6 +336,36 @@ export default function RecipeViewScreen() {
           </View>
         </Pressable>
       </Modal>
+
+      {/* 요리 완료 축하 팝업 — 마스코트 + 골드 버튼 1개. 확인 시 별 점등 화면으로.
+          AlertDialog는 자체 dim + flex-1 중앙정렬이라 absoluteFill View로 덮는다(Modal 감싸면 버튼 잘림). */}
+      {showComplete ? (
+        <View style={StyleSheet.absoluteFill}>
+          <AlertDialog
+            mascot={
+              <Image
+                source={require('../assets/images/mascot-cook-complete.png')}
+                style={{ width: 166, height: 143 }}
+                contentFit="contain"
+              />
+            }
+            title="요리를 완료하였어요!"
+            message={'맛있는 한 끼 완성!\n오늘의 요리가 기록됐어요'}
+            haptic="success"
+            actions={[
+              {
+                label: '확인',
+                tone: 'primary',
+                onPress: () =>
+                  router.replace({
+                    pathname: '/cook-complete',
+                    params: { title: data?.title ?? '' },
+                  }),
+              },
+            ]}
+          />
+        </View>
+      ) : null}
     </Screen>
   );
 }

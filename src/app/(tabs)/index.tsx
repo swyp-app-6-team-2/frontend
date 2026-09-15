@@ -39,7 +39,6 @@ const PAGES: { href: Href; label: string }[] = [
   { href: '/policies', label: '↳ 약관' },
   { href: '/inquiry', label: '↳ 문의하기' },
   { href: '/inquiry-detail', label: '↳ 문의 상세' },
-  { href: '/purchase-history', label: '↳ 구매내역' },
   { href: '/add-recipe', label: '＋ 레시피 등록 (플로우 시작)' },
   { href: '/add-recipe-url', label: '↳ URL로 등록' },
   { href: '/add-recipe-image', label: '↳ 이미지로 등록' },

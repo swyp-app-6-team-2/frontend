@@ -1,4 +1,4 @@
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter, type Href } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -11,6 +11,15 @@ import { useProfile } from '@/hooks/use-api';
 import { useEnteringOnce } from '@/hooks/use-entering-once';
 
 // 마이페이지 — 프로필 + 남은 별(슬롯) + 설정 메뉴.
+// 닉네임 옆 배지 — 마지막 로그인 provider 로고. require는 정적이라 미리 맵으로 선언한다.
+// 로고 PNG는 자기완결형 원형 배지(로그인 화면과 동일 에셋).
+const PROVIDER_LOGO: Record<string, number> = {
+  KAKAO: require('../assets/images/kakao.png'),
+  NAVER: require('../assets/images/naver.png'),
+  GOOGLE: require('../assets/images/google.png'),
+  APPLE: require('../assets/images/apple.png'),
+};
+
 // 하단 메뉴 (Figma 리스트, gap 32).
 const MENU: { label: string; href?: Href }[] = [
   { label: '알림 설정', href: '/notifications' },
@@ -24,6 +33,8 @@ export default function MyScreen() {
   const animate = useEnteringOnce('my'); // 최초 진입에만 메뉴 순차 등장
   // 프로필 — 백엔드 GET /users/me 생기면 실데이터, 아직 없으면 폴백값.
   const { data: me } = useProfile();
+  // provider 로고 — 값이 없거나 매칭 안 되면 배지 자체를 안 그린다(틀린 로고 방지).
+  const providerLogo = me?.provider ? PROVIDER_LOGO[me.provider.toUpperCase()] : undefined;
 
   return (
     <View className="flex-1 bg-background">
@@ -54,10 +65,14 @@ export default function MyScreen() {
               )}
               <View className="flex-row items-center gap-1.5">
                 <AppText variant="subheading">{me?.nickname ?? '별따먹는사람'}</AppText>
-                {/* 카카오 로그인 배지 — 아이콘 라이브러리 없음, 이모지 임시 */}
-                <View className="h-4 w-4 items-center justify-center rounded-full bg-primary">
-                  <Text className="text-[9px]">💬</Text>
-                </View>
+                {/* 로그인 provider 배지 — KAKAO/NAVER/GOOGLE/APPLE 로고 */}
+                {providerLogo ? (
+                  <Image
+                    source={providerLogo}
+                    style={{ width: 18, height: 18 }}
+                    contentFit="contain"
+                  />
+                ) : null}
               </View>
             </View>
             <Chevron direction="right" className="text-muted" />

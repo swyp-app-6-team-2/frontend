@@ -1,4 +1,4 @@
-import { ApiError, apiFetch, uploadToGcs } from './client';
+import { apiFetch, uploadToGcs } from './client';
 import type {
   AddMyIngredientsRequest,
   AddMyIngredientsResponse,
@@ -36,26 +36,7 @@ export const authApi = {
 
 // ── User / Profile ────────────────────────────────────────────
 export const userApi = {
-  // 백엔드 GET /users/me 미구현 → 현재 404. 생기면 마이페이지에 자동 반영.
-  me: async () => {
-    try {
-      const res = await apiFetch<MeResponse>('/users/me');
-      if (__DEV__)
-        console.log('[me][diag] OK provider=', res?.provider, 'full=', JSON.stringify(res));
-      return res;
-    } catch (e) {
-      if (__DEV__) {
-        const status = e instanceof ApiError ? e.status : undefined;
-        console.log(
-          '[me][diag] FAIL status=',
-          status,
-          'msg=',
-          e instanceof Error ? e.message : String(e),
-        );
-      }
-      throw e;
-    }
-  },
+  me: () => apiFetch<MeResponse>('/users/me'),
 };
 
 // ── Upload ────────────────────────────────────────────────────
@@ -75,11 +56,8 @@ export async function uploadImage(
   purpose: UploadPurpose,
   file: { uri: string; contentType: ImageContentType },
 ): Promise<string> {
-  if (__DEV__) console.log(`[upload][diag] 1) issueUrl purpose=${purpose} ct=${file.contentType}`);
   const issued = await uploadApi.issueUrl(purpose, file.contentType);
-  if (__DEV__) console.log(`[upload][diag] 2) issued OK objectKey=${issued.objectKey}`);
   await uploadToGcs(issued.uploadUrl, issued.uploadHeaders, file.uri);
-  if (__DEV__) console.log(`[upload][diag] 3) gcs PUT OK`);
   return issued.objectKey;
 }
 

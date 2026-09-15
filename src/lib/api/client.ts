@@ -71,7 +71,6 @@ function refreshTokens(): Promise<boolean> {
  */
 async function doRefresh(): Promise<boolean> {
   const rt = getRefreshToken();
-  if (__DEV__) console.log('[refresh][diag] doRefresh start rt=', rt ? 'present' : 'MISSING');
   if (!rt) return false;
   try {
     const res = await fetch(`${BASE}/auth/token/refresh`, {
@@ -79,32 +78,13 @@ async function doRefresh(): Promise<boolean> {
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify({ refreshToken: rt }),
     });
-    if (__DEV__) console.log('[refresh][diag] /auth/token/refresh status=', res.status);
-    if (!res.ok) {
-      if (__DEV__) {
-        const t = await res
-          .clone()
-          .text()
-          .catch(() => '<no body>');
-        console.log('[refresh][diag] refresh FAILED body=', t);
-      }
-      return false;
-    }
+    if (!res.ok) return false;
     const text = await res.text();
     const data = text ? (JSON.parse(text) as ApiResponse<TokenRefreshResponse>).data : null;
-    if (__DEV__)
-      console.log(
-        '[refresh][diag] newAccess=',
-        !!data?.accessToken,
-        'newRefresh=',
-        !!data?.refreshToken,
-      );
     if (!data?.accessToken) return false;
     setTokens({ accessToken: data.accessToken, refreshToken: data.refreshToken });
     return true;
-  } catch (e) {
-    if (__DEV__)
-      console.log('[refresh][diag] doRefresh threw', e instanceof Error ? e.message : String(e));
+  } catch {
     return false;
   }
 }
@@ -130,9 +110,6 @@ export async function apiFetch<T>(path: string, opts: ApiFetchOptions = {}): Pro
 
   let res = await send();
 
-  if (__DEV__ && res.status === 401 && auth) {
-    console.log('[refresh][diag] 401 on', path, '— rt=', getRefreshToken() ? 'present' : 'MISSING');
-  }
   // 인증 요청이 401 → 재발급 시도. 성공하면 새 토큰으로 1회 재요청, 실패하면 세션 종료 통지.
   if (res.status === 401 && auth && getRefreshToken()) {
     if (await refreshTokens()) {
@@ -184,19 +161,12 @@ export async function uploadToGcs(
   uploadHeaders: Record<string, string>,
   fileUri: string,
 ): Promise<void> {
-  if (__DEV__) {
-    console.log(`[gcs][diag] PUT start uri=${fileUri} headers=${JSON.stringify(uploadHeaders)}`);
-  }
   const res = await new File(fileUri).upload(uploadUrl, {
     httpMethod: 'PUT',
     uploadType: UploadType.BINARY_CONTENT,
     headers: uploadHeaders,
   });
   if (res.status < 200 || res.status >= 300) {
-    if (__DEV__) {
-      console.log(`[gcs][diag] PUT FAILED status=${res.status} body=${res.body}`);
-    }
     throw new ApiError(res.status, null, `이미지 업로드에 실패했습니다. (${res.status})`);
   }
-  if (__DEV__) console.log(`[gcs][diag] PUT OK status=${res.status}`);
 }

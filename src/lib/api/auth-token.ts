@@ -69,16 +69,6 @@ export function hydrateTokens(): void {
   accessToken = secureGet(K_ACCESS);
   refreshToken = secureGet(K_REFRESH);
   loginProvider = secureGet(K_PROVIDER);
-  if (__DEV__) {
-    console.log(
-      '[refresh][diag] hydrate access=',
-      !!accessToken,
-      'refreshToken=',
-      refreshToken ? 'present' : 'MISSING',
-      'provider=',
-      loginProvider,
-    );
-  }
 }
 
 export function setLoginProvider(provider: string | null): void {
@@ -121,15 +111,6 @@ export function setTokens(tokens: { accessToken: string; refreshToken?: string |
   if (tokens.refreshToken !== undefined) {
     refreshToken = tokens.refreshToken;
     securePut(K_REFRESH, tokens.refreshToken);
-  }
-  if (__DEV__) {
-    const rt =
-      tokens.refreshToken === undefined
-        ? 'undefined(미전달)'
-        : tokens.refreshToken === null
-          ? 'null'
-          : 'present';
-    console.log('[refresh][diag] setTokens access=', !!tokens.accessToken, 'refreshToken=', rt);
   }
   authExpiredEmitted = false; // 로그인/재발급 성공 → 다음 만료 때 다시 발화 가능
 }

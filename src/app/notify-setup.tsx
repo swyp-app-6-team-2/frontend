@@ -21,7 +21,7 @@ function TimeSlot({ label, on, onPress }: { label: string; on: boolean; onPress:
       }`}
     >
       <Text
-        className={`text-[20px] font-semibold leading-[26px] ${on ? 'text-ink' : 'text-foreground'}`}
+        className={`text-[16px] font-semibold leading-[26px] ${on ? 'text-ink' : 'text-foreground'}`}
       >
         {label}
       </Text>

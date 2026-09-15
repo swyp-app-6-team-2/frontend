@@ -2,20 +2,22 @@ import { useState } from 'react';
 import { Alert, Pressable, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { openBrowserAsync, WebBrowserPresentationStyle } from 'expo-web-browser';
 
 import { AppText, Chevron, Screen } from '@/components/ui';
+import { POLICY_URLS } from '@/constants/policy-links';
 import { useSignup } from '@/hooks/use-api';
 import { ApiError } from '@/lib/api';
 
 // 서비스 이용 동의 — 소셜 로그인 후 신규 회원 가입 절차(약관 동의). Figma 619:9650.
 type Key = 'age' | 'tos' | 'privacy' | 'notify' | 'marketing';
 
-const ITEMS: { key: Key; label: string }[] = [
-  { key: 'age', label: '(필수) 만 14세 이상입니다.' },
-  { key: 'tos', label: '(필수) 서비스 이용약관' },
-  { key: 'privacy', label: '(필수) 개인정보 처리방침' },
-  { key: 'notify', label: '(선택) 서비스 알림 수신 동의' },
-  { key: 'marketing', label: '(선택) 마케팅 정보 수신동의' },
+const ITEMS: { key: Key; label: string; url: string }[] = [
+  { key: 'age', label: '(필수) 만 14세 이상입니다.', url: POLICY_URLS.age },
+  { key: 'tos', label: '(필수) 서비스 이용약관', url: POLICY_URLS.tos },
+  { key: 'privacy', label: '(필수) 개인정보 처리방침', url: POLICY_URLS.privacy },
+  { key: 'notify', label: '(선택) 서비스 알림 수신 동의', url: POLICY_URLS.notify },
+  { key: 'marketing', label: '(선택) 마케팅 정보 수신동의', url: POLICY_URLS.marketing },
 ];
 const REQUIRED: Key[] = ['age', 'tos', 'privacy'];
 
@@ -121,7 +123,20 @@ export default function TermsScreen() {
                 <Text className="flex-1 text-[16px] font-medium leading-[19px] text-foreground">
                   {it.label}
                 </Text>
-                <Chevron className="text-muted" />
+                {/* 셰브론 탭 → 약관 원문(노션). 안쪽 Pressable이 터치를 잡아 체크 토글과 분리. */}
+                <Pressable
+                  onPress={() =>
+                    openBrowserAsync(it.url, {
+                      presentationStyle: WebBrowserPresentationStyle.AUTOMATIC,
+                    })
+                  }
+                  hitSlop={10}
+                  accessibilityRole="link"
+                  accessibilityLabel={`${it.label} 전문 보기`}
+                  className="active:opacity-60"
+                >
+                  <Chevron className="text-muted" />
+                </Pressable>
               </Pressable>
             ))}
           </View>

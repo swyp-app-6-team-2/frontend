@@ -13,7 +13,6 @@ import Animated, {
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { ChatFab } from '@/components/chat-fab';
 import { RecommendPopup } from '@/components/recommend-popup';
 import { SlotAddedPopup } from '@/components/slot-added-popup';
 import { TabBar } from '@/components/tab-bar';
@@ -264,9 +263,6 @@ export default function HomeScreen() {
         {/* 떠 있는 탭바 */}
         <TabBar active="home" />
       </SafeAreaView>
-
-      {/* 오른쪽 아래 AI 채팅 (문서 RAG) */}
-      <ChatFab bottom={210} />
 
       {/* 메뉴 추천 결과 팝업 */}
       {recommend ? (

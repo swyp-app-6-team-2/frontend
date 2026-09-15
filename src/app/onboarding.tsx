@@ -16,7 +16,7 @@ const TABS = [
   { key: 'my', icon: require('../assets/images/ic-tab-my.png'), label: '마이' },
 ];
 
-// 코치마크 4단계 — header: 오버레이 대상 화면 · spot: 강조 요소
+// 코치마크 6단계 — header: 오버레이 대상 화면 · spot: 강조 요소
 const STEPS = [
   {
     title: '나의 레시피를 등록해보세요',
@@ -43,10 +43,16 @@ const STEPS = [
     spot: 'sky',
   },
   {
-    title: '뭐 먹을지 어떤 방법으로 골라줄까요?',
+    title: '어떤 방법으로 메뉴를 골라줄까요?',
     sub: '랜덤으로도, 내 재료로도 고를 수 있어요',
     header: '별따먹자',
     spot: 'dropdown',
+  },
+  {
+    title: '오늘은 이거 어때요?',
+    sub: '레시피가 늘어날수록 뭐 먹을지 고민도 줄어들어요',
+    header: '별따먹자',
+    spot: 'reco-card',
   },
 ] as const;
 
@@ -123,6 +129,57 @@ function NightSky() {
   );
 }
 
+// 추천 카드 (대파라면) — 온보딩 6·7단계 공용. 두 버튼 모두 onSelect 실행.
+function RecoCard({ onSelect }: { onSelect: () => void }) {
+  return (
+    <View
+      className="overflow-hidden rounded-[20px]"
+      style={{
+        borderWidth: 1,
+        borderColor: palette.primary,
+        shadowColor: '#FFFFFF',
+        shadowOpacity: 0.2,
+        shadowRadius: 34,
+        shadowOffset: { width: 0, height: 0 },
+      }}
+    >
+      {/* 음식 이미지 */}
+      <View className="h-[216px] w-full overflow-hidden bg-field">
+        <Image
+          source={require('../assets/images/food-sample.png')}
+          style={{ width: '100%', height: '100%' }}
+          contentFit="cover"
+        />
+      </View>
+      {/* 하단 팝업 — 제목·재료·버튼 */}
+      <View className="items-center gap-[26px] bg-field px-[18px] pb-5 pt-8">
+        <View className="items-center gap-3">
+          <AppText variant="subheading">대파라면</AppText>
+          <AppText variant="body" className="text-center text-muted">
+            필수재료: 라면, 계란, 대파
+          </AppText>
+        </View>
+        <View className="flex-row gap-3 self-stretch">
+          <Pressable
+            onPress={onSelect}
+            accessibilityRole="button"
+            className="h-[52px] flex-1 items-center justify-center rounded-[30px] bg-popup-button active:opacity-80"
+          >
+            <Text className="text-[16px] font-semibold text-muted">안땡겨요</Text>
+          </Pressable>
+          <Pressable
+            onPress={onSelect}
+            accessibilityRole="button"
+            className="h-[52px] flex-1 items-center justify-center rounded-[30px] bg-primary active:opacity-90"
+          >
+            <Text className="text-[16px] font-semibold text-ink">좋아!</Text>
+          </Pressable>
+        </View>
+      </View>
+    </View>
+  );
+}
+
 export default function OnboardingScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -130,7 +187,7 @@ export default function OnboardingScreen() {
   const finish = () => router.replace('/home');
   const isCard = step === STEPS.length;
 
-  // 튜토리얼 6 — 오늘의 추천 카드 (강조 카드 + 코치 텍스트 + 완료하기)
+  // 튜토리얼 7 — 오늘의 추천 카드 (강조 카드 + 코치 텍스트 + 시작하기)
   if (isCard) {
     return (
       <View className="flex-1 bg-background">
@@ -164,52 +221,8 @@ export default function OnboardingScreen() {
           <View className="flex-1 px-screen">
             {/* 상단 여백 — 카드+코치문구를 버튼 위쪽으로 내림 (Figma: 헤더~카드 사이에 여백) */}
             <View className="flex-1" pointerEvents="none" />
-            {/* 강조 추천 카드 — primary 테두리 + 글로우 */}
-            <View
-              className="overflow-hidden rounded-[20px]"
-              style={{
-                borderWidth: 1,
-                borderColor: palette.primary,
-                shadowColor: '#FFFFFF',
-                shadowOpacity: 0.2,
-                shadowRadius: 34,
-                shadowOffset: { width: 0, height: 0 },
-              }}
-            >
-              {/* 음식 이미지 */}
-              <View className="h-[216px] w-full overflow-hidden bg-field">
-                <Image
-                  source={require('../assets/images/food-sample.png')}
-                  style={{ width: '100%', height: '100%' }}
-                  contentFit="cover"
-                />
-              </View>
-              {/* 하단 팝업 — 제목·재료·버튼 */}
-              <View className="items-center gap-[26px] bg-field px-[18px] pb-5 pt-8">
-                <View className="items-center gap-3">
-                  <AppText variant="subheading">대파라면</AppText>
-                  <AppText variant="body" className="text-center text-muted">
-                    필수재료: 라면, 계란, 대파
-                  </AppText>
-                </View>
-                <View className="flex-row gap-3 self-stretch">
-                  <Pressable
-                    onPress={finish}
-                    accessibilityRole="button"
-                    className="h-[52px] flex-1 items-center justify-center rounded-[30px] bg-popup-button active:opacity-80"
-                  >
-                    <Text className="text-[16px] font-semibold text-muted">안땡겨요</Text>
-                  </Pressable>
-                  <Pressable
-                    onPress={finish}
-                    accessibilityRole="button"
-                    className="h-[52px] flex-1 items-center justify-center rounded-[30px] bg-primary active:opacity-90"
-                  >
-                    <Text className="text-[16px] font-semibold text-ink">좋아!</Text>
-                  </Pressable>
-                </View>
-              </View>
-            </View>
+            {/* 강조 추천 카드 — primary 테두리 + 글로우 (6·7단계 공용) */}
+            <RecoCard onSelect={finish} />
 
             {/* 코치 텍스트 — 상하 페이드 선 사이 */}
             <View className="mt-8 gap-5">
@@ -356,6 +369,24 @@ export default function OnboardingScreen() {
         </>
       ) : null}
 
+      {/* 온보딩 6 — 추천 카드 강조(코치마크). 카드/버튼 탭 → 다음(7단계로) */}
+      {s.spot === 'reco-card' ? (
+        <View
+          className="absolute inset-x-0 items-center px-screen"
+          style={{ top: 210 }}
+          pointerEvents="box-none"
+        >
+          <View className="w-full max-w-[362px]">
+            <RecoCard onSelect={next} />
+          </View>
+          <Image
+            source={require('../assets/images/tap.png')}
+            style={{ width: 96, height: 64, marginTop: 16 }}
+            contentFit="contain"
+          />
+        </View>
+      ) : null}
+
       <SafeAreaView className="flex-1 px-screen" edges={['top', 'bottom']} pointerEvents="box-none">
         {/* 온보딩 헤더 — 이전(뒤로) + 건너뛰기 (Figma 헤더7). 화면명은 배경이 담당 */}
         <View className="h-[38px] flex-row items-center justify-between" pointerEvents="box-none">
@@ -393,6 +424,12 @@ export default function OnboardingScreen() {
           <View className="flex-1 justify-center" style={{ paddingTop: 200 }} pointerEvents="none">
             {coachText}
           </View>
+        ) : s.spot === 'reco-card' ? (
+          // 온보딩 6 — 코치 텍스트는 상단(강조 카드 위), 아래는 스페이서로 네비바 하단 고정
+          <>
+            <View pointerEvents="none">{coachText}</View>
+            <View className="flex-1" pointerEvents="none" />
+          </>
         ) : (
           <>
             {/* 하단 블록을 바닥에 고정하는 스페이서 */}

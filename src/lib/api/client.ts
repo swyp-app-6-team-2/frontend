@@ -163,7 +163,10 @@ export async function uploadToGcs(
   const res = await fetch(uploadUrl, { method: 'PUT', headers: uploadHeaders, body: blob });
   if (!res.ok) {
     if (__DEV__) {
-      const errText = await res.clone().text().catch(() => '<no body>');
+      const errText = await res
+        .clone()
+        .text()
+        .catch(() => '<no body>');
       console.log(`[gcs][diag] PUT FAILED status=${res.status} body=${errText}`);
     }
     throw new ApiError(res.status, null, `이미지 업로드에 실패했습니다. (${res.status})`);

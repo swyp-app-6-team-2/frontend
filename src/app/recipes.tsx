@@ -13,7 +13,7 @@ import { AppText, PressableScale, SearchBar } from '@/components/ui';
 import { staggerDelay } from '@/constants/animation';
 import { RECIPE_CATEGORY_LABEL } from '@/constants/labels';
 import { palette } from '@/constants/tokens';
-import { useIngredients, useRecipes } from '@/hooks/use-api';
+import { useMyIngredients, useRecipes } from '@/hooks/use-api';
 import { useEnteringOnce } from '@/hooks/use-entering-once';
 import type { RecipeCategory, RecipeListItem, RecipeListSort } from '@/lib/api/types';
 
@@ -98,7 +98,10 @@ export default function RecipesScreen() {
   const [sheet, setSheet] = useState<'filter' | 'sort' | null>(null);
 
   const { data, isLoading, isError } = useRecipes({ sort });
-  const { data: ingredientData } = useIngredients();
+  // 필터의 재료 리스트는 마스터 전체가 아니라 내가 등록한 '보유 재료'만.
+  // GET /users/me/ingredients (재료관리 화면과 동일 소스).
+  const { data: myIngredientData } = useMyIngredients();
+  const myIngredients = myIngredientData?.ingredients ?? [];
   // 백엔드 서버검색 없음 → 로드된 목록에서 제목·카테고리·재료로 클라이언트 필터.
   const recipes = (data?.recipes ?? []).filter((r) => {
     if (query && !r.title.toLowerCase().includes(query)) return false;
@@ -269,7 +272,7 @@ export default function RecipesScreen() {
       {/* 카테고리·재료 필터 시트 */}
       {sheet === 'filter' ? (
         <RecipeFilterSheet
-          ingredients={ingredientData?.ingredients ?? []}
+          ingredients={myIngredients}
           categories={selectedCats}
           ingredientNames={selectedIngs}
           onCancel={() => setSheet(null)}

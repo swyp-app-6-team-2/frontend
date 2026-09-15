@@ -13,43 +13,27 @@ import {
   INGREDIENT_CATEGORY_ORDER,
 } from '@/constants/labels';
 import { palette } from '@/constants/tokens';
-import { useIngredients } from '@/hooks/use-api';
-import type { Ingredient } from '@/lib/api/types';
+import { useMyIngredients } from '@/hooks/use-api';
+import type { UserIngredient } from '@/lib/api/types';
 
 // Figma 칩 — 이모지 + 이름, bg #1E2230(field), h36, pill, px16.
-// 탭으로 보유 여부 토글: 보유=흰색, 미보유=muted. (백엔드 보유 플래그 전까지 로컬 상태)
-function IngredientChip({
-  ing,
-  owned,
-  onToggle,
-}: {
-  ing: Ingredient;
-  owned: boolean;
-  onToggle: () => void;
-}) {
+// 재료관리는 "내가 등록한" 재료만 보여준다 → 전부 보유(흰색) 표시. 삭제 API 없음(표시 전용).
+function IngredientChip({ ing }: { ing: UserIngredient }) {
   return (
-    <PressableScale
-      onPress={onToggle}
-      haptic="selection"
-      accessibilityRole="button"
-      accessibilityState={{ selected: owned }}
-      className="h-9 flex-row items-center gap-1.5 rounded-pill bg-field px-4"
-    >
+    <View className="h-9 flex-row items-center gap-1.5 rounded-pill bg-field px-4">
       {/* 백엔드 재료 아이콘(iconUrl) 우선, 없으면 카테고리 이모지로 폴백 */}
       {ing.iconUrl ? (
         <Image
           source={{ uri: ing.iconUrl }}
-          style={{ width: 18, height: 18, opacity: owned ? 1 : 0.4 }}
+          style={{ width: 18, height: 18 }}
           contentFit="contain"
           transition={150}
         />
       ) : (
         <Text className="text-[14px]">{INGREDIENT_CATEGORY_EMOJI[ing.categoryCode]}</Text>
       )}
-      <Text className={`text-[14px] leading-[17px] ${owned ? 'text-foreground' : 'text-muted'}`}>
-        {ing.name}
-      </Text>
-    </PressableScale>
+      <Text className="text-[14px] leading-[17px] text-foreground">{ing.name}</Text>
+    </View>
   );
 }
 
@@ -59,30 +43,18 @@ export default function IngredientsScreen() {
   const insets = useSafeAreaInsets();
   const [q, setQ] = useState('');
   const query = q.trim().toLowerCase();
-  // 미보유(dim)로 표시할 재료 이름 — 비어 있으면 전부 보유(흰색). 탭으로 토글(로컬).
-  const [dimmed, setDimmed] = useState<Set<string>>(new Set());
-  const toggleOwned = (name: string) =>
-    setDimmed((prev) => {
-      const next = new Set(prev);
-      if (next.has(name)) next.delete(name);
-      else next.add(name);
-      return next;
-    });
 
-  const { data, isLoading, isError } = useIngredients();
+  // 내가 등록한 재료만. 마스터 전체가 아니라 GET /users/me/ingredients.
+  const { data, isLoading, isError } = useMyIngredients();
   const items = useMemo(() => data?.ingredients ?? [], [data]);
 
-  // 카테고리 순서대로, 항목 있는 섹션만. 검색어는 이름·별칭으로 필터.
+  // 카테고리 순서대로, 항목 있는 섹션만. 검색어는 이름으로 필터(보유 응답엔 별칭 없음).
   const sections = useMemo(
     () =>
       INGREDIENT_CATEGORY_ORDER.map((cat) => ({
         cat,
         items: items.filter(
-          (it) =>
-            it.categoryCode === cat &&
-            (!query ||
-              it.name.toLowerCase().includes(query) ||
-              it.aliases.some((a) => a.toLowerCase().includes(query))),
+          (it) => it.categoryCode === cat && (!query || it.name.toLowerCase().includes(query)),
         ),
       })).filter((s) => s.items.length > 0),
     [items, query],
@@ -131,12 +103,7 @@ export default function IngredientsScreen() {
                 </View>
                 <View className="flex-row flex-wrap gap-2">
                   {s.items.map((ing) => (
-                    <IngredientChip
-                      key={ing.ingredientId}
-                      ing={ing}
-                      owned={!dimmed.has(ing.name)}
-                      onToggle={() => toggleOwned(ing.name)}
-                    />
+                    <IngredientChip key={ing.ingredientId} ing={ing} />
                   ))}
                 </View>
               </View>

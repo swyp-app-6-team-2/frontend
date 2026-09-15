@@ -1,5 +1,7 @@
 import { apiFetch, uploadToGcs } from './client';
 import type {
+  AddMyIngredientsRequest,
+  AddMyIngredientsResponse,
   CookHistoryCreateRequest,
   CookHistoryItem,
   ImageContentType,
@@ -8,6 +10,7 @@ import type {
   IngestionJobResponse,
   IngredientListResponse,
   MeResponse,
+  MyIngredientListResponse,
   RecipeCreateRequest,
   RecipeCreateResponse,
   RecipeDetailResponse,
@@ -54,8 +57,11 @@ export async function uploadImage(
   purpose: UploadPurpose,
   file: { uri: string; contentType: ImageContentType },
 ): Promise<string> {
+  if (__DEV__) console.log(`[upload][diag] 1) issueUrl purpose=${purpose} ct=${file.contentType}`);
   const issued = await uploadApi.issueUrl(purpose, file.contentType);
+  if (__DEV__) console.log(`[upload][diag] 2) issued OK objectKey=${issued.objectKey}`);
   await uploadToGcs(issued.uploadUrl, issued.uploadHeaders, file.uri);
+  if (__DEV__) console.log(`[upload][diag] 3) gcs PUT OK`);
   return issued.objectKey;
 }
 
@@ -81,6 +87,22 @@ export const cookingApi = {
 // ── Ingredient ────────────────────────────────────────────────
 export const ingredientApi = {
   list: () => apiFetch<IngredientListResponse>('/ingredients'),
+};
+
+// ── My Ingredient (보유 재료) ──────────────────────────────────
+// 마스터(GET /ingredients)와 구분: 이건 "내가 등록한" 재료만. 인증 필요.
+export const myIngredientApi = {
+  // searchQuery: 재료명 부분검색(옵션). 비어 있으면 전체 조회.
+  list: (searchQuery?: string) =>
+    apiFetch<MyIngredientListResponse>('/users/me/ingredients', {
+      query: searchQuery ? { searchQuery } : undefined,
+    }),
+  // 마스터 id 다건 등록. 이미 보유한 건 백엔드가 무시하고 신규만 반환.
+  add: (ingredientIds: number[]) =>
+    apiFetch<AddMyIngredientsResponse>('/users/me/ingredients', {
+      method: 'POST',
+      body: { ingredientIds } satisfies AddMyIngredientsRequest,
+    }),
 };
 
 // ── Ingestion (레시피 분석) ────────────────────────────────────

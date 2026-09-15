@@ -287,6 +287,39 @@ type IngredientListResponse = {
 
 ---
 
+## 5-1. 보유 재료 — My Ingredient
+
+> ⚠️ **백엔드 `feat/73-get-my-ingredients` 기준 (아직 origin/main 미머지).** 머지·배포 전까지 로컬 백엔드를 해당 브랜치로 띄워야 동작. 마스터(`GET /ingredients`)와 다른 소스 — "내가 등록한 재료"만. 인증 필요.
+
+응답 항목(`UserIngredient`)은 마스터와 달리 `iconUrl`이 항상 채워지고 `code`/`aliases`가 없다. 조회·등록 응답이 공유.
+
+```ts
+type UserIngredient = {
+  ingredientId: number;
+  name: string;
+  categoryCode: IngredientCategory;
+  iconUrl: string;            // 항상 채워짐(백엔드가 iconBaseUrl로 생성)
+};
+```
+
+### `GET /api/v1/users/me/ingredients?searchQuery=` — 내 보유 재료 → **200**
+
+```ts
+type MyIngredientListResponse = { ingredients: UserIngredient[] };
+```
+- `searchQuery`(옵션): 재료명 부분검색. 빈 값/생략 = 전체.
+- 정렬: 카테고리 순 + 이름 가나다순. 보유한 비활성 재료도 포함.
+
+### `POST /api/v1/users/me/ingredients` — 보유 재료 추가 → **200**
+
+```ts
+type AddMyIngredientsRequest = { ingredientIds: number[] };   // 1개 이상, 양수
+type AddMyIngredientsResponse = { ingredients: UserIngredient[] }; // 신규만(이미 보유는 무시), 전부 보유면 []
+```
+- 에러: `400`(요청값 오류/존재하지 않거나 비활성인 신규 재료) · `401`(인증 실패).
+
+---
+
 ## 6. Enum 요약 (TS 정의용)
 
 ```ts
@@ -312,7 +345,8 @@ type ImageContentType = 'image/jpeg' | 'image/png' | 'image/webp';
 | 레시피 상세(`recipe-view`/`recipe-detail`) | `GET /recipes/{id}` |
 | 레시피 등록(`add-recipe*`) | (이미지 있으면) `POST /uploads/images`→PUT→ `POST /recipes` |
 | 요리 완료(`cook-complete`) | (사진) 업로드 → `POST /recipes/{id}/cook-histories` |
-| 재료관리(`fridge`) | `GET /ingredients` (클라 검색/카테고리 필터) |
+| 재료관리(`ingredients`) | `GET /users/me/ingredients` (내 보유 재료만) |
+| 재료 추가(`fridge`) | `GET /ingredients`(마스터) − 보유분 제외 → `POST /users/me/ingredients` |
 
 ### React Query 제안 (이미 `@tanstack/react-query` 설정됨)
 
@@ -322,10 +356,12 @@ type ImageContentType = 'image/jpeg' | 'image/png' | 'image/webp';
 ['recipe', recipeId]               // 상세
 ['cook-histories', recipeId]       // 이력
 ['ingredients']                    // 마스터(거의 불변 → staleTime 크게)
+['my-ingredients', searchQuery]    // 내 보유 재료
 
 // 변이 후 무효화
 // 레시피 생성/수정/삭제 → invalidate ['recipes'] (+ ['recipe', id])
 // 요리기록 생성 → invalidate ['cook-histories', id]
+// 보유 재료 추가 → invalidate ['my-ingredients']
 ```
 
 - API 클라이언트: envelope를 벗겨 `data`만 반환하고, `status>=400`이면 `data.code`로 에러를 던지는 래퍼를 하나 두면 편하다.

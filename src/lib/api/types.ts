@@ -168,3 +168,17 @@ export type Ingredient = {
   iconUrl?: string;
 };
 export type IngredientListResponse = { ingredients: Ingredient[] };
+
+// ── My Ingredient (보유 재료) ──────────────────────────────────
+// GET/POST /users/me/ingredients. 마스터(Ingredient)와 달리 iconUrl은 항상 채워지고
+// aliases/code는 없다(조회·등록 응답이 공유하는 축약형).
+export type UserIngredient = {
+  ingredientId: number;
+  name: string;
+  categoryCode: IngredientCategory;
+  iconUrl: string;
+};
+export type MyIngredientListResponse = { ingredients: UserIngredient[] };
+export type AddMyIngredientsRequest = { ingredientIds: number[] };
+// 새로 추가된 재료만 반환(이미 보유한 것은 무시). 전부 보유 중이면 빈 배열.
+export type AddMyIngredientsResponse = { ingredients: UserIngredient[] };

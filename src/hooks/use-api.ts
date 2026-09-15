@@ -6,6 +6,7 @@ import {
   cookingApi,
   ingestionApi,
   ingredientApi,
+  myIngredientApi,
   recipeApi,
   userApi,
 } from '@/lib/api/endpoints';
@@ -25,6 +26,7 @@ export const queryKeys = {
   recipe: (recipeId: number) => ['recipe', recipeId] as const,
   cookHistories: (recipeId: number) => ['cook-histories', recipeId] as const,
   ingredients: () => ['ingredients'] as const,
+  myIngredients: (searchQuery?: string) => ['my-ingredients', searchQuery ?? ''] as const,
   ingestionJob: (jobId: number) => ['ingestion-job', jobId] as const,
   me: () => ['me'] as const,
 };
@@ -69,6 +71,14 @@ export function useIngredients() {
   });
 }
 
+// 내가 등록한 재료(재료관리 화면). 마스터(useIngredients)와 다른 소스.
+export function useMyIngredients(searchQuery?: string) {
+  return useQuery({
+    queryKey: queryKeys.myIngredients(searchQuery),
+    queryFn: () => myIngredientApi.list(searchQuery),
+  });
+}
+
 // 레시피 분석 작업 폴링. QUEUED/PROCESSING 동안만 refetch, terminal 상태면 자동 정지.
 export function useIngestionJob(jobId: number | null | undefined) {
   return useQuery({
@@ -108,6 +118,15 @@ export function useDeleteRecipe() {
   return useMutation({
     mutationFn: (recipeId: number) => recipeApi.remove(recipeId),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['recipes'] }),
+  });
+}
+
+// 보유 재료 추가(재료 추가하기 화면). 성공 시 재료관리 목록 무효화 → 자동 반영.
+export function useAddMyIngredients() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (ingredientIds: number[]) => myIngredientApi.add(ingredientIds),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['my-ingredients'] }),
   });
 }
 

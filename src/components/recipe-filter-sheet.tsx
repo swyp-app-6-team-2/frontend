@@ -13,7 +13,7 @@ import {
   RECIPE_CATEGORY_ORDER,
 } from '@/constants/labels';
 import { useReduceMotion } from '@/hooks/use-reduce-motion';
-import type { Ingredient, RecipeCategory, RecipeListSort } from '@/lib/api/types';
+import type { RecipeCategory, RecipeListSort, UserIngredient } from '@/lib/api/types';
 
 import { AppText } from './ui';
 
@@ -141,7 +141,7 @@ export function RecipeFilterSheet({
   onCancel,
   onApply,
 }: {
-  ingredients: Ingredient[];
+  ingredients: UserIngredient[];
   categories: Set<RecipeCategory>;
   ingredientNames: Set<string>;
   onCancel: () => void;
@@ -172,16 +172,22 @@ export function RecipeFilterSheet({
         재료
       </AppText>
       <ScrollView className="mt-4 max-h-[200px]" showsVerticalScrollIndicator={false}>
-        <View className="flex-row flex-wrap gap-2">
-          {ingredients.map((ing) => (
-            <Chip
-              key={ing.ingredientId}
-              label={`${INGREDIENT_CATEGORY_EMOJI[ing.categoryCode]} ${ing.name}`}
-              active={ings.has(ing.name)}
-              onPress={() => setIngs((s) => toggle(s, ing.name))}
-            />
-          ))}
-        </View>
+        {ingredients.length === 0 ? (
+          <Text className="py-2 text-[14px] leading-[20px] text-muted">
+            보유 재료가 없어요. 재료 추가하기에서 재료를 담아주세요.
+          </Text>
+        ) : (
+          <View className="flex-row flex-wrap gap-2">
+            {ingredients.map((ing) => (
+              <Chip
+                key={ing.ingredientId}
+                label={`${INGREDIENT_CATEGORY_EMOJI[ing.categoryCode]} ${ing.name}`}
+                active={ings.has(ing.name)}
+                onPress={() => setIngs((s) => toggle(s, ing.name))}
+              />
+            ))}
+          </View>
+        )}
       </ScrollView>
     </SheetShell>
   );

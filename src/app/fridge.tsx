@@ -12,10 +12,9 @@ import {
   INGREDIENT_CATEGORY_ORDER,
 } from '@/constants/labels';
 import { palette } from '@/constants/tokens';
-import { useIngredients } from '@/hooks/use-api';
+import { useAddMyIngredients, useIngredients, useMyIngredients } from '@/hooks/use-api';
 import { useEnteringOnce } from '@/hooks/use-entering-once';
 import type { IngredientCategory } from '@/lib/api/types';
-import { addMyIngredients, useMyIngredientIds } from '@/lib/my-ingredients';
 
 // 재료관리 — 검색 + 카테고리 칩 + 재료 그리드. 재료 마스터(GET /ingredients) 연결.
 export default function FridgeScreen() {
@@ -38,17 +37,21 @@ export default function FridgeScreen() {
       return next;
     });
 
+  const addMutation = useAddMyIngredients();
   const onRegister = () => {
-    if (selected.size === 0) return;
-    // 세션 store에 담는다. 백엔드 '내 재료 저장' API가 생기면 여기서 서버 전송으로 교체.
-    addMyIngredients([...selected]);
-    router.back();
+    if (selected.size === 0 || addMutation.isPending) return;
+    // POST /users/me/ingredients. 성공 시 재료관리 목록이 무효화되어 자동 반영된다.
+    addMutation.mutate([...selected], { onSuccess: () => router.back() });
   };
 
   const { data, isLoading, isError } = useIngredients();
   const items = useMemo(() => data?.ingredients ?? [], [data]);
-  // 이미 담은 재료는 추가 화면에서 제외한다. (세션 store — 백엔드 저장 API 생기면 교체)
-  const owned = useMyIngredientIds();
+  // 이미 등록한 재료는 추가 목록에서 제외한다. 서버(GET /users/me/ingredients) 기준.
+  const { data: mine } = useMyIngredients();
+  const owned = useMemo(
+    () => new Set((mine?.ingredients ?? []).map((it) => it.ingredientId)),
+    [mine],
+  );
   const available = useMemo(
     () => items.filter((it) => !owned.has(it.ingredientId)),
     [items, owned],
@@ -219,8 +222,14 @@ export default function FridgeScreen() {
 
       <View className="gap-1 pb-6">
         <Button
-          label={selected.size ? `등록하기 (${selected.size})` : '등록하기'}
-          disabled={selected.size === 0}
+          label={
+            addMutation.isPending
+              ? '등록 중…'
+              : selected.size
+                ? `등록하기 (${selected.size})`
+                : '등록하기'
+          }
+          disabled={selected.size === 0 || addMutation.isPending}
           onPress={onRegister}
         />
         <PressableScale

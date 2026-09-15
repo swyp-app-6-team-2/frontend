@@ -1,13 +1,34 @@
 import { useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Alert, Pressable, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { AppText, Screen } from '@/components/ui';
+import { useSaveNotificationSettings } from '@/hooks/use-api';
+import { ApiError } from '@/lib/api';
+import type { Weekday } from '@/lib/api';
 
 // 알림 시간대 설정 — 신규 가입(약관 동의) 후. 선택한 시간대에 '별똥별' 알림을 보낸다.
 // 시간대 라벨은 임시(스펙 확정 시 교체). 복수 선택 가능(Figma: 2개 활성 예시).
 const SLOTS = ['아침', '점심', '저녁', '야식'];
+
+// 칩 → 알림 시간대 기본값(스펙상 앱 보유). label은 푸시 제목이 된다.
+const SLOT_META: Record<string, { label: string; time: string }> = {
+  아침: { label: '아침 알림', time: '08:00' },
+  점심: { label: '점심 알림', time: '12:00' },
+  저녁: { label: '저녁 알림', time: '18:00' },
+  야식: { label: '야식 알림', time: '22:00' },
+};
+// 온보딩에선 요일을 묻지 않으니 매일로 저장. 이후 알림 설정에서 조정 가능.
+const ALL_WEEKDAYS: Weekday[] = [
+  'MONDAY',
+  'TUESDAY',
+  'WEDNESDAY',
+  'THURSDAY',
+  'FRIDAY',
+  'SATURDAY',
+  'SUNDAY',
+];
 
 // 172×52 미니 토글 — on=골드·ink 글자, off=#36398A(slot)·흰 글자. radius 30.
 function TimeSlot({ label, on, onPress }: { label: string; on: boolean; onPress: () => void }) {
@@ -34,6 +55,7 @@ export default function NotifySetupScreen() {
   const { nick } = useLocalSearchParams<{ nick?: string }>();
   const nickname = nick || '요리사';
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const save = useSaveNotificationSettings();
 
   const toggle = (s: string) =>
     setSelected((prev) => {
@@ -43,10 +65,19 @@ export default function NotifySetupScreen() {
       return next;
     });
 
-  const canSubmit = selected.size > 0;
-  const onSubmit = () => {
+  const canSubmit = selected.size > 0 && !save.isPending;
+  const onSubmit = async () => {
     if (!canSubmit) return;
-    // TODO: 선택 시간대를 알림 설정 API로 저장.
+    // 선택한 칩을 시간대로 변환해 전체 교체 저장. 실패해도 온보딩은 진행(설정에서 재조정 가능).
+    const timeSlots = SLOTS.filter((s) => selected.has(s)).map((s) => SLOT_META[s]);
+    try {
+      await save.mutateAsync({ enabled: true, weekdays: ALL_WEEKDAYS, timeSlots });
+    } catch (e) {
+      Alert.alert(
+        '알림 설정 저장 실패',
+        e instanceof ApiError ? e.message : '설정 화면에서 다시 설정할 수 있어요.',
+      );
+    }
     // 신규 가입 흐름: 알림 시간대 설정 → 온보딩 튜토리얼.
     router.replace('/onboarding');
   };

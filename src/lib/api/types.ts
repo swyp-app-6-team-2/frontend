@@ -168,3 +168,22 @@ export type Ingredient = {
   iconUrl?: string;
 };
 export type IngredientListResponse = { ingredients: Ingredient[] };
+
+// ── Notification ──────────────────────────────────────────────
+// 백엔드 DayOfWeek enum과 일치(월→일). 저장/조회 모두 이 순서로 정렬됨.
+export type Weekday =
+  'MONDAY' | 'TUESDAY' | 'WEDNESDAY' | 'THURSDAY' | 'FRIDAY' | 'SATURDAY' | 'SUNDAY';
+/** time은 "HH:mm" 24시간 문자열(예: "08:00"). label 최대 255자. */
+export type TimeSlot = { label: string; time: string };
+/** 알림 설정 — 조회/저장 동일 형태(전체 교체). 켜져 있어도 배열은 비어 있을 수 있음. */
+export type NotificationSetting = {
+  enabled: boolean;
+  weekdays: Weekday[];
+  timeSlots: TimeSlot[];
+};
+export type NotificationSettingRequest = NotificationSetting;
+
+export type PushPlatform = 'IOS' | 'ANDROID';
+/** FCM 등록 토큰 등록. iOS도 FCM 토큰(원시 APNs 토큰 아님). token 최대 512자. */
+export type PushTokenRegisterRequest = { token: string; platform: PushPlatform };
+export type PushTokenUnregisterRequest = { token: string };

@@ -8,6 +8,9 @@ import type {
   IngestionJobResponse,
   IngredientListResponse,
   MeResponse,
+  NotificationSetting,
+  NotificationSettingRequest,
+  PushPlatform,
   RecipeCreateRequest,
   RecipeCreateResponse,
   RecipeDetailResponse,
@@ -81,6 +84,24 @@ export const cookingApi = {
 // ── Ingredient ────────────────────────────────────────────────
 export const ingredientApi = {
   list: () => apiFetch<IngredientListResponse>('/ingredients'),
+};
+
+// ── Notification (설정 · 푸시 토큰 · 오픈 기록) ────────────────
+export const notificationApi = {
+  // 설정 조회 — 없으면 백엔드가 꺼진 기본값({enabled:false, weekdays:[], timeSlots:[]})을 준다.
+  getSettings: () => apiFetch<NotificationSetting>('/notification-settings'),
+  // 전체 교체 저장. 세 필드 모두 필수(켜져 있어도 배열은 빌 수 있음).
+  saveSettings: (body: NotificationSettingRequest) =>
+    apiFetch<null>('/notification-settings', { method: 'PUT', body }),
+  // FCM 등록 토큰 등록/이관(upsert). platform은 IOS/ANDROID.
+  registerPushToken: (token: string, platform: PushPlatform) =>
+    apiFetch<null>('/push-tokens', { method: 'PUT', body: { token, platform } }),
+  // 토큰 해제(비활성화). 남의 토큰·없는 토큰이어도 200.
+  unregisterPushToken: (token: string) =>
+    apiFetch<null>('/push-tokens', { method: 'DELETE', body: { token } }),
+  // 알림 오픈 기록 — 푸시 data.notificationId(문자열)를 숫자로 바꿔 호출.
+  markOpened: (notificationId: number) =>
+    apiFetch<null>(`/notifications/${notificationId}/open`, { method: 'POST' }),
 };
 
 // ── Ingestion (레시피 분석) ────────────────────────────────────

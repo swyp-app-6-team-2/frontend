@@ -16,13 +16,49 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText, PressableScale, Screen } from '@/components/ui';
 import { palette } from '@/constants/tokens';
+import { useNotificationSettings, useSaveNotificationSettings } from '@/hooks/use-api';
 import { useReduceMotion } from '@/hooks/use-reduce-motion';
+import type { Weekday } from '@/lib/api';
 import { fireHaptic } from '@/lib/haptics';
 
 // 바텀시트를 화면 아래로 밀어내는 거리(px) — 닫힘 슬라이드용.
 const SHEET_OFFSCREEN = 700;
 
 const DAYS = ['일', '월', '화', '수', '목', '금', '토'];
+// DAYS 인덱스(0=일) ↔ 백엔드 Weekday enum. 백엔드가 월→일로 정렬하므로 저장 순서는 무관.
+const WEEKDAY_BY_INDEX: Weekday[] = [
+  'SUNDAY',
+  'MONDAY',
+  'TUESDAY',
+  'WEDNESDAY',
+  'THURSDAY',
+  'FRIDAY',
+  'SATURDAY',
+];
+const INDEX_BY_WEEKDAY: Record<Weekday, number> = {
+  SUNDAY: 0,
+  MONDAY: 1,
+  TUESDAY: 2,
+  WEDNESDAY: 3,
+  THURSDAY: 4,
+  FRIDAY: 5,
+  SATURDAY: 6,
+};
+
+// 화면 표기("오전 8:00") → API("HH:mm"). 오전 12→00, 오후 12→12.
+const to24h = (kr: string): string => {
+  const [ap, hm] = kr.split(' ');
+  const [h, m] = hm.split(':').map(Number);
+  const hour = (h % 12) + (ap === '오후' ? 12 : 0);
+  return `${String(hour).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+};
+// API("HH:mm") → 화면 표기("오전 8:00"). 00→오전 12, 12→오후 12.
+const from24h = (hhmm: string): string => {
+  const [h, m] = hhmm.split(':').map(Number);
+  const ap = h < 12 ? '오전' : '오후';
+  const hour12 = h % 12 === 0 ? 12 : h % 12;
+  return `${ap} ${hour12}:${String(m).padStart(2, '0')}`;
+};
 
 // 시간 휠 데이터
 const AMPM = ['오전', '오후'];
@@ -488,6 +524,47 @@ export default function NotificationsScreen() {
   ]);
   const nextId = useRef(4); // 새 알람 고유 id 생성용
   const [sheetFor, setSheetFor] = useState<number | null>(null);
+
+  // 서버 저장값 로드 → 최초 1회만 화면 상태로 수화(hydrate). 이후엔 사용자 편집이 우선.
+  const { data: settings } = useNotificationSettings();
+  const { mutate: saveSettings } = useSaveNotificationSettings();
+  const hydrated = useRef(false);
+  const skipNextPersist = useRef(false);
+  useEffect(() => {
+    if (hydrated.current || !settings) return;
+    setNotifOn(settings.enabled);
+    setDays(new Set(settings.weekdays.map((w) => INDEX_BY_WEEKDAY[w])));
+    setAlarms(
+      settings.timeSlots.map((t, i) => ({
+        id: `a${i}`,
+        label: t.label,
+        time: from24h(t.time),
+      })),
+    );
+    nextId.current = settings.timeSlots.length;
+    skipNextPersist.current = true; // 수화 직후의 동일값 재저장 방지
+    hydrated.current = true;
+  }, [settings]);
+
+  // 커밋(수신 토글·요일·알람 변경)마다 전체 교체 저장. 라벨 타이핑 연타는 디바운스로 흡수.
+  // 백엔드는 label NotBlank라 빈 제목 알람은 제외하고 보낸다.
+  useEffect(() => {
+    if (!hydrated.current) return;
+    if (skipNextPersist.current) {
+      skipNextPersist.current = false;
+      return;
+    }
+    const handle = setTimeout(() => {
+      saveSettings({
+        enabled: notifOn,
+        weekdays: [...days].map((i) => WEEKDAY_BY_INDEX[i]),
+        timeSlots: alarms
+          .filter((a) => a.label.trim())
+          .map((a) => ({ label: a.label.trim(), time: to24h(a.time) })),
+      });
+    }, 600);
+    return () => clearTimeout(handle);
+  }, [notifOn, days, alarms, saveSettings]);
 
   const toggleDay = (i: number) =>
     setDays((prev) => {

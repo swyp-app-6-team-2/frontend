@@ -6,12 +6,15 @@ import {
   cookingApi,
   ingestionApi,
   ingredientApi,
+  notificationApi,
   recipeApi,
   userApi,
 } from '@/lib/api/endpoints';
 import type {
   CookHistoryCreateRequest,
   IngestionJobCreateRequest,
+  NotificationSettingRequest,
+  PushPlatform,
   RecipeCreateRequest,
   RecipeListParams,
   RecipeUpdateRequest,
@@ -27,6 +30,7 @@ export const queryKeys = {
   ingredients: () => ['ingredients'] as const,
   ingestionJob: (jobId: number) => ['ingestion-job', jobId] as const,
   me: () => ['me'] as const,
+  notificationSettings: () => ['notification-settings'] as const,
 };
 
 // ── Queries ───────────────────────────────────────────────────
@@ -145,5 +149,45 @@ export function useSignup() {
     onSuccess: (res) => {
       setTokens({ accessToken: res.accessToken, refreshToken: res.refreshToken });
     },
+  });
+}
+
+// ── Notification ──────────────────────────────────────────────
+// 알림 설정 조회 — notify-setup(온보딩)·notifications(설정) 화면에서 사용.
+export function useNotificationSettings() {
+  return useQuery({
+    queryKey: queryKeys.notificationSettings(),
+    queryFn: () => notificationApi.getSettings(),
+  });
+}
+
+// 알림 설정 저장(전체 교체). 성공 시 설정 캐시 무효화.
+export function useSaveNotificationSettings() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: NotificationSettingRequest) => notificationApi.saveSettings(body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.notificationSettings() }),
+  });
+}
+
+// FCM 등록 토큰 등록/이관. 로그인 후·토큰 갱신 시 호출.
+export function useRegisterPushToken() {
+  return useMutation({
+    mutationFn: ({ token, platform }: { token: string; platform: PushPlatform }) =>
+      notificationApi.registerPushToken(token, platform),
+  });
+}
+
+// 토큰 해제 — 로그아웃 시 호출.
+export function useUnregisterPushToken() {
+  return useMutation({
+    mutationFn: (token: string) => notificationApi.unregisterPushToken(token),
+  });
+}
+
+// 알림 오픈 기록 — 푸시 탭 시 data.notificationId로 호출.
+export function useMarkNotificationOpened() {
+  return useMutation({
+    mutationFn: (notificationId: number) => notificationApi.markOpened(notificationId),
   });
 }

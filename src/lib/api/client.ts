@@ -110,9 +110,12 @@ export async function apiFetch<T>(path: string, opts: ApiFetchOptions = {}): Pro
 
   let res = await send();
 
-  // 인증 요청이 401 → 재발급 시도. 성공하면 새 토큰으로 1회 재요청, 실패하면 세션 종료 통지.
-  if (res.status === 401 && auth && getRefreshToken()) {
-    if (await refreshTokens()) {
+  // 인증 요청이 401 → 재발급 시도. 성공하면 새 토큰으로 1회 재요청.
+  // 재발급 불가(refreshToken 없음/유실 포함)거나 실패하면 세션 종료로 보고 로그인으로 보낸다.
+  // (refreshToken null이면 조건에서 빠져 로그인 이동 없이 에러에 갇히던 문제 방지)
+  if (res.status === 401 && auth) {
+    const refreshed = getRefreshToken() ? await refreshTokens() : false;
+    if (refreshed) {
       res = await send();
     } else {
       clearTokens();

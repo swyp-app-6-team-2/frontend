@@ -6,8 +6,8 @@ import {
   Modal,
   Pressable,
   ScrollView,
-  StyleSheet,
   Text,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { Image } from 'expo-image';
@@ -53,6 +53,7 @@ function formatRelative(iso: string) {
 export default function RecipeViewScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { width: winW, height: winH } = useWindowDimensions();
   const { id } = useLocalSearchParams<{ id: string }>();
   const recipeId = Number(id);
   const { data, isLoading, isError } = useRecipe(Number.isFinite(recipeId) ? recipeId : null);
@@ -281,7 +282,7 @@ export default function RecipeViewScreen() {
 
       {/* 하단 고정 — 요리 완료 기록(별 점등) */}
       <View className="pb-8 pt-4">
-        <Button label="완료하기" onPress={onComplete} disabled={createCook.isPending} />
+        <Button label="요리 완료" onPress={onComplete} disabled={createCook.isPending} />
       </View>
 
       {/* 헤더 ⋯ 메뉴 — 헤더 우측 아래 앵커. 바깥 탭하면 닫힘. */}
@@ -299,7 +300,7 @@ export default function RecipeViewScreen() {
           <View
             className="absolute right-5 w-[159px] gap-[15px] rounded-[12px] border border-disabled bg-background p-4"
             style={{
-              top: insets.top + 72 + 6,
+              top: insets.top + 56,
               shadowColor: '#000',
               shadowOpacity: 0.3,
               shadowRadius: 12,
@@ -337,10 +338,11 @@ export default function RecipeViewScreen() {
         </Pressable>
       </Modal>
 
-      {/* 요리 완료 축하 팝업 — 마스코트 + 골드 버튼 1개. 확인 시 별 점등 화면으로.
-          AlertDialog는 자체 dim + flex-1 중앙정렬이라 absoluteFill View로 덮는다(Modal 감싸면 버튼 잘림). */}
-      {showComplete ? (
-        <View style={StyleSheet.absoluteFill}>
+      {/* 요리 완료 축하 팝업 — 마스코트 + 골드 확인 버튼. 확인 시 별 점등 화면으로.
+          전체화면 Modal로 띄워 AlertDialog(자체 dim + flex-1 중앙정렬)가 화면 전체를 덮게 한다. */}
+      <Modal visible={showComplete} transparent statusBarTranslucent animationType="fade">
+        {/* Modal 자식은 flex-1이 화면을 못 채우므로 명시적 window 크기로 전체화면 확보 → dim·중앙정렬·버튼 정상 */}
+        <View style={{ width: winW, height: winH }}>
           <AlertDialog
             mascot={
               <Image
@@ -365,7 +367,7 @@ export default function RecipeViewScreen() {
             ]}
           />
         </View>
-      ) : null}
+      </Modal>
     </Screen>
   );
 }

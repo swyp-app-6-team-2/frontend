@@ -71,6 +71,7 @@ function refreshTokens(): Promise<boolean> {
  */
 async function doRefresh(): Promise<boolean> {
   const rt = getRefreshToken();
+  if (__DEV__) console.log('[refresh][diag] doRefresh start rt=', rt ? 'present' : 'MISSING');
   if (!rt) return false;
   try {
     const res = await fetch(`${BASE}/auth/token/refresh`, {
@@ -78,13 +79,32 @@ async function doRefresh(): Promise<boolean> {
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify({ refreshToken: rt }),
     });
-    if (!res.ok) return false;
+    if (__DEV__) console.log('[refresh][diag] /auth/token/refresh status=', res.status);
+    if (!res.ok) {
+      if (__DEV__) {
+        const t = await res
+          .clone()
+          .text()
+          .catch(() => '<no body>');
+        console.log('[refresh][diag] refresh FAILED body=', t);
+      }
+      return false;
+    }
     const text = await res.text();
     const data = text ? (JSON.parse(text) as ApiResponse<TokenRefreshResponse>).data : null;
+    if (__DEV__)
+      console.log(
+        '[refresh][diag] newAccess=',
+        !!data?.accessToken,
+        'newRefresh=',
+        !!data?.refreshToken,
+      );
     if (!data?.accessToken) return false;
     setTokens({ accessToken: data.accessToken, refreshToken: data.refreshToken });
     return true;
-  } catch {
+  } catch (e) {
+    if (__DEV__)
+      console.log('[refresh][diag] doRefresh threw', e instanceof Error ? e.message : String(e));
     return false;
   }
 }
@@ -110,6 +130,9 @@ export async function apiFetch<T>(path: string, opts: ApiFetchOptions = {}): Pro
 
   let res = await send();
 
+  if (__DEV__ && res.status === 401 && auth) {
+    console.log('[refresh][diag] 401 on', path, '— rt=', getRefreshToken() ? 'present' : 'MISSING');
+  }
   // 인증 요청이 401 → 재발급 시도. 성공하면 새 토큰으로 1회 재요청, 실패하면 세션 종료 통지.
   if (res.status === 401 && auth && getRefreshToken()) {
     if (await refreshTokens()) {

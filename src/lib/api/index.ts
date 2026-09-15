@@ -7,4 +7,7 @@ export {
   setTokens,
   clearTokens,
   setOnAuthExpired,
+  setLoginProvider,
+  getLoginProvider,
+  hydrateTokens,
 } from './auth-token';

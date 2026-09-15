@@ -7,9 +7,13 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { QueryProvider } from '@/components/query-provider';
 import { useReduceMotion } from '@/hooks/use-reduce-motion';
-import { setOnAuthExpired } from '@/lib/api';
+import { hydrateTokens, setOnAuthExpired } from '@/lib/api';
 
 SplashScreen.preventAutoHideAsync();
+
+// 저장소(SecureStore) → 인메모리 토큰 복원. 모듈 로드(=렌더/쿼리보다 먼저) 시 1회 실행해
+// 인증 요청 전에 세션을 채운다. (렌더 중 실행하면 React Compiler 규칙 위반)
+hydrateTokens();
 
 // 개발 빌드에서만 뜨는 화면 하단 LogBox 경고 알림 배지를 숨긴다.
 // (라이브러리에서 나는 경고는 Metro 터미널에는 그대로 찍힌다. 배포 빌드엔 원래 없음.)

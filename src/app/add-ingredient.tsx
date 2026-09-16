@@ -1,19 +1,49 @@
-import { useState } from 'react';
-import { View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
 import { AppText, Button, Screen, SearchBar } from '@/components/ui';
+import { useAddMyIngredients, useIngredients, useMyIngredients } from '@/hooks/use-api';
+import { ApiError } from '@/lib/api';
 
-// 재료 직접 입력 — 마스터 목록에 없는 재료를 직접 입력. (재료 추가하기의 '직접 입력할게요'에서 진입)
+// 재료 직접 입력 — 입력한 이름을 마스터(이름·별칭)에 매칭해 등록한다.
+// 백엔드는 마스터 재료 id만 저장할 수 있어(자유입력 저장 API 없음), 목록에 없는 이름은 등록 불가.
 export default function AddIngredientScreen() {
   const router = useRouter();
   const [name, setName] = useState('');
-  const canSubmit = name.trim().length > 0;
+  const [error, setError] = useState<string | null>(null);
+
+  const { data: master } = useIngredients();
+  const items = useMemo(() => master?.ingredients ?? [], [master]);
+  const { data: mine } = useMyIngredients();
+  const owned = useMemo(
+    () => new Set((mine?.ingredients ?? []).map((it) => it.ingredientId)),
+    [mine],
+  );
+  const addMutation = useAddMyIngredients();
+
+  const canSubmit = name.trim().length > 0 && !addMutation.isPending;
 
   const onSubmit = () => {
     if (!canSubmit) return;
-    // TODO: 백엔드 '내 재료 저장'(커스텀 재료 추가) API가 생기면 name 전송.
-    router.back();
+    const typed = name.trim().toLowerCase();
+    const match = items.find(
+      (it) => it.name.toLowerCase() === typed || it.aliases.some((a) => a.toLowerCase() === typed),
+    );
+    if (!match) {
+      setError('목록에 없는 재료예요. ‘재료 추가하기’ 목록에서 찾아 등록해주세요.');
+      return;
+    }
+    if (owned.has(match.ingredientId)) {
+      setError('이미 등록된 재료예요.');
+      return;
+    }
+    // POST /users/me/ingredients → 성공 시 my-ingredients 무효화로 재료관리에 자동 반영.
+    addMutation.mutate([match.ingredientId], {
+      onSuccess: () => router.back(),
+      onError: (e) =>
+        setError(e instanceof ApiError ? e.message : '등록에 실패했어요. 다시 시도해주세요.'),
+    });
   };
 
   return (
@@ -25,17 +55,27 @@ export default function AddIngredientScreen() {
         <SearchBar
           placeholder="재료명을 검색해보세요"
           value={name}
-          onChangeText={setName}
+          onChangeText={(t) => {
+            setName(t);
+            if (error) setError(null);
+          }}
           returnKeyType="done"
           onSubmitEditing={onSubmit}
           leftIcon={null}
           containerClassName="mt-6"
           autoFocus
         />
+        {error ? (
+          <Text className="mt-2 pl-1 text-[13px] leading-[18px] text-error">{error}</Text>
+        ) : null}
       </View>
 
       <View className="pb-8">
-        <Button label="완료하기" disabled={!canSubmit} onPress={onSubmit} />
+        <Button
+          label={addMutation.isPending ? '등록 중…' : '완료하기'}
+          disabled={!canSubmit}
+          onPress={onSubmit}
+        />
       </View>
     </Screen>
   );

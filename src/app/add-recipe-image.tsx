@@ -74,7 +74,7 @@ export default function AddRecipeImageScreen() {
             onPress={addImage}
             className="mt-5 aspect-square w-full flex-row items-center justify-center gap-2 rounded-[20px] bg-field active:opacity-90"
             accessibilityRole="button"
-            accessibilityLabel="대표 사진 추가"
+            accessibilityLabel="이미지 추가"
           >
             <Image
               source={require('../assets/images/ic-camera.png')}
@@ -82,7 +82,7 @@ export default function AddRecipeImageScreen() {
               tintColor={palette.muted}
               contentFit="contain"
             />
-            <Text className="text-body text-muted">대표 사진 추가 (선택)</Text>
+            <Text className="text-body text-muted">이미지 추가</Text>
           </Pressable>
 
           {/* 썸네일 그리드 — 3열 청킹(기기 폭 무관), r12, 열16/행20 (업로드 박스 아래 20) */}

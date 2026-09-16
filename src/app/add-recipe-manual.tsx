@@ -7,13 +7,11 @@ import { Feather } from '@expo/vector-icons';
 import { AppText, Button, Screen, SearchBar } from '@/components/ui';
 import { RECIPE_CATEGORY_LABEL, RECIPE_CATEGORY_ORDER } from '@/constants/labels';
 import { palette } from '@/constants/tokens';
-import { useCreateRecipe, useRecipe, useUpdateRecipe } from '@/hooks/use-api';
+import { useCreateRecipe, useMyIngredients, useRecipe, useUpdateRecipe } from '@/hooks/use-api';
 import { ApiError, uploadImage } from '@/lib/api';
 import type { RecipeCategory, RecipeDraft } from '@/lib/api/types';
+import { fireHaptic } from '@/lib/haptics';
 import { ImagePickerUnavailableError, pickSquareImage, type PickedImage } from '@/lib/pick-image';
-
-// 냉장고에 있는 재료 추천 (탭하면 재료 행에 추가)
-const OWNED = ['브로콜리', '새우', '대파', '계란', '다진 마늘', '설탕', '소금', '후추'];
 
 // 조리시간 프리셋 (분) — 단일 선택
 const COOK_TIMES = [
@@ -62,14 +60,18 @@ export default function AddRecipeManualScreen() {
   const isEdit = editId != null && Number.isFinite(editId);
   const { data: existing } = useRecipe(isEdit ? editId : null);
   const update = useUpdateRecipe(isEdit ? editId : 0);
+  // 보유 재료 추천 — 실제 등록한 재료만. 없으면 섹션 자체를 숨긴다.
+  const { data: myIngredients } = useMyIngredients();
+  const owned = myIngredients?.ingredients.map((ing) => ing.name) ?? [];
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState<RecipeCategory>('KOREAN');
   const [cookHour, setCookHour] = useState(''); // 조리시간 — 시
   const [cookMin, setCookMin] = useState(''); // 조리시간 — 분
   const [servings, setServings] = useState('');
   const cookMinutes = (Number(cookHour) || 0) * 60 + (Number(cookMin) || 0);
-  // 프리셋 칩 → 현재 조리시간에 누적으로 더한다
+  // 프리셋 칩 → 현재 조리시간에 누적으로 더한다. 탭 인지가 어려워 햅틱으로 피드백.
   const addCookPreset = (mins: number) => {
+    fireHaptic('selection');
     const total = cookMinutes + mins;
     const h = Math.floor(total / 60);
     const m = total % 60;
@@ -77,6 +79,7 @@ export default function AddRecipeManualScreen() {
     setCookMin(m ? String(m) : '');
   };
   const resetCookTime = () => {
+    fireHaptic('selection');
     setCookHour('');
     setCookMin('');
   };
@@ -435,32 +438,34 @@ export default function AddRecipeManualScreen() {
         {/* 위 12 = gap8+mt-1, 아래 16 = gap8+mb-2 */}
         <DashedAddButton label="재료 추가" onPress={() => addIngredient()} className="mb-2 mt-1" />
 
-        {/* 갖고 있는 재료 — 탭하면 재료 행 추가 */}
-        <View className="gap-[10px] rounded-[12px] bg-field p-3">
-          <View className="flex-row items-center gap-1.5">
-            <Feather name="bookmark" size={16} color={palette.primary} />
-            <Text className="text-[14px] text-primary">갖고 있는 재료</Text>
+        {/* 갖고 있는 재료 — 탭하면 재료 행 추가. 보유 재료가 없으면 숨김 */}
+        {owned.length > 0 ? (
+          <View className="gap-[10px] rounded-[12px] bg-field p-3">
+            <View className="flex-row items-center gap-1.5">
+              <Feather name="bookmark" size={16} color={palette.primary} />
+              <Text className="text-[14px] text-primary">갖고 있는 재료</Text>
+            </View>
+            <View className="flex-row flex-wrap gap-1.5">
+              {owned.map((o) => {
+                const added = ingredients.some((ing) => ing.name === o);
+                return (
+                  <Pressable
+                    key={o}
+                    onPress={() => addIngredient(o)}
+                    disabled={added}
+                    accessibilityRole="button"
+                    accessibilityState={{ disabled: added }}
+                    className={`rounded-pill border border-primary/50 bg-primary/10 px-3 py-1.5 ${
+                      added ? 'opacity-40' : 'active:opacity-80'
+                    }`}
+                  >
+                    <Text className="text-[12px] leading-[14px] text-primary">{o}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
           </View>
-          <View className="flex-row flex-wrap gap-1.5">
-            {OWNED.map((o) => {
-              const added = ingredients.some((ing) => ing.name === o);
-              return (
-                <Pressable
-                  key={o}
-                  onPress={() => addIngredient(o)}
-                  disabled={added}
-                  accessibilityRole="button"
-                  accessibilityState={{ disabled: added }}
-                  className={`rounded-pill border border-primary/50 bg-primary/10 px-3 py-1.5 ${
-                    added ? 'opacity-40' : 'active:opacity-80'
-                  }`}
-                >
-                  <Text className="text-[12px] leading-[14px] text-primary">{o}</Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        </View>
+        ) : null}
       </View>
 
       {/* 방법 — 번호+순서이동 단계 입력 + 삭제, 단계 추가 · 위 마진 20 = screen gap16 + mt-1 */}

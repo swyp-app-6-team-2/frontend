@@ -6,16 +6,14 @@ import type { RecipeListItem } from '@/lib/api/types';
 
 import { AppText } from './ui';
 
-// 메뉴 추천 결과 팝업 — 이미지(216) + 이름 + 필수재료 + [다시 추천][보기].
+// 메뉴 추천 결과 팝업 — 이미지(216) + 이름 + 필수재료 + [안 땡겨요(닫기)][보기].
 // Figma: 딤 #060A19 85%, 카드 #1E2230 radius20, 버튼 150×52 radius30.
 export function RecommendPopup({
   recipe,
-  onReroll,
   onView,
   onClose,
 }: {
   recipe: RecipeListItem;
-  onReroll: () => void;
   onView: () => void;
   onClose: () => void;
 }) {
@@ -52,7 +50,7 @@ export function RecommendPopup({
             </View>
             <View className="w-full flex-row gap-3">
               <Pressable
-                onPress={onReroll}
+                onPress={onClose}
                 accessibilityRole="button"
                 className="h-[52px] flex-1 items-center justify-center rounded-[30px] bg-popup-button active:opacity-80"
               >

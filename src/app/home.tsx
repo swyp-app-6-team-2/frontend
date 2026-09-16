@@ -282,7 +282,6 @@ export default function HomeScreen() {
       {recommend ? (
         <RecommendPopup
           recipe={recommend}
-          onReroll={() => setRecommend((cur) => pickRandomRecipe(recipes, cur?.recipeId) ?? cur)}
           onView={() => {
             const id = recommend.recipeId;
             setRecommend(null);

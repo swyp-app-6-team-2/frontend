@@ -138,16 +138,21 @@ export default function RecipeViewScreen() {
     >
       <View className="flex-1">
         <ScrollView contentContainerClassName="pb-4" showsVerticalScrollIndicator={false}>
-          {/* 대표 이미지 362x362 */}
-          <Image
-            source={
-              data.coverImageUrl
-                ? { uri: data.coverImageUrl }
-                : require('../assets/images/food-sample.png')
-            }
-            style={{ width: '100%', aspectRatio: 1, borderRadius: 12 }}
-            contentFit="cover"
-          />
+          {/* 대표 이미지 362x362 — 없으면 중립 플레이스홀더(샘플 사진 대신) */}
+          {data.coverImageUrl ? (
+            <Image
+              source={{ uri: data.coverImageUrl }}
+              style={{ width: '100%', aspectRatio: 1, borderRadius: 12 }}
+              contentFit="cover"
+            />
+          ) : (
+            <View
+              className="w-full items-center justify-center rounded-[12px] bg-field"
+              style={{ aspectRatio: 1 }}
+            >
+              <Feather name="image" size={48} color={palette.disabled} />
+            </View>
+          )}
 
           {/* 카테고리 칩 */}
           <View className="mt-6 self-start rounded-[4px] bg-field px-3 py-1">

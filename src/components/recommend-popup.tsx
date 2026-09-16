@@ -1,7 +1,9 @@
 import { Modal, Pressable, Text, View } from 'react-native';
 import { Image } from 'expo-image';
+import { Feather } from '@expo/vector-icons';
 import Animated, { Easing, FadeIn } from 'react-native-reanimated';
 
+import { palette } from '@/constants/tokens';
 import type { RecipeListItem } from '@/lib/api/types';
 
 import { AppText } from './ui';
@@ -28,16 +30,21 @@ export function RecommendPopup({
           entering={FadeIn.duration(420).easing(Easing.out(Easing.cubic))}
           className="w-full max-w-[362px] overflow-hidden rounded-[20px]"
         >
-          {/* 추천 레시피 이미지 */}
-          <Image
-            source={
-              recipe.coverImageUrl
-                ? { uri: recipe.coverImageUrl }
-                : require('../assets/images/food-sample.png')
-            }
-            style={{ width: '100%', height: 216 }}
-            contentFit="cover"
-          />
+          {/* 추천 레시피 이미지 — 없으면 중립 플레이스홀더 */}
+          {recipe.coverImageUrl ? (
+            <Image
+              source={{ uri: recipe.coverImageUrl }}
+              style={{ width: '100%', height: 216 }}
+              contentFit="cover"
+            />
+          ) : (
+            <View
+              className="items-center justify-center bg-field"
+              style={{ width: '100%', height: 216 }}
+            >
+              <Feather name="image" size={40} color={palette.disabled} />
+            </View>
+          )}
           {/* 정보 + 버튼 */}
           <View className="items-center gap-[26px] bg-field px-[18px] pb-5 pt-8">
             <View className="items-center gap-3">

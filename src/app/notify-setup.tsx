@@ -105,7 +105,7 @@ export default function NotifySetupScreen() {
         </View>
       </View>
 
-      {/* 하단 완료 버튼 + 취소할게요 */}
+      {/* 하단 완료 버튼 + 다음에 할게요(건너뛰고 홈으로) */}
       <View className="gap-3 pb-8 pt-4">
         <Pressable
           onPress={onSubmit}
@@ -125,12 +125,12 @@ export default function NotifySetupScreen() {
           </Text>
         </Pressable>
         <Pressable
-          onPress={() => router.back()}
+          onPress={() => router.replace('/home')}
           accessibilityRole="button"
           hitSlop={8}
           className="self-center py-1 active:opacity-70"
         >
-          <Text className="text-[14px] font-medium leading-[18px] text-muted">다르게 할게요</Text>
+          <Text className="text-[14px] font-medium leading-[18px] text-muted">다음에 할게요</Text>
         </Pressable>
       </View>
     </Screen>

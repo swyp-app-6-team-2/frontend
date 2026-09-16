@@ -87,8 +87,23 @@ type SocialLoginResponse = {
 - **신규 회원**: `requiresTermsAgreement=true` + `signupToken` → 약관 동의 화면(`/terms`)으로 유도.
 
 **에러**: `401` 유효하지 않은 소셜 토큰 · `502` 소셜 인증 서버 오류.
+(provider 값: `KAKAO | NAVER | GOOGLE | APPLE`.)
 
-> 회원가입 완료(약관 동의 후 signupToken → 정식 가입) API는 백엔드에 아직 없음 → 추가되면 이 문서 갱신.
+### `POST /api/v1/auth/signup` — 신규 가입 완료 (인증 불필요)
+`social-login`이 준 `signupToken` + 약관 동의로 정식 가입 → 토큰 발급.
+```ts
+Request  = { signupToken; ageOver14Agreed; serviceTermsAgreed; privacyAgreed; marketingAgreed; serviceAgreed } // boolean 5
+Response = { userId; accessToken; refreshToken }   // 200
+```
+
+### `POST /api/v1/auth/token/refresh` — 토큰 재발급 (인증 불필요)
+```ts
+Request = { refreshToken }; Response = { accessToken; refreshToken }  // 이전 refreshToken은 폐기(회전)
+```
+프론트 `client.ts`가 401 시 자동 호출(single-flight).
+
+### `POST /api/v1/auth/logout` — 로그아웃 (인증 필요) → **200** `data: null`
+서버 세션/토큰 무효화. 프론트는 이후 로컬 토큰(`clearTokens`)도 비운다.
 
 ---
 
@@ -151,6 +166,12 @@ type UploadUrlIssueResponse = {
 | `RECIPE_INGREDIENT_INVALID` | 400 | 보낸 `ingredientId`가 마스터에 없음 |
 | `RECIPE_COVER_INVALID` | 400 | coverImageKey가 없음/남의것/다른용도/미업로드 |
 | `RECIPE_COVER_ALREADY_USED` | 409 | 이미 연결된 coverImageKey |
+
+### `POST /api/v1/recipes/recommendations` — 추천 → **200** (홈 "랜덤/재료 기반")
+```ts
+Request  = { recommendationMode: 'RANDOM' | 'INGREDIENT_BASED'; previousRecipeId?: number } // previousRecipeId: "다른 거" 시 직전 제외
+Response = { recipeId; title; category: RecipeCategory; thumbnailUrl: string|null; mainIngredients: string[] }
+```
 
 ### `POST /api/v1/recipes` — 생성 → **201** `{ recipeId }`
 
@@ -320,6 +341,27 @@ type AddMyIngredientsResponse = { ingredients: UserIngredient[] }; // 신규만(
 
 ---
 
+## 5-2. 사용자 / 프로필 / 온보딩 — `User`
+
+### `GET /api/v1/users/me` — 내 정보 → **200**
+```ts
+{ userId; nickname: string|null; profileImageUrl: string|null;
+  remainingRecipeSlots: number; recipeSlotLimit: number; cumulativeRecipeCount: number }
+```
+신규 유저는 nickname/profileImageUrl 이 null. **provider 필드는 아직 없음** → 마이 배지는 로그인 시 저장값 폴백.
+
+### `PATCH /api/v1/users/me/profile` — 프로필 수정 → **200**
+```ts
+Request  = { nickname: string /*1~6자*/; profileImageKey?: string /*uploads/images key, 생략=유지*/ }
+Response = { userId; nickname: string|null; profileImageUrl: string|null }
+```
+
+### `GET /api/v1/users/me/onboarding` — 온보딩 필요 여부 → **200**
+### `POST /api/v1/users/me/onboarding/complete` — 온보딩 완료 → **200**
+둘 다 `{ onboardingRequired: boolean; onboardingCompletedAt: string|null }`.
+
+---
+
 ## 6. 문의 — `Inquiry`
 
 모든 API 인증 필요. 첨부는 `POST /uploads/images`에 `purpose: "INQUIRY_ATTACHMENT"`로 발급받아 올린 objectKey들(최대 5장). 표시 이름·순서는 앱이 보유(서버는 코드만).
@@ -397,11 +439,43 @@ type AddMyIngredientsResponse = { ingredients: UserIngredient[] }; // 신규만(
 
 ---
 
+## 7-1. 광고 보상 슬롯 — `Ad Reward`
+
+보상형 광고(AdMob) 시청 → 레시피 저장 슬롯 지급. 지급 확정은 **Google SSV 서버-서버 콜백**이 하므로, 앱은 세션 발급 → 광고 시청 → 결과 폴링으로 지급을 확인한다. (콜백 `GET /ads/rewards/callback`은 Google 전용, 앱 미사용.)
+
+### `GET /api/v1/ads/rewards/status` — 상태 → **200** (슬롯 지급 안 함)
+```ts
+{ recipeSlotLimit; remainingRecipeSlots; dailyRewardCount; dailyRewardLimit; reservedCount;
+  remainingRewardCount; availableWatchCount; canWatchAd: boolean;
+  unavailableReason: 'DAILY_LIMIT_REACHED'|'REWARD_PENDING'|null; quotaDate; resetsAt;
+  pendingSessions: { sessionId; status; quotaDate; expiresAt; verificationDeadline }[] }
+```
+
+### `POST /api/v1/ads/rewards/sessions` — 시청 세션 발급 → **200** (당일 1회 예약, requestId 멱등)
+```ts
+Request  = { platform: 'IOS'|'ANDROID'; requestId: string /*≤255, 멱등키*/ }
+Response = { sessionId; status; adUnitId; customData /*=sessionId, AdMob customData*/;
+             rewardType; rewardAmount; quotaDate; expiresAt; verificationDeadline }
+// 409: AD_REWARD_SESSION_PENDING / AD_REWARD_DAILY_LIMIT_REACHED / AD_REWARD_REQUEST_ID_CONFLICT
+```
+
+### `GET /api/v1/ads/rewards/sessions/{sessionId}` — 결과 조회(폴링) → **200**
+### `POST /api/v1/ads/rewards/sessions/{sessionId}/cancel` — 청구 포기 → **200**
+```ts
+CancelRequest = { reason: 'LOAD_FAILED'|'USER_DISMISSED' }
+Result = { sessionId; status: 'PENDING'|'GRANTED'|'CANCELLED'|'EXPIRED'|'REJECTED';
+           reasonCode: string|null; quotaDate; grantedAmount /*GRANTED 아니면 0*/; grantedAt: string|null;
+           recipeSlotLimit; remainingRecipeSlots /*최신값*/ }
+```
+
+---
+
 ## 8. Enum 요약 (TS 정의용)
 
 ```ts
 type RecipeCategory = 'KOREAN' | 'WESTERN' | 'CHINESE' | 'JAPANESE' | 'BUNSIK' | 'ASIAN' | 'OTHER';
 type RecipeListSort = 'LATEST' | 'OLDEST';
+type RecommendationMode = 'RANDOM' | 'INGREDIENT_BASED';
 type IngredientCategory = 'MEAT' | 'SEAFOOD' | 'VEGETABLE' | 'SAUCE' | 'ETC';
 type UploadPurpose = 'RECIPE_COVER' | 'COOK_HISTORY_PHOTO' | 'INGESTION_INPUT' | 'INQUIRY_ATTACHMENT';
 type ImageContentType = 'image/jpeg' | 'image/png' | 'image/webp';
@@ -409,6 +483,11 @@ type InquiryType = 'RECIPE' | 'SLOT' | 'ACCOUNT' | 'NOTIFICATION' | 'BUG' | 'ETC
 type InquiryStatus = 'RECEIVED' | 'ANSWERED'; // answer 유무로 서버가 계산
 type Weekday = 'MONDAY' | 'TUESDAY' | 'WEDNESDAY' | 'THURSDAY' | 'FRIDAY' | 'SATURDAY' | 'SUNDAY';
 type PushPlatform = 'IOS' | 'ANDROID';
+// 광고 보상
+type AdRewardPlatform = 'IOS' | 'ANDROID';
+type AdRewardCancelReason = 'LOAD_FAILED' | 'USER_DISMISSED';
+type AdRewardSessionStatus = 'PENDING' | 'GRANTED' | 'CANCELLED' | 'EXPIRED' | 'REJECTED';
+type AdRewardUnavailableReason = 'DAILY_LIMIT_REACHED' | 'REWARD_PENDING';
 ```
 
 **nullable 함정**: `RecipeDetail.servings`는 non-null, 그러나 `cookTimeMinutes`/`memo`/`coverImageUrl`/`source`는 nullable. 모든 `coverImageUrl`/`photoUrl` nullable. `GET cook-histories`는 `data`가 배열.

@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { setTokens } from '@/lib/api/auth-token';
+import { clearTokens, setTokens } from '@/lib/api/auth-token';
 import {
+  adRewardApi,
   authApi,
   cookingApi,
   ingestionApi,
@@ -13,15 +14,19 @@ import {
   userApi,
 } from '@/lib/api/endpoints';
 import type {
+  AdRewardSessionCancelRequest,
+  AdRewardSessionCreateRequest,
   CookHistoryCreateRequest,
   IngestionJobCreateRequest,
   InquiryCreateRequest,
   InquiryListParams,
   NotificationSettings,
+  ProfileUpdateRequest,
   PushTokenRegisterRequest,
   PushTokenUnregisterRequest,
   RecipeCreateRequest,
   RecipeListParams,
+  RecipeRecommendationRequest,
   RecipeUpdateRequest,
   SignupRequest,
   SocialLoginRequest,
@@ -39,6 +44,9 @@ export const queryKeys = {
   inquiries: (params?: InquiryListParams) => ['inquiries', params ?? {}] as const,
   inquiry: (inquiryId: number) => ['inquiry', inquiryId] as const,
   notificationSettings: () => ['notification-settings'] as const,
+  onboarding: () => ['onboarding'] as const,
+  adRewardStatus: () => ['ad-reward-status'] as const,
+  adRewardSession: (sessionId: string) => ['ad-reward-session', sessionId] as const,
 };
 
 // ── Queries ───────────────────────────────────────────────────
@@ -229,5 +237,82 @@ export function useRegisterPushToken() {
 export function useUnregisterPushToken() {
   return useMutation({
     mutationFn: (body: PushTokenUnregisterRequest) => notificationApi.unregisterPushToken(body),
+  });
+}
+
+// ── User / Auth 추가 ──────────────────────────────────────────
+// 프로필 수정 — 성공 시 /users/me 무효화(닉네임·이미지 즉시 반영).
+export function useUpdateProfile() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: ProfileUpdateRequest) => userApi.updateProfile(body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.me() }),
+  });
+}
+
+// 온보딩 필요 여부.
+export function useOnboarding() {
+  return useQuery({ queryKey: queryKeys.onboarding(), queryFn: () => userApi.getOnboarding() });
+}
+export function useCompleteOnboarding() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => userApi.completeOnboarding(),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.onboarding() }),
+  });
+}
+
+// 로그아웃 — 서버 세션 무효화 후 로컬 토큰 삭제(성공/실패 무관하게 로컬은 비운다).
+export function useLogout() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => authApi.logout(),
+    onSettled: () => {
+      clearTokens();
+      qc.clear();
+    },
+  });
+}
+
+// ── 레시피 추천 ───────────────────────────────────────────────
+// 홈 "랜덤으로 골라줘/재료 기반". 결과는 화면 상태로 다뤄 매번 새로 뽑으므로 mutation.
+export function useRecommendRecipe() {
+  return useMutation({
+    mutationFn: (body: RecipeRecommendationRequest) => recipeApi.recommend(body),
+  });
+}
+
+// ── 광고 보상 슬롯 ────────────────────────────────────────────
+// 시청 가능 여부·잔여 슬롯 조회. 세션 결과 반영 위해 포그라운드 복귀 시 자동 갱신.
+export function useAdRewardStatus() {
+  return useQuery({ queryKey: queryKeys.adRewardStatus(), queryFn: () => adRewardApi.status() });
+}
+
+// 시청 세션 발급. 성공 시 상태 무효화(예약 반영).
+export function useCreateAdRewardSession() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: AdRewardSessionCreateRequest) => adRewardApi.createSession(body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.adRewardStatus() }),
+  });
+}
+
+// 세션 결과 폴링 — SSV 지급 확인용. sessionId 있고 poll=true일 때만 2초 간격.
+export function useAdRewardResult(sessionId: string | null, poll = false) {
+  return useQuery({
+    queryKey: queryKeys.adRewardSession(sessionId ?? ''),
+    queryFn: () => adRewardApi.getResult(sessionId as string),
+    enabled: !!sessionId,
+    refetchInterval: poll ? 2000 : false,
+  });
+}
+
+// 보상 청구 포기(시청 실패/닫음). 성공 시 상태 무효화.
+export function useCancelAdRewardSession() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (args: { sessionId: string; body: AdRewardSessionCancelRequest }) =>
+      adRewardApi.cancelSession(args.sessionId, args.body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.adRewardStatus() }),
   });
 }

@@ -14,6 +14,7 @@ export type ErrorData = { code: string; errors?: FieldError[] };
 export type RecipeCategory =
   'KOREAN' | 'WESTERN' | 'CHINESE' | 'JAPANESE' | 'BUNSIK' | 'ASIAN' | 'OTHER';
 export type RecipeListSort = 'LATEST' | 'OLDEST';
+export type RecommendationMode = 'RANDOM' | 'INGREDIENT_BASED';
 export type IngredientCategory = 'MEAT' | 'SEAFOOD' | 'VEGETABLE' | 'SAUCE' | 'ETC';
 export type UploadPurpose =
   'RECIPE_COVER' | 'COOK_HISTORY_PHOTO' | 'INGESTION_INPUT' | 'INQUIRY_ATTACHMENT';
@@ -46,13 +47,30 @@ export type TokenRefreshRequest = { refreshToken: string };
 export type TokenRefreshResponse = { accessToken: string; refreshToken: string };
 
 // ── User / Profile ────────────────────────────────────────────
-// 현재 프로필 조회. 백엔드 엔드포인트(GET /users/me)는 미구현 — 생기면 그대로 붙는다.
-// (profiles 테이블: nickname, profile_image_url / users: last_login_provider)
+// GET /users/me. 신규 유저는 nickname/profileImageUrl 이 null.
 export type MeResponse = {
   userId: number;
-  nickname: string;
+  nickname: string | null;
   profileImageUrl?: string | null;
-  provider?: string; // KAKAO | NAVER | GOOGLE | APPLE — 배지용
+  remainingRecipeSlots: number;
+  recipeSlotLimit: number;
+  cumulativeRecipeCount: number;
+  // provider 는 백엔드가 아직 응답에 안 넣는다 — 마이 배지는 로그인 시 저장한 값(getLoginProvider)으로 폴백.
+  provider?: string; // KAKAO | NAVER | GOOGLE | APPLE
+};
+
+// PATCH /users/me/profile — nickname 1~6자 필수, profileImageKey 옵션(생략=기존 유지).
+export type ProfileUpdateRequest = { nickname: string; profileImageKey?: string };
+export type ProfileResponse = {
+  userId: number;
+  nickname: string | null;
+  profileImageUrl: string | null;
+};
+
+// 온보딩 상태 — GET /users/me/onboarding, POST /users/me/onboarding/complete 둘 다 이 응답.
+export type OnboardingResponse = {
+  onboardingRequired: boolean;
+  onboardingCompletedAt: string | null; // ISO8601 UTC
 };
 
 // ── Upload ────────────────────────────────────────────────────
@@ -120,6 +138,20 @@ export type RecipeDetailResponse = {
 };
 
 export type RecipeListParams = { page?: number; size?: number; sort?: RecipeListSort };
+
+// POST /recipes/recommendations — 홈 "랜덤으로 골라줘/재료 기반".
+// previousRecipeId: "다른 거 추천" 시 직전 추천 제외용(옵션).
+export type RecipeRecommendationRequest = {
+  recommendationMode: RecommendationMode;
+  previousRecipeId?: number;
+};
+export type RecipeRecommendationResponse = {
+  recipeId: number;
+  title: string;
+  category: RecipeCategory;
+  thumbnailUrl: string | null;
+  mainIngredients: string[];
+};
 
 // ── Cooking ───────────────────────────────────────────────────
 export type CookHistoryCreateRequest = { photoKey?: string; memo?: string };
@@ -239,3 +271,63 @@ export type NotificationSettings = {
 export type PushPlatform = 'IOS' | 'ANDROID';
 export type PushTokenRegisterRequest = { token: string; platform: PushPlatform };
 export type PushTokenUnregisterRequest = { token: string };
+
+// ── Ad Reward (광고 보상 슬롯) ──────────────────────────────────
+// 보상형 광고 SSV 플로우. 슬롯 지급은 Google SSV 콜백(서버-서버)으로 확정되므로,
+// 앱은 세션 발급 → 광고 시청 → 결과 폴링(getSessionResult)으로 지급 여부를 확인한다.
+export type AdRewardPlatform = 'IOS' | 'ANDROID';
+export type AdRewardCancelReason = 'LOAD_FAILED' | 'USER_DISMISSED';
+export type AdRewardSessionStatus = 'PENDING' | 'GRANTED' | 'CANCELLED' | 'EXPIRED' | 'REJECTED';
+export type AdRewardUnavailableReason = 'DAILY_LIMIT_REACHED' | 'REWARD_PENDING';
+
+// GET /ads/rewards/status — 한도·잔여 슬롯·당일 지급/예약·진행 중 세션. 슬롯 지급 안 함.
+export type AdRewardPendingSession = {
+  sessionId: string; // UUID
+  status: AdRewardSessionStatus;
+  quotaDate: string; // YYYY-MM-DD
+  expiresAt: string; // ISO8601 UTC
+  verificationDeadline: string;
+};
+export type AdRewardStatusResponse = {
+  recipeSlotLimit: number;
+  remainingRecipeSlots: number;
+  dailyRewardCount: number;
+  dailyRewardLimit: number;
+  reservedCount: number;
+  remainingRewardCount: number;
+  availableWatchCount: number;
+  canWatchAd: boolean;
+  unavailableReason: AdRewardUnavailableReason | null;
+  quotaDate: string;
+  resetsAt: string;
+  pendingSessions: AdRewardPendingSession[];
+};
+
+// POST /ads/rewards/sessions — 시청 세션 발급(당일 1회 예약). requestId 로 멱등.
+export type AdRewardSessionCreateRequest = { platform: AdRewardPlatform; requestId: string };
+export type AdRewardSessionResponse = {
+  sessionId: string; // UUID
+  status: AdRewardSessionStatus;
+  adUnitId: string;
+  customData: string; // = sessionId, AdMob customData로 전달
+  rewardType: string;
+  rewardAmount: number;
+  quotaDate: string;
+  expiresAt: string;
+  verificationDeadline: string;
+};
+
+// POST /ads/rewards/sessions/{id}/cancel — 보상 청구 포기(시청 실패/닫음).
+export type AdRewardSessionCancelRequest = { reason: AdRewardCancelReason };
+
+// GET /ads/rewards/sessions/{id} & cancel 응답 — 지급 결과 + 최신 슬롯 값.
+export type AdRewardSessionResultResponse = {
+  sessionId: string;
+  status: AdRewardSessionStatus;
+  reasonCode: string | null;
+  quotaDate: string;
+  grantedAmount: number; // GRANTED 아니면 0
+  grantedAt: string | null;
+  recipeSlotLimit: number;
+  remainingRecipeSlots: number;
+};

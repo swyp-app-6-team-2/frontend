@@ -2,6 +2,11 @@ import { apiFetch, uploadToGcs } from './client';
 import type {
   AddMyIngredientsRequest,
   AddMyIngredientsResponse,
+  AdRewardSessionCancelRequest,
+  AdRewardSessionCreateRequest,
+  AdRewardSessionResponse,
+  AdRewardSessionResultResponse,
+  AdRewardStatusResponse,
   CookHistoryCreateRequest,
   CookHistoryItem,
   ImageContentType,
@@ -17,6 +22,9 @@ import type {
   MeResponse,
   MyIngredientListResponse,
   NotificationSettings,
+  OnboardingResponse,
+  ProfileResponse,
+  ProfileUpdateRequest,
   PushTokenRegisterRequest,
   PushTokenUnregisterRequest,
   RecipeCreateRequest,
@@ -24,6 +32,8 @@ import type {
   RecipeDetailResponse,
   RecipeListParams,
   RecipeListResponse,
+  RecipeRecommendationRequest,
+  RecipeRecommendationResponse,
   RecipeUpdateRequest,
   SignupRequest,
   SignupResponse,
@@ -40,11 +50,20 @@ export const authApi = {
   // 신규 사용자 가입 완료 — signupToken은 social-login이 반환한 값. accessToken 불필요.
   signup: (body: SignupRequest) =>
     apiFetch<SignupResponse>('/auth/signup', { method: 'POST', body, auth: false }),
+  // 로그아웃 — 서버 세션/토큰 무효화(인증 필요). 이후 프론트에서 clearTokens 호출.
+  logout: () => apiFetch<null>('/auth/logout', { method: 'POST' }),
 };
 
 // ── User / Profile ────────────────────────────────────────────
 export const userApi = {
   me: () => apiFetch<MeResponse>('/users/me'),
+  // 프로필 수정 — nickname(1~6자) 필수, profileImageKey는 uploads/images(RECIPE_COVER 등)로 받은 key.
+  updateProfile: (body: ProfileUpdateRequest) =>
+    apiFetch<ProfileResponse>('/users/me/profile', { method: 'PATCH', body }),
+  // 온보딩 필요 여부 조회 / 완료 처리.
+  getOnboarding: () => apiFetch<OnboardingResponse>('/users/me/onboarding'),
+  completeOnboarding: () =>
+    apiFetch<OnboardingResponse>('/users/me/onboarding/complete', { method: 'POST' }),
 };
 
 // ── Upload ────────────────────────────────────────────────────
@@ -71,6 +90,9 @@ export async function uploadImage(
 
 // ── Recipe ────────────────────────────────────────────────────
 export const recipeApi = {
+  // 추천 — 홈 "랜덤으로 골라줘/재료 기반". previousRecipeId로 직전 추천 제외.
+  recommend: (body: RecipeRecommendationRequest) =>
+    apiFetch<RecipeRecommendationResponse>('/recipes/recommendations', { method: 'POST', body }),
   list: (params: RecipeListParams = {}) =>
     apiFetch<RecipeListResponse>('/recipes', { query: params }),
   detail: (recipeId: number) => apiFetch<RecipeDetailResponse>(`/recipes/${recipeId}`),
@@ -143,4 +165,20 @@ export const ingestionApi = {
     apiFetch<IngestionJobCreateResponse>('/ingestion-jobs', { method: 'POST', body }),
   get: (ingestionJobId: number) =>
     apiFetch<IngestionJobResponse>(`/ingestion-jobs/${ingestionJobId}`),
+};
+
+// ── Ad Reward (광고 보상 슬롯) ──────────────────────────────────
+// 플로우: status로 시청 가능 확인 → createSession → (AdMob 광고 시청) → getResult 폴링으로
+// 지급 확인. 시청 실패/닫음 시 cancel. 실제 슬롯 지급은 Google SSV 콜백이 확정한다.
+export const adRewardApi = {
+  status: () => apiFetch<AdRewardStatusResponse>('/ads/rewards/status'),
+  createSession: (body: AdRewardSessionCreateRequest) =>
+    apiFetch<AdRewardSessionResponse>('/ads/rewards/sessions', { method: 'POST', body }),
+  getResult: (sessionId: string) =>
+    apiFetch<AdRewardSessionResultResponse>(`/ads/rewards/sessions/${sessionId}`),
+  cancelSession: (sessionId: string, body: AdRewardSessionCancelRequest) =>
+    apiFetch<AdRewardSessionResultResponse>(`/ads/rewards/sessions/${sessionId}/cancel`, {
+      method: 'POST',
+      body,
+    }),
 };

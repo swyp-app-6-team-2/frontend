@@ -6,13 +6,20 @@ import {
   cookingApi,
   ingestionApi,
   ingredientApi,
+  inquiryApi,
   myIngredientApi,
+  notificationApi,
   recipeApi,
   userApi,
 } from '@/lib/api/endpoints';
 import type {
   CookHistoryCreateRequest,
   IngestionJobCreateRequest,
+  InquiryCreateRequest,
+  InquiryListParams,
+  NotificationSettings,
+  PushTokenRegisterRequest,
+  PushTokenUnregisterRequest,
   RecipeCreateRequest,
   RecipeListParams,
   RecipeUpdateRequest,
@@ -29,6 +36,9 @@ export const queryKeys = {
   myIngredients: (searchQuery?: string) => ['my-ingredients', searchQuery ?? ''] as const,
   ingestionJob: (jobId: number) => ['ingestion-job', jobId] as const,
   me: () => ['me'] as const,
+  inquiries: (params?: InquiryListParams) => ['inquiries', params ?? {}] as const,
+  inquiry: (inquiryId: number) => ['inquiry', inquiryId] as const,
+  notificationSettings: () => ['notification-settings'] as const,
 };
 
 // ── Queries ───────────────────────────────────────────────────
@@ -90,6 +100,31 @@ export function useIngestionJob(jobId: number | null | undefined) {
       const done = status === 'RESULT_READY' || status === 'FAILED' || status === 'EXPIRED';
       return done ? false : 2000;
     },
+  });
+}
+
+// 내 문의 목록(문의내역). 최근 1년, 최신순.
+export function useInquiries(params: InquiryListParams = {}) {
+  return useQuery({
+    queryKey: queryKeys.inquiries(params),
+    queryFn: () => inquiryApi.list(params),
+  });
+}
+
+// 문의 상세(답변 포함).
+export function useInquiry(inquiryId: number | null | undefined) {
+  return useQuery({
+    queryKey: queryKeys.inquiry(inquiryId as number),
+    queryFn: () => inquiryApi.detail(inquiryId as number),
+    enabled: inquiryId != null,
+  });
+}
+
+// 알림 설정 조회. 설정이 없으면 {enabled:false, weekdays:[], timeSlots:[]}.
+export function useNotificationSettings() {
+  return useQuery({
+    queryKey: queryKeys.notificationSettings(),
+    queryFn: () => notificationApi.getSettings(),
   });
 }
 
@@ -164,5 +199,35 @@ export function useSignup() {
     onSuccess: (res) => {
       setTokens({ accessToken: res.accessToken, refreshToken: res.refreshToken });
     },
+  });
+}
+
+// 문의 접수(문의하기 폼). 성공 시 문의내역 무효화 → 목록 자동 반영.
+export function useCreateInquiry() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: InquiryCreateRequest) => inquiryApi.create(body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['inquiries'] }),
+  });
+}
+
+// 알림 설정 저장(전체 교체). 성공 시 설정 무효화.
+export function useSaveNotificationSettings() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: NotificationSettings) => notificationApi.saveSettings(body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.notificationSettings() }),
+  });
+}
+
+// 기기 푸시 토큰 등록/해제 — 네이티브 FCM 토큰이 있어야 실제 동작(iOS도 FCM).
+export function useRegisterPushToken() {
+  return useMutation({
+    mutationFn: (body: PushTokenRegisterRequest) => notificationApi.registerPushToken(body),
+  });
+}
+export function useUnregisterPushToken() {
+  return useMutation({
+    mutationFn: (body: PushTokenUnregisterRequest) => notificationApi.unregisterPushToken(body),
   });
 }

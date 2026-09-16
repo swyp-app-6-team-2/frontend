@@ -9,8 +9,16 @@ import type {
   IngestionJobCreateResponse,
   IngestionJobResponse,
   IngredientListResponse,
+  InquiryCreateRequest,
+  InquiryCreateResponse,
+  InquiryDetailResponse,
+  InquiryListParams,
+  InquiryListResponse,
   MeResponse,
   MyIngredientListResponse,
+  NotificationSettings,
+  PushTokenRegisterRequest,
+  PushTokenUnregisterRequest,
   RecipeCreateRequest,
   RecipeCreateResponse,
   RecipeDetailResponse,
@@ -99,6 +107,33 @@ export const myIngredientApi = {
       method: 'POST',
       body: { ingredientIds } satisfies AddMyIngredientsRequest,
     }),
+};
+
+// ── Inquiry (문의) ─────────────────────────────────────────────
+export const inquiryApi = {
+  // 접수(201). attachmentKeys 는 uploads/images(INQUIRY_ATTACHMENT) 발급 key들.
+  create: (body: InquiryCreateRequest) =>
+    apiFetch<InquiryCreateResponse>('/inquiries', { method: 'POST', body }),
+  // 내 문의 목록 — 최근 1년, createdAt DESC. page 기본 0, size 기본 20(1~100).
+  list: (params: InquiryListParams = {}) =>
+    apiFetch<InquiryListResponse>('/inquiries', { query: params }),
+  detail: (inquiryId: number) => apiFetch<InquiryDetailResponse>(`/inquiries/${inquiryId}`),
+};
+
+// ── Notification (알림) ────────────────────────────────────────
+export const notificationApi = {
+  getSettings: () => apiFetch<NotificationSettings>('/notification-settings'),
+  // 전체 교체(PUT). 세 필드 모두 필수.
+  saveSettings: (body: NotificationSettings) =>
+    apiFetch<null>('/notification-settings', { method: 'PUT', body }),
+  // 기기 FCM 토큰 등록/갱신. 네이티브 FCM 토큰 필요.
+  registerPushToken: (body: PushTokenRegisterRequest) =>
+    apiFetch<null>('/push-tokens', { method: 'PUT', body }),
+  unregisterPushToken: (body: PushTokenUnregisterRequest) =>
+    apiFetch<null>('/push-tokens', { method: 'DELETE', body }),
+  // 푸시 탭 시 최초 오픈 기록. notificationId = push data.notificationId.
+  markOpened: (notificationId: number) =>
+    apiFetch<null>(`/notifications/${notificationId}/open`, { method: 'POST' }),
 };
 
 // ── Ingestion (레시피 분석) ────────────────────────────────────

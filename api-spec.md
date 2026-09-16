@@ -1,7 +1,7 @@
 # API 스펙 (프론트 연동용)
 
 > 백엔드 레포 [`swyp-app-6-team-2/backend`](https://github.com/swyp-app-6-team-2/backend)(Spring Boot) 기준.
-> 백엔드 `docs/specs/*.md` + 컨트롤러/DTO에서 추출. **기준일 2026-09-09.**
+> 백엔드 `docs/specs/*.md` + 컨트롤러/DTO에서 추출. **기준일 2026-09-16.**
 > 백엔드가 계약을 바꾸면 이 문서도 갱신할 것. Swagger UI: `<host>/swagger-ui/index.html`.
 
 ---
@@ -320,21 +320,102 @@ type AddMyIngredientsResponse = { ingredients: UserIngredient[] }; // 신규만(
 
 ---
 
-## 6. Enum 요약 (TS 정의용)
+## 6. 문의 — `Inquiry`
+
+모든 API 인증 필요. 첨부는 `POST /uploads/images`에 `purpose: "INQUIRY_ATTACHMENT"`로 발급받아 올린 objectKey들(최대 5장). 표시 이름·순서는 앱이 보유(서버는 코드만).
+
+### `POST /api/v1/inquiries` — 문의 접수 → **201** `{ inquiryId }`
+
+```json
+{ "type": "SLOT", "title": "…", "content": "…", "attachmentKeys": ["inquiry-attachments/12/a.jpg"] }
+```
+
+- `title` 1~255자, `content` 1~2,000자. `attachmentKeys` 생략/`null`이면 `[]`.
+- 에러: 형식/없는 type `400 INVALID_REQUEST_FORMAT` · 검증 `400 REQUEST_VALIDATION_FAILED`(+`data.errors`, 중복은 `attachmentKeysUnique`) · 첨부 key 무효 `400 INQUIRY_ATTACHMENT_INVALID` · 이미 사용된 key `409 INQUIRY_ATTACHMENT_ALREADY_USED`.
+
+### `GET /api/v1/inquiries?page=0&size=20` — 내 문의 목록 → **200**
+
+```json
+{ "totalCount": 2, "inquiries": [
+  { "inquiryId": 31, "type": "SLOT", "title": "…", "content": "…", "status": "ANSWERED", "createdAt": "2026-09-15T06:10:00Z" }
+] }
+```
+
+- 최근 1년(`Asia/Seoul`), `createdAt DESC, id DESC`. 정렬 파라미터 없음. `page`≥0 기본 0, `size` 1~100 기본 20.
+- `content` 전체를 준다(미리보기 길이는 앱). 첨부·답변은 목록에 없다. 없으면 `totalCount:0`.
+
+### `GET /api/v1/inquiries/{inquiryId}` — 내 문의 상세 → **200**
+
+```json
+{ "inquiryId": 31, "type": "SLOT", "title": "…", "content": "…",
+  "attachmentImageUrls": ["https://…"], "status": "ANSWERED",
+  "createdAt": "2026-09-15T06:10:00Z",
+  "answer": "…", "answeredAt": "2026-09-16T01:20:00Z" }
+```
+
+- 답변 전엔 `answer`·`answeredAt`이 `null`(키는 항상 내려온다). `attachmentImageUrls`는 조회 URL(유효 60분), 서명 실패분은 배열에서 빠진다.
+- 없음/타인/1년 경과 = `404 INQUIRY_NOT_FOUND`. 비-숫자 id = `400 INVALID_REQUEST_FORMAT`.
+
+---
+
+## 7. 알림 — `Notification`
+
+모든 API 인증 필요. 시간대 칩→설정 변환은 앱이 하고 `PUT`으로 보낸다.
+
+### `GET /api/v1/notification-settings` — 조회 → **200**
+
+```json
+{ "enabled": true, "weekdays": ["MONDAY", "FRIDAY"], "timeSlots": [{ "label": "점심 알림", "time": "12:00" }] }
+```
+
+설정이 없으면 `{ "enabled": false, "weekdays": [], "timeSlots": [] }`(row 생성 안 함).
+
+### `PUT /api/v1/notification-settings` — 전체 교체 → **200** `data: null`
+
+- 세 필드 모두 필수. **켜져 있어도 `weekdays`·`timeSlots`는 빌 수 있다**(보낼 대상이 없을 뿐).
+- `time`은 `"HH:mm"`(24h). 에러: 검증 `400 REQUEST_VALIDATION_FAILED`(label 빈값·255초과, 요일·시각 중복) · 없는 요일·잘못된 time 형식 `400 INVALID_REQUEST_FORMAT`.
+
+### `PUT /api/v1/push-tokens` — 기기 토큰 등록/갱신 → **200** `data: null`
+
+```json
+{ "token": "fcm-registration-token", "platform": "IOS" }
+```
+
+- `token` 필수·512자 이하, `platform` `IOS`/`ANDROID`. **iOS도 FCM 토큰**(RNFirebase). 재등록은 갱신, 다른 계정 토큰은 현재 계정으로 이동.
+
+### `DELETE /api/v1/push-tokens` — 해제 → **200** `data: null`
+
+```json
+{ "token": "fcm-registration-token" }
+```
+
+- 내 토큰이면 비활성화. 남의/없는 토큰이어도 `200`(소유 여부 비노출).
+
+### `POST /api/v1/notifications/{notificationId}/open` — 오픈 기록 → **200** `data: null`
+
+- 푸시 탭 시 최초 시각 기록. `notificationId` = 푸시 `data.notificationId`. 없음/타인 = `404 NOTIFICATION_NOT_FOUND`.
+
+---
+
+## 8. Enum 요약 (TS 정의용)
 
 ```ts
 type RecipeCategory = 'KOREAN' | 'WESTERN' | 'CHINESE' | 'JAPANESE' | 'BUNSIK' | 'ASIAN' | 'OTHER';
 type RecipeListSort = 'LATEST' | 'OLDEST';
 type IngredientCategory = 'MEAT' | 'SEAFOOD' | 'VEGETABLE' | 'SAUCE' | 'ETC';
-type UploadPurpose = 'RECIPE_COVER' | 'COOK_HISTORY_PHOTO' | 'INGESTION_INPUT';
+type UploadPurpose = 'RECIPE_COVER' | 'COOK_HISTORY_PHOTO' | 'INGESTION_INPUT' | 'INQUIRY_ATTACHMENT';
 type ImageContentType = 'image/jpeg' | 'image/png' | 'image/webp';
+type InquiryType = 'RECIPE' | 'SLOT' | 'ACCOUNT' | 'NOTIFICATION' | 'BUG' | 'ETC';
+type InquiryStatus = 'RECEIVED' | 'ANSWERED'; // answer 유무로 서버가 계산
+type Weekday = 'MONDAY' | 'TUESDAY' | 'WEDNESDAY' | 'THURSDAY' | 'FRIDAY' | 'SATURDAY' | 'SUNDAY';
+type PushPlatform = 'IOS' | 'ANDROID';
 ```
 
 **nullable 함정**: `RecipeDetail.servings`는 non-null, 그러나 `cookTimeMinutes`/`memo`/`coverImageUrl`/`source`는 nullable. 모든 `coverImageUrl`/`photoUrl` nullable. `GET cook-histories`는 `data`가 배열.
 
 ---
 
-## 7. 프론트 연동 메모
+## 9. 프론트 연동 메모
 
 ### 화면 ↔ API 매핑
 
@@ -347,6 +428,9 @@ type ImageContentType = 'image/jpeg' | 'image/png' | 'image/webp';
 | 요리 완료(`cook-complete`) | (사진) 업로드 → `POST /recipes/{id}/cook-histories` |
 | 재료관리(`ingredients`) | `GET /users/me/ingredients` (내 보유 재료만) |
 | 재료 추가(`fridge`) | `GET /ingredients`(마스터) − 보유분 제외 → `POST /users/me/ingredients` |
+| 문의하기(`inquiry`) | `GET /inquiries`(내역) · `POST /inquiries`(접수) |
+| 문의 상세(`inquiry-detail`) | `GET /inquiries/{id}` |
+| 알림 설정(`notifications`) | `GET`·`PUT /notification-settings` · `PUT`·`DELETE /push-tokens`(FCM 토큰) |
 
 ### React Query 제안 (이미 `@tanstack/react-query` 설정됨)
 
@@ -357,11 +441,16 @@ type ImageContentType = 'image/jpeg' | 'image/png' | 'image/webp';
 ['cook-histories', recipeId]       // 이력
 ['ingredients']                    // 마스터(거의 불변 → staleTime 크게)
 ['my-ingredients', searchQuery]    // 내 보유 재료
+['inquiries', { page, size }]      // 문의내역
+['inquiry', inquiryId]             // 문의 상세
+['notification-settings']          // 알림 설정
 
 // 변이 후 무효화
 // 레시피 생성/수정/삭제 → invalidate ['recipes'] (+ ['recipe', id])
 // 요리기록 생성 → invalidate ['cook-histories', id]
 // 보유 재료 추가 → invalidate ['my-ingredients']
+// 문의 접수 → invalidate ['inquiries']
+// 알림 설정 저장 → invalidate ['notification-settings']
 ```
 
 - API 클라이언트: envelope를 벗겨 `data`만 반환하고, `status>=400`이면 `data.code`로 에러를 던지는 래퍼를 하나 두면 편하다.

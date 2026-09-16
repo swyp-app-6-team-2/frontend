@@ -15,7 +15,8 @@ export type RecipeCategory =
   'KOREAN' | 'WESTERN' | 'CHINESE' | 'JAPANESE' | 'BUNSIK' | 'ASIAN' | 'OTHER';
 export type RecipeListSort = 'LATEST' | 'OLDEST';
 export type IngredientCategory = 'MEAT' | 'SEAFOOD' | 'VEGETABLE' | 'SAUCE' | 'ETC';
-export type UploadPurpose = 'RECIPE_COVER' | 'COOK_HISTORY_PHOTO' | 'INGESTION_INPUT';
+export type UploadPurpose =
+  'RECIPE_COVER' | 'COOK_HISTORY_PHOTO' | 'INGESTION_INPUT' | 'INQUIRY_ATTACHMENT';
 export type ImageContentType = 'image/jpeg' | 'image/png' | 'image/webp';
 
 // ── Auth ──────────────────────────────────────────────────────
@@ -182,3 +183,59 @@ export type MyIngredientListResponse = { ingredients: UserIngredient[] };
 export type AddMyIngredientsRequest = { ingredientIds: number[] };
 // 새로 추가된 재료만 반환(이미 보유한 것은 무시). 전부 보유 중이면 빈 배열.
 export type AddMyIngredientsResponse = { ingredients: UserIngredient[] };
+
+// ── Inquiry (문의) ─────────────────────────────────────────────
+// 표시 이름·순서는 앱이 보유(constants). 서버는 코드만 주고받는다.
+export type InquiryType = 'RECIPE' | 'SLOT' | 'ACCOUNT' | 'NOTIFICATION' | 'BUG' | 'ETC';
+export type InquiryStatus = 'RECEIVED' | 'ANSWERED'; // answer 유무로 서버가 계산
+
+// 첨부는 POST /uploads/images(purpose=INQUIRY_ATTACHMENT)로 받은 objectKey들, 최대 5장.
+export type InquiryCreateRequest = {
+  type: InquiryType;
+  title: string; // 1~255자
+  content: string; // 1~2,000자
+  attachmentKeys?: string[]; // 생략/ null 이면 []
+};
+export type InquiryCreateResponse = { inquiryId: number };
+
+// 목록: content 전체를 주며 미리보기 길이는 앱이 정한다. 첨부·답변은 목록에 없음.
+export type InquiryListItem = {
+  inquiryId: number;
+  type: InquiryType;
+  title: string;
+  content: string;
+  status: InquiryStatus;
+  createdAt: string; // ISO8601 UTC
+};
+export type InquiryListResponse = { totalCount: number; inquiries: InquiryListItem[] };
+export type InquiryListParams = { page?: number; size?: number };
+
+// 상세: 답변 전엔 answer·answeredAt 이 null(키는 항상 내려온다). URL 유효 60분.
+export type InquiryDetailResponse = {
+  inquiryId: number;
+  type: InquiryType;
+  title: string;
+  content: string;
+  attachmentImageUrls: string[];
+  status: InquiryStatus;
+  createdAt: string;
+  answer: string | null;
+  answeredAt: string | null;
+};
+
+// ── Notification (알림) ────────────────────────────────────────
+export type Weekday =
+  'MONDAY' | 'TUESDAY' | 'WEDNESDAY' | 'THURSDAY' | 'FRIDAY' | 'SATURDAY' | 'SUNDAY';
+export type NotificationTimeSlot = { label: string; time: string }; // time = "HH:mm"
+
+// GET 응답 = PUT 요청 본문(전체 교체). 켜져 있어도 weekdays/timeSlots 는 비어 있을 수 있다.
+export type NotificationSettings = {
+  enabled: boolean;
+  weekdays: Weekday[];
+  timeSlots: NotificationTimeSlot[];
+};
+
+// 푸시 토큰 — 네이티브 FCM 토큰 필요(iOS도 FCM). platform 은 발송엔 안 쓰이나 구분용.
+export type PushPlatform = 'IOS' | 'ANDROID';
+export type PushTokenRegisterRequest = { token: string; platform: PushPlatform };
+export type PushTokenUnregisterRequest = { token: string };

@@ -1,5 +1,7 @@
 import { useRef, useState } from 'react';
 import {
+  ActivityIndicator,
+  Alert,
   Image,
   Pressable,
   ScrollView,
@@ -21,20 +23,16 @@ import {
 } from '@/components/inquiry-type-sheet';
 import { AlertDialog, AppText, PressableScale, ScreenHeader } from '@/components/ui';
 import { palette } from '@/constants/tokens';
+import { useCreateInquiry, useInquiries } from '@/hooks/use-api';
+import { ApiError } from '@/lib/api';
 import { fireHaptic } from '@/lib/haptics';
 
-// 문의내역 목업 — status: 답변완료(success) / 접수 완료(disabled)
-type Inquiry = { status: '답변완료' | '접수 완료'; date: string; text: string };
-
-const HISTORY: Inquiry[] = [
-  {
-    status: '답변완료',
-    date: '2026.08.16 18:45',
-    text: '미디엄팩을 결제했는데 슬롯 개수가 그대로예요. 확인 부탁드려요.',
-  },
-  { status: '접수 완료', date: '2026.07.02 11:20', text: '환불 문의 드립니다.' },
-  { status: '접수 완료', date: '2026.07.02 11:20', text: '환불 문의 드립니다.' },
-];
+// 접수 시각 표기 — 서버 UTC ISO → 로컬 "YYYY.MM.DD HH:mm".
+function formatInquiryDate(iso: string) {
+  const d = new Date(iso);
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}.${p(d.getMonth() + 1)}.${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
 
 // 문의하기 — 작성 폼 / 문의내역 확인 (좌우 페이징 스와이프).
 export default function InquiryScreen() {
@@ -49,8 +47,29 @@ export default function InquiryScreen() {
   const [typeSheet, setTypeSheet] = useState(false); // 문의유형 선택 시트
   const [title, setTitle] = useState(''); // 제목(필수)
   const [content, setContent] = useState(''); // 문의내용(필수, 최소 10자)
-  // 제목·내용은 필수, 내용은 공백 제외 10자 이상이어야 접수 가능.
-  const canSubmit = title.trim().length > 0 && content.trim().length >= 10;
+  // 유형·제목·내용은 필수, 내용은 공백 제외 10자 이상이어야 접수 가능.
+  const canSubmit = type != null && title.trim().length > 0 && content.trim().length >= 10;
+
+  // 문의내역(내 문의 목록) — 최근 1년, 최신순.
+  const { data: historyData, isLoading: historyLoading, isError: historyError } = useInquiries();
+  const inquiries = historyData?.inquiries ?? [];
+  const createInquiry = useCreateInquiry();
+
+  // 접수 확인 팝업 '확인' → 서버 접수 → 완료 화면. (사진 첨부는 아직 미수집 → 빈 배열)
+  const onSubmit = async () => {
+    if (!canSubmit || type == null) return;
+    setConfirm(null);
+    try {
+      await createInquiry.mutateAsync({ type, title: title.trim(), content: content.trim() });
+      fireHaptic('success');
+      router.replace('/inquiry-success');
+    } catch (e) {
+      Alert.alert(
+        '문의 접수 실패',
+        e instanceof ApiError ? e.message : '잠시 후 다시 시도해주세요.',
+      );
+    }
+  };
 
   const goTab = (i: number) => {
     fireHaptic('selection');
@@ -217,33 +236,61 @@ export default function InquiryScreen() {
               contentContainerClassName="gap-3 px-screen pb-6 pt-6"
               showsVerticalScrollIndicator={false}
             >
-              {HISTORY.map((q, i) => {
-                const answered = q.status === '답변완료';
-                return (
-                  <PressableScale
-                    key={`${q.date}-${i}`}
-                    onPress={() => router.push('/inquiry-detail')}
-                    accessibilityRole="button"
-                    accessibilityLabel={`${q.status} 문의 상세`}
-                    scaleTo={0.98}
-                    className="gap-3 rounded-[12px] bg-field px-4 py-5"
-                  >
-                    <View className="flex-row items-center gap-3">
-                      <View
-                        className={`items-center justify-center rounded-pill px-3 py-1 ${answered ? 'bg-success' : 'bg-disabled'}`}
-                      >
-                        <Text className="text-[12px] font-bold text-foreground">{q.status}</Text>
+              {historyLoading ? (
+                <View className="items-center py-20">
+                  <ActivityIndicator color={palette.primary} />
+                </View>
+              ) : historyError ? (
+                <View className="items-center py-20">
+                  <AppText variant="body" className="text-muted">
+                    문의내역을 불러오지 못했어요.
+                  </AppText>
+                </View>
+              ) : inquiries.length === 0 ? (
+                <View className="items-center py-20">
+                  <AppText variant="body" className="text-muted">
+                    아직 접수한 문의가 없어요.
+                  </AppText>
+                </View>
+              ) : (
+                inquiries.map((q) => {
+                  const answered = q.status === 'ANSWERED';
+                  return (
+                    <PressableScale
+                      key={q.inquiryId}
+                      onPress={() =>
+                        router.push({
+                          pathname: '/inquiry-detail',
+                          params: { id: String(q.inquiryId) },
+                        })
+                      }
+                      accessibilityRole="button"
+                      accessibilityLabel={`${answered ? '답변완료' : '접수 완료'} 문의 상세`}
+                      scaleTo={0.98}
+                      className="gap-3 rounded-[12px] bg-field px-4 py-5"
+                    >
+                      <View className="flex-row items-center gap-3">
+                        <View
+                          className={`items-center justify-center rounded-pill px-3 py-1 ${answered ? 'bg-success' : 'bg-disabled'}`}
+                        >
+                          <Text className="text-[12px] font-bold text-foreground">
+                            {answered ? '답변완료' : '접수 완료'}
+                          </Text>
+                        </View>
+                        <Text className="text-[14px] font-medium leading-[18px] text-muted">
+                          {formatInquiryDate(q.createdAt)}
+                        </Text>
                       </View>
-                      <Text className="text-[14px] font-medium leading-[18px] text-muted">
-                        {q.date}
+                      <Text
+                        className="text-[16px] font-medium leading-[21px] text-foreground"
+                        numberOfLines={2}
+                      >
+                        {q.title}
                       </Text>
-                    </View>
-                    <Text className="text-[16px] font-medium leading-[21px] text-foreground">
-                      {q.text}
-                    </Text>
-                  </PressableScale>
-                );
-              })}
+                    </PressableScale>
+                  );
+                })
+              )}
             </ScrollView>
           </View>
         </ScrollView>
@@ -285,14 +332,7 @@ export default function InquiryScreen() {
               message={'작성한 내용으로\n문의를 접수할까요?'}
               actions={[
                 { label: '취소', onPress: () => setConfirm(null) },
-                {
-                  label: '확인',
-                  tone: 'primary',
-                  onPress: () => {
-                    fireHaptic('success');
-                    router.replace('/inquiry-success');
-                  },
-                },
+                { label: '확인', tone: 'primary', onPress: onSubmit },
               ]}
             />
           )}

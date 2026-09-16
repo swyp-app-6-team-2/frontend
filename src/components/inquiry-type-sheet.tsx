@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
+import type { InquiryType } from '@/lib/api/types';
+
 import { AppText, SheetShell } from './ui';
 
-// 문의유형 코드 — 백엔드 계약 테이블. 기타(ETC)는 항상 마지막.
-export type InquiryType = 'RECIPE' | 'SLOT' | 'ACCOUNT' | 'NOTIFICATION' | 'BUG' | 'ETC';
+// 코드는 백엔드 계약(types.ts)에서, 표시 이름·순서는 앱이 보유. 기타(ETC)는 항상 마지막.
+export type { InquiryType };
 
 export const INQUIRY_TYPE_LABEL: Record<InquiryType, string> = {
   RECIPE: '레시피',

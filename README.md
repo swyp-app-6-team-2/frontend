@@ -26,7 +26,7 @@ _"저장"이 아니라 "해먹었다"는 완료 기록으로 요리 실행을 �
 
 - 🎯 **차별점** — 단순 스크랩이 아니라 **"해먹었어요" 완료 기록 → 별 점등(별따먹자)**. 앱 이름이 곧 핵심 루프입니다.
 - 🤖 **AI 정리** — 영상 / 이미지 / 링크를 넣으면 **요리명 · 재료 · 조리순서**로 자동 구조화합니다.
-- 🧊 **내 냉장고** — 보유 재료와 유통기한 임박(D-1 등)을 관리하고, 533종 재료에서 검색·필터로 담습니다.
+- 🧊 **내 냉장고** — 보유 재료와 유통기한 임박(D-1 등)을 관리하고, 104종 재료에서 검색·필터로 담습니다.
 
 > 팀: **SWYP 앱 6기 2팀** · 저장소: [`swyp-app-6-team-2/frontend`](https://github.com/swyp-app-6-team-2/frontend) (이 repo = 프론트엔드)
 
@@ -37,7 +37,7 @@ _"저장"이 아니라 "해먹었다"는 완료 기록으로 요리 실행을 �
 | 축 | 내용 |
 |---|---|
 | 🍳 **나의 레시피** | 저장한 레시피 목록 · 검색 · 필터 · 상세 · **요리 완료 기록(별 점등)** |
-| 🧊 **재료 관리(내 냉장고)** | 보유 재료 목록·검색(`GET /users/me/ingredients`) · 마스터 533종에서 카테고리 필터로 추가 |
+| 🧊 **재료 관리(내 냉장고)** | 보유 재료 목록·검색(`GET /users/me/ingredients`) · 마스터 104종에서 카테고리 필터로 추가 |
 | ➕ **3경로 등록** | URL/영상 → AI 분석 · 이미지 → OCR · 직접 입력 폼 (모두 하나의 `Recipe`로 수렴) |
 | 🏠 **홈 / 마이** | 남은 별 · 추천 / 프로필(로그인 provider 배지) · 저장 슬롯 · **알림 설정** · **문의하기** |
 | 🔐 **소셜 로그인** | 카카오 · 네이버 · Google · Apple · 신규 가입(약관 동의) · 토큰 자동 재발급 |
@@ -108,7 +108,7 @@ graph TD
   subgraph "데이터 레이어 (src/lib/api)"
     CL["client.ts<br/>fetch 래퍼 + BASE URL"]
     EP["endpoints.ts / types.ts<br/>API 계약"]
-    AT["auth-token.ts / social-auth.ts<br/>JWT(자동 재발급) · 카카오/네이버/Google/Apple"]
+    AT["auth-token.ts / social-auth.ts<br/>JWT 자동 재발급 · SecureStore 세션 영속화 · 카카오/네이버/Google/Apple"]
   end
   BE["백엔드 API<br/>(dev · local)"]
 
@@ -160,12 +160,12 @@ pnpm install
 
 ### 3. 개발 서버 실행
 ```bash
-pnpm start          # dev client 서버 (기본)
+pnpm start:dev      # dev 백엔드(dev-api.starpick.cloud) 연결 + 캐시 클리어  ← 보통 이걸 씀
 pnpm start:local    # 로컬 백엔드(localhost:8080) 연결 + 캐시 클리어
-pnpm start:dev      # dev 백엔드 연결 + 캐시 클리어
+pnpm start          # 백엔드 URL 미지정 (아래 주의)
 ```
 
-> 💡 서버 전환은 `EXPO_PUBLIC_API_BASE_URL` 인라인 env로 동작합니다. `.env.local`에 같은 키가 있으면 스크립트 값을 **덮어쓰니** 전환이 안 될 때 확인하세요. 실제 적용값은 콘솔의 `[api] BASE=` 로그로 확인할 수 있습니다.
+> ⚠️ **`pnpm start`(plain)는 `EXPO_PUBLIC_API_BASE_URL`을 설정하지 않습니다.** `.env.local`에도 이 키가 없어서(의도된 상태), plain `start`로 띄우면 API 요청이 백엔드가 아니라 Metro로 가 **전부 404**가 됩니다. **백엔드에 붙으려면 `start:dev`(또는 `start:local`)로 실행하세요.** 실제 적용값은 콘솔의 `[api] BASE=` 로그로 확인할 수 있습니다.
 
 ### 4. 네이티브 실행 (필요 시)
 ```bash
@@ -205,7 +205,7 @@ pnpm lint:fix       # expo lint --fix (Prettier 포함)
 src/
 ├─ app/                     # expo-router 라우트 (파일 = 화면)
 │  ├─ _layout.tsx           #   루트 Stack (headerShown: false)
-│  ├─ (tabs)/               #   하단 탭 그룹 (홈·재료관리·나의레시피·마이)
+│  ├─ (tabs)/index.tsx      #   앱 진입점 → 세션 유무로 홈/로그인 리다이렉트
 │  └─ *.tsx                 #   상세·플로우 화면들 (add-recipe, cook-complete …)
 ├─ components/
 │  └─ ui/                   # 공통 컴포넌트 (배럴: index.ts)
@@ -219,9 +219,10 @@ tailwind.config.js          # 색·타이포·간격·radius 토큰
 global.css                  # 색상 CSS 변수 (다크 토큰)
 ```
 
-### 새 화면 추가 (2스텝)
-1. `src/app/foo.tsx` → `export default () => <Screen title="…">…</Screen>`
-2. `src/app/(tabs)/index.tsx`의 `PAGES`에 한 줄 추가 → 개발용 허브에서 push
+### 새 화면 추가
+`src/app/foo.tsx`에 `export default () => <Screen title="…">…</Screen>` 만 만들면 expo-router가 `/foo` 라우트로 자동 연결됩니다 (별도 등록 불필요).
+
+> 앱 진입점 `(tabs)/index.tsx`는 저장된 세션이 있으면 `/home`, 없으면 `/login`으로 리다이렉트합니다. (예전의 개발용 페이지 허브 `PAGES`는 제거됨.) 특정 화면은 딥링크로 이동: `xcrun simctl openurl booted "orca:///foo"`.
 
 ---
 

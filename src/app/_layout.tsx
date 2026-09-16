@@ -7,7 +7,8 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { QueryProvider } from '@/components/query-provider';
 import { useReduceMotion } from '@/hooks/use-reduce-motion';
-import { hydrateTokens, setOnAuthExpired } from '@/lib/api';
+import { getAccessToken, hydrateTokens, setOnAuthExpired } from '@/lib/api';
+import { registerPushToken, subscribeNotificationOpen, subscribeTokenRefresh } from '@/lib/push';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -37,6 +38,18 @@ export default function RootLayout() {
   useEffect(() => {
     setOnAuthExpired(() => router.replace('/login'));
     return () => setOnAuthExpired(null);
+  }, [router]);
+
+  // FCM 푸시 — 이미 로그인된 세션이면 앱 시작 시 토큰 등록, 갱신 시 재등록, 알림 탭 시 홈으로.
+  // (신규 로그인은 login.tsx가 별도로 registerPushToken 호출)
+  useEffect(() => {
+    if (getAccessToken()) void registerPushToken();
+    const unsubRefresh = subscribeTokenRefresh();
+    const unsubOpen = subscribeNotificationOpen(() => router.replace('/home'));
+    return () => {
+      unsubRefresh();
+      unsubOpen();
+    };
   }, [router]);
 
   return (

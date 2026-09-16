@@ -11,8 +11,13 @@
       "bundleIdentifier": "com.byeolddameokja.app",
       "usesAppleSignIn": true,
       "supportsTablet": true,
+      "googleServicesFile": "./GoogleService-Info.plist",
+      "entitlements": {
+        "aps-environment": "development"
+      },
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "UIBackgroundModes": ["remote-notification"]
       },
       "runtimeVersion": {
         "policy": "appVersion"
@@ -70,7 +75,15 @@
           "iosUrlScheme": "com.googleusercontent.apps.844378154938-9lhifn3h276dgbsebefdimdkoo6jjvcq"
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "@react-native-firebase/app",
+        {
+          "ios": {
+            "disableSPM": true
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

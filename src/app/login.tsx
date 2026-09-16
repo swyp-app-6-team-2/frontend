@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import { AppText } from '@/components/ui';
 import { useSocialLogin } from '@/hooks/use-api';
 import { ApiError, setLoginProvider } from '@/lib/api';
+import { registerPushToken } from '@/lib/push';
 import {
   API_PROVIDER,
   getSocialAuthToken,
@@ -42,6 +43,8 @@ export default function LoginScreen() {
       // 마이페이지 배지용 — 선택한 provider(KAKAO/…)를 세션 저장소에 기록. 서버 /users/me가
       // provider를 안 내려주므로 이 값이 배지 소스. 로그아웃 시 clearTokens가 함께 지운다.
       setLoginProvider(provider);
+      // 로그인 성공(토큰 저장 후) → FCM 토큰 등록. 실패해도 로그인 흐름엔 영향 없음.
+      void registerPushToken();
       if (res.requiresTermsAgreement) {
         // 신규 → 약관. signupToken을 넘겨 약관 화면이 가입 완료(POST /auth/signup)에 사용.
         router.push({ pathname: '/terms', params: { signupToken: res.signupToken ?? '' } });

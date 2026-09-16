@@ -5,6 +5,8 @@
   "dependencies": {
     "@expo/ui": "~57.0.10",
     "@expo/vector-icons": "^15.1.1",
+    "@react-native-firebase/app": "^26.4.0",
+    "@react-native-firebase/messaging": "^26.4.0",
     "@react-native-google-signin/google-signin": "^16.1.5",
     "@react-native-seoul/kakao-login": "^6.0.4",
     "@react-native-seoul/naver-login": "^5.0.1",

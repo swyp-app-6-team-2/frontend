@@ -49,3 +49,7 @@ example
 /.playwright-mcp/
 /rag-page.png
 *.bak
+
+# Firebase config (API 키 포함) — 레포에 커밋하지 않음. EAS secret/별도 공유로 각자 로컬에 둔다.
+/GoogleService-Info.plist
+/google-services.json

@@ -1,6 +1,6 @@
 name: CI
 
-# PR과 main 푸시마다 타입체크 + 린트를 돌려 깨진 코드를 막는다.
+# PR과 main 푸시마다 타입체크 + 린트 + 테스트를 돌려 깨진 코드를 막는다.
 on:
   push:
     branches: [main]
@@ -13,7 +13,7 @@ concurrency:
 
 jobs:
   check:
-    name: typecheck + lint
+    name: typecheck + lint + test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -39,3 +39,6 @@ jobs:
 
       - name: Lint
         run: pnpm lint
+
+      - name: Test
+        run: pnpm test

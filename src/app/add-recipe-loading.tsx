@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
+import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import Animated, {
   cancelAnimation,
@@ -68,11 +69,11 @@ export default function AddRecipeLoadingScreen() {
   return (
     <Screen title={isImage ? '이미지로 등록' : 'URL로 등록'} back>
       <View className="flex-1 items-center justify-center gap-8">
-        <View className="h-56 w-full items-center justify-center rounded-card border border-dashed border-foreground/15">
-          <AppText variant="chip" className="text-muted">
-            (gif or img)
-          </AppText>
-        </View>
+        <Image
+          source={require('../assets/images/mascot-analyzing.png')}
+          style={{ width: 220, height: 200 }}
+          contentFit="contain"
+        />
 
         <AppText variant="body" className="text-center text-muted">
           {isImage

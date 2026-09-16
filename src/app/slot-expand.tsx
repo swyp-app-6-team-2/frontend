@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Text, View } from 'react-native';
-import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 
 import { SlotAddedPopup } from '@/components/slot-added-popup';
@@ -15,10 +14,9 @@ import {
 } from '@/lib/slot-ads';
 
 // 슬롯 확장 — 광고 시청 시 별 슬롯 +2 (하루 최대 3회).
-// 하단 '광고 시청하기' → 시청 완료 → 성공 모달('슬롯 2개가 추가됐어요!') → 확인 시 홈으로.
+// 하단 '광고 시청하기' → 시청 완료 → 성공 모달('슬롯 2개가 추가됐어요!') → 확인 시 팝업만 닫고 화면 유지.
 // 상단 카드는 리워드 안내(표시용), '잔여 시청 한도'는 오늘 남은 횟수.
 export default function SlotExpandScreen() {
-  const router = useRouter();
   const canWatch = useCanWatchAd();
   const remaining = useRemainingWatches();
   const [showAdded, setShowAdded] = useState(false);
@@ -31,7 +29,7 @@ export default function SlotExpandScreen() {
 
   const onCloseAdded = () => {
     dismissSlotAdded(); // 홈 중복 팝업 방지
-    router.replace('/home');
+    setShowAdded(false); // 팝업만 닫고 슬롯 확장 화면에 머묾
   };
 
   return (

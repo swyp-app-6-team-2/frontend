@@ -17,7 +17,11 @@ export type RecipeListSort = 'LATEST' | 'OLDEST';
 export type RecommendationMode = 'RANDOM' | 'INGREDIENT_BASED';
 export type IngredientCategory = 'MEAT' | 'SEAFOOD' | 'VEGETABLE' | 'SAUCE' | 'ETC';
 export type UploadPurpose =
-  'RECIPE_COVER' | 'COOK_HISTORY_PHOTO' | 'INGESTION_INPUT' | 'INQUIRY_ATTACHMENT';
+  | 'PROFILE_IMAGE'
+  | 'RECIPE_COVER'
+  | 'COOK_HISTORY_PHOTO'
+  | 'INGESTION_INPUT'
+  | 'INQUIRY_ATTACHMENT';
 export type ImageContentType = 'image/jpeg' | 'image/png' | 'image/webp';
 
 // ── Auth ──────────────────────────────────────────────────────

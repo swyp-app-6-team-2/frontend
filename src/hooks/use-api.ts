@@ -250,9 +250,13 @@ export function useUpdateProfile() {
   });
 }
 
-// 온보딩 필요 여부.
-export function useOnboarding() {
-  return useQuery({ queryKey: queryKeys.onboarding(), queryFn: () => userApi.getOnboarding() });
+// 온보딩 필요 여부. enabled=false면 조회 안 함(로그인 전 401 방지).
+export function useOnboarding(enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.onboarding(),
+    queryFn: () => userApi.getOnboarding(),
+    enabled,
+  });
 }
 export function useCompleteOnboarding() {
   const qc = useQueryClient();

@@ -17,19 +17,23 @@ import { RecommendPopup } from '@/components/recommend-popup';
 import { SlotAddedPopup } from '@/components/slot-added-popup';
 import { TabBar } from '@/components/tab-bar';
 import { palette } from '@/constants/tokens';
-import { useIngredients, useRecipes } from '@/hooks/use-api';
+import { useIngredients, useRecipes, useRecommendRecipe } from '@/hooks/use-api';
 import { useReduceMotion } from '@/hooks/use-reduce-motion';
-import type { RecipeListItem } from '@/lib/api/types';
+import { ApiError } from '@/lib/api';
+import type { RecipeListItem, RecipeRecommendationResponse } from '@/lib/api/types';
 import { dismissSlotAdded, useSlotJustAdded } from '@/lib/slot-ads';
 
 const RECO = ['랜덤으로 골라줘', '내재료로 골라줘'];
 
-// 저장 레시피 중 랜덤 1개(재추천 시 직전과 다르게). 없으면 null.
-// 모듈 레벨(react-compiler가 렌더 내 Math.random을 impure로 막는다).
-function pickRandomRecipe(recipes: RecipeListItem[], excludeId?: number): RecipeListItem | null {
-  const pool = recipes.filter((r) => r.recipeId !== excludeId);
-  const list = pool.length > 0 ? pool : recipes;
-  return list.length > 0 ? list[Math.floor(Math.random() * list.length)] : null;
+// 추천 응답(백엔드) → RecommendPopup이 받는 목록아이템 형태로 매핑.
+function toListItem(r: RecipeRecommendationResponse): RecipeListItem {
+  return {
+    recipeId: r.recipeId,
+    title: r.title,
+    categoryCode: r.category,
+    coverImageUrl: r.thumbnailUrl,
+    ingredientNames: r.mainIngredients,
+  };
 }
 
 // 레시피 수만큼 밤하늘에 흩뿌리는 반짝이별 — 시야를 안 가리게 상단~중앙 하늘 영역에만.
@@ -144,17 +148,30 @@ export default function HomeScreen() {
   const [reco, setReco] = useState(RECO[0]);
   const [open, setOpen] = useState(false);
   const [recommend, setRecommend] = useState<RecipeListItem | null>(null);
+  const recommendRecipe = useRecommendRecipe();
+  const lastRecoId = useRef<number | undefined>(undefined); // 재추천 시 직전 제외용
   const lastTap = useRef(0);
   // 남은 별 개수 — 별 데이터 레이어 생기면 서버 값으로 교체(현재 placeholder).
   const remainingStars = 10;
 
-  // 추천 옵션 선택 → 랜덤 레시피 팝업 (저장 레시피 없으면 안내)
-  const onRecommend = (label: string) => {
+  // 추천 옵션 선택 → 백엔드 추천 API 호출 → 결과 팝업. previousRecipeId로 직전과 다르게.
+  const onRecommend = async (label: string) => {
     setReco(label);
     setOpen(false);
-    const rec = pickRandomRecipe(recipes);
-    if (rec) setRecommend(rec);
-    else Alert.alert('추천할 레시피가 없어요', '먼저 레시피를 저장해주세요.');
+    const recommendationMode = label === RECO[0] ? 'RANDOM' : 'INGREDIENT_BASED';
+    try {
+      const r = await recommendRecipe.mutateAsync({
+        recommendationMode,
+        previousRecipeId: lastRecoId.current,
+      });
+      lastRecoId.current = r.recipeId;
+      setRecommend(toListItem(r));
+    } catch (e) {
+      Alert.alert(
+        '추천할 레시피가 없어요',
+        e instanceof ApiError ? e.message : '먼저 레시피를 저장해주세요.',
+      );
+    }
   };
 
   // 더블탭 → 별 토글(별똥별 떨어짐)

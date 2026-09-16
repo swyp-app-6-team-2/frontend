@@ -8,6 +8,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { AddRecipeMenu } from '@/components/add-recipe-menu';
 import { AppText, Button, SearchBar } from '@/components/ui';
 import { palette } from '@/constants/tokens';
+import { useCompleteOnboarding } from '@/hooks/use-api';
 
 const TABS = [
   { key: 'home', icon: require('../assets/images/ic-tab-home.png'), label: '홈' },
@@ -186,7 +187,13 @@ export default function OnboardingScreen() {
   const [step, setStep] = useState(0);
   // 진입 인트로 팝업(알림 시간 설정 다음 화면) — 닫으면 코치마크 튜토리얼 시작.
   const [intro, setIntro] = useState(true);
-  const finish = () => router.replace('/home');
+  const completeOnboarding = useCompleteOnboarding();
+  // 튜토리얼 종료 → 백엔드에 온보딩 완료 기록(재진입 시 온보딩 스킵) 후 홈으로.
+  // 기록 실패해도 홈 진입은 막지 않는다(다음 진입에서 다시 시도됨).
+  const finish = () => {
+    completeOnboarding.mutate();
+    router.replace('/home');
+  };
   const isCard = step === STEPS.length;
 
   // 인트로 — 밤하늘 위 중앙 팝업(마스코트 + 별 게이미피케이션 안내)

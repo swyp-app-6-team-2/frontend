@@ -1,5 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Modal,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { Image } from 'expo-image';
 import { Feather } from '@expo/vector-icons';
 import ReanimatedSwipeable, {
@@ -16,13 +24,53 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText, PressableScale, Screen } from '@/components/ui';
 import { palette } from '@/constants/tokens';
+import { useNotificationSettings, useSaveNotificationSettings } from '@/hooks/use-api';
 import { useReduceMotion } from '@/hooks/use-reduce-motion';
+import type { NotificationSettings, Weekday } from '@/lib/api/types';
 import { fireHaptic } from '@/lib/haptics';
 
 // 바텀시트를 화면 아래로 밀어내는 거리(px) — 닫힘 슬라이드용.
 const SHEET_OFFSCREEN = 700;
 
 const DAYS = ['일', '월', '화', '수', '목', '금', '토'];
+
+// 요일 인덱스(0=일..6=토) ↔ 백엔드 enum.
+const WEEKDAY_BY_INDEX: Weekday[] = [
+  'SUNDAY',
+  'MONDAY',
+  'TUESDAY',
+  'WEDNESDAY',
+  'THURSDAY',
+  'FRIDAY',
+  'SATURDAY',
+];
+const INDEX_BY_WEEKDAY: Record<Weekday, number> = {
+  SUNDAY: 0,
+  MONDAY: 1,
+  TUESDAY: 2,
+  WEDNESDAY: 3,
+  THURSDAY: 4,
+  FRIDAY: 5,
+  SATURDAY: 6,
+};
+
+// UI 시각('오전 8:00') ↔ 서버 'HH:mm'(24h).
+function uiTimeTo24(t: string): string {
+  const m = t.match(/(오전|오후)\s*(\d{1,2}):(\d{2})/);
+  if (!m) return '00:00';
+  let h = Number(m[2]);
+  const pm = m[1] === '오후';
+  if (h === 12) h = pm ? 12 : 0;
+  else if (pm) h += 12;
+  return `${String(h).padStart(2, '0')}:${m[3]}`;
+}
+function time24ToUi(t: string): string {
+  const [hs, min] = t.split(':');
+  const h = Number(hs);
+  const pm = h >= 12;
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return `${pm ? '오후' : '오전'} ${h12}:${min ?? '00'}`;
+}
 
 // 시간 휠 데이터
 const AMPM = ['오전', '오후'];
@@ -477,17 +525,73 @@ function AlarmRow({
 }
 
 // 마이 > 알림 설정 — 알림 수신 토글 + 시간 설정(편집·시간 휠 바텀시트) + 요일 선택.
+// 서버 알림 설정을 받아 폼을 초기화한다. 로드 후 마운트되므로 초기값을 useState로 바로 심는다
+// (effect로 setState 하지 않음 → 연쇄 렌더 방지).
 export default function NotificationsScreen() {
-  const [notifOn, setNotifOn] = useState(true);
+  const { data: settings, isLoading, isError } = useNotificationSettings();
+  if (isLoading) {
+    return (
+      <Screen title="알림 설정" back>
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator color={palette.primary} />
+        </View>
+      </Screen>
+    );
+  }
+  if (isError || !settings) {
+    return (
+      <Screen title="알림 설정" back>
+        <View className="flex-1 items-center justify-center">
+          <AppText variant="body" className="text-muted">
+            알림 설정을 불러오지 못했어요.
+          </AppText>
+        </View>
+      </Screen>
+    );
+  }
+  return <NotificationSettingsForm initial={settings} />;
+}
+
+// timeSlots가 비어 있으면(신규 사용자) 기본 3개 알람을 시작값으로 보여준다.
+const DEFAULT_ALARMS = [
+  { id: 'a1', label: '아침 알람', time: '오전 8:00' },
+  { id: 'a2', label: '점심 알람', time: '오후 12:00' },
+  { id: 'a3', label: '저녁 알람', time: '오후 6:00' },
+];
+
+function NotificationSettingsForm({ initial }: { initial: NotificationSettings }) {
+  const [notifOn, setNotifOn] = useState(initial.enabled);
   const [editing, setEditing] = useState(false);
-  const [days, setDays] = useState<Set<number>>(() => new Set([0, 1, 2])); // 기본 일·월·화
-  const [alarms, setAlarms] = useState([
-    { id: 'a1', label: '아침 알람', time: '오전 8:00' },
-    { id: 'a2', label: '점심 알람', time: '오후 12:00' },
-    { id: 'a3', label: '저녁 알람', time: '오후 6:00' },
-  ]);
-  const nextId = useRef(4); // 새 알람 고유 id 생성용
+  const [days, setDays] = useState<Set<number>>(
+    () => new Set(initial.weekdays.map((w) => INDEX_BY_WEEKDAY[w])),
+  );
+  const [alarms, setAlarms] = useState(() =>
+    initial.timeSlots.length > 0
+      ? initial.timeSlots.map((s, i) => ({ id: `s${i}`, label: s.label, time: time24ToUi(s.time) }))
+      : DEFAULT_ALARMS,
+  );
+  const nextId = useRef((initial.timeSlots.length || DEFAULT_ALARMS.length) + 1);
   const [sheetFor, setSheetFor] = useState<number | null>(null);
+
+  // 변경 시 디바운스 저장(전체 교체 PUT). 첫 렌더(=서버값 그대로)는 건너뛴다.
+  // label 빈 알람(작성 중)은 제외하고, 요일·시간대 정렬은 서버가 담당.
+  const saveSettings = useSaveNotificationSettings();
+  const saveMutate = saveSettings.mutate;
+  const firstRun = useRef(true);
+  useEffect(() => {
+    if (firstRun.current) {
+      firstRun.current = false;
+      return;
+    }
+    const t = setTimeout(() => {
+      const timeSlots = alarms
+        .filter((a) => a.label.trim().length > 0)
+        .map((a) => ({ label: a.label.trim(), time: uiTimeTo24(a.time) }));
+      const weekdays = [...days].sort((x, y) => x - y).map((i) => WEEKDAY_BY_INDEX[i]);
+      saveMutate({ enabled: notifOn, weekdays, timeSlots });
+    }, 600);
+    return () => clearTimeout(t);
+  }, [notifOn, days, alarms, saveMutate]);
 
   const toggleDay = (i: number) =>
     setDays((prev) => {
@@ -514,7 +618,14 @@ export default function NotificationsScreen() {
         {/* 시간 설정 + 편집 토글 */}
         <View className="gap-4">
           <View className="flex-row items-center justify-between">
-            <AppText variant="body">시간 설정</AppText>
+            <View className="flex-row items-center gap-2">
+              <AppText variant="body">시간 설정</AppText>
+              {saveSettings.isPending ? (
+                <Text className="text-[13px] leading-[17px] text-muted">저장 중…</Text>
+              ) : saveSettings.isError ? (
+                <Text className="text-[13px] leading-[17px] text-error">저장 실패</Text>
+              ) : null}
+            </View>
             <Pressable accessibilityRole="button" onPress={() => setEditing((e) => !e)} hitSlop={8}>
               <Text className="text-[16px] font-medium text-muted">
                 {editing ? '편집 완료' : '편집'}

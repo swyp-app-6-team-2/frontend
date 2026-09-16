@@ -10,15 +10,11 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import { Feather } from '@expo/vector-icons';
-import ReanimatedSwipeable, {
-  type SwipeableMethods,
-} from 'react-native-gesture-handler/ReanimatedSwipeable';
 import Animated, {
   Easing,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
-  type SharedValue,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -431,41 +427,7 @@ function TimeSheet({
   );
 }
 
-// 스와이프 진행도(0→1)에 따라 커지며 페이드인되는 원형 삭제 버튼.
-function DeleteAction({
-  progress,
-  onPress,
-  label,
-}: {
-  progress: SharedValue<number>;
-  onPress: () => void;
-  label: string;
-}) {
-  const style = useAnimatedStyle(() => {
-    const p = Math.min(1, progress.value);
-    return { opacity: p, transform: [{ scale: 0.5 + 0.5 * p }] };
-  });
-  return (
-    <Animated.View style={style} className="h-full justify-center">
-      <Pressable
-        onPress={onPress}
-        accessibilityRole="button"
-        accessibilityLabel={label}
-        hitSlop={12}
-        className="h-11 w-[54px] items-center justify-center active:opacity-60"
-      >
-        <Image
-          source={require('../assets/images/ic-close.png')}
-          style={{ width: 16, height: 16 }}
-          tintColor={palette.muted}
-          contentFit="contain"
-        />
-      </Pressable>
-    </Animated.View>
-  );
-}
-
-// 알람 행 — 제목 입력 + 시간(탭하면 시트) + 왼쪽 스와이프 삭제.
+// 알람 행 — 제목 입력 + 시간(탭하면 시트) + 우측 상시 X 삭제.
 function AlarmRow({
   alarm,
   editing,
@@ -479,7 +441,6 @@ function AlarmRow({
   onDelete: () => void;
   onChangeLabel: (text: string) => void;
 }) {
-  const ref = useRef<SwipeableMethods>(null);
   return (
     <View className="gap-2">
       <TextInput
@@ -490,36 +451,34 @@ function AlarmRow({
         placeholderTextColor={palette.muted}
         className="px-2 py-0 text-[16px] leading-[21px] text-muted"
       />
-      <ReanimatedSwipeable
-        ref={ref}
-        renderRightActions={(progress) => (
-          <DeleteAction
-            progress={progress}
-            label={`${alarm.label || '알람'} 삭제`}
-            onPress={() => {
-              fireHaptic('warning');
-              ref.current?.close();
-              onDelete();
-            }}
-          />
-        )}
-        rightThreshold={40}
-        overshootRight={false}
-        friction={1.6}
-      >
+      <View className="flex-row items-center gap-2">
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={`${alarm.label || '알람'} 시간 ${alarm.time}`}
           disabled={!editing}
           onPress={onPress}
-          className={`flex-row items-center gap-2.5 rounded-pill bg-field px-4 py-2.5 active:opacity-80 ${
+          className={`flex-1 flex-row items-center gap-2.5 rounded-pill bg-field px-4 py-2.5 active:opacity-80 ${
             editing ? 'border border-primary' : ''
           }`}
         >
           <Feather name="clock" size={24} color={palette.muted} />
           <Text className="text-[16px] leading-[21px] text-foreground">{alarm.time}</Text>
         </Pressable>
-      </ReanimatedSwipeable>
+        {editing ? (
+          <Pressable
+            onPress={() => {
+              fireHaptic('warning');
+              onDelete();
+            }}
+            accessibilityRole="button"
+            accessibilityLabel={`${alarm.label || '알람'} 삭제`}
+            hitSlop={12}
+            className="h-11 w-11 items-center justify-center active:opacity-60"
+          >
+            <Feather name="x" size={20} color={palette.muted} />
+          </Pressable>
+        ) : null}
+      </View>
     </View>
   );
 }
@@ -593,6 +552,22 @@ function NotificationSettingsForm({ initial }: { initial: NotificationSettings }
     return () => clearTimeout(t);
   }, [notifOn, days, alarms, saveMutate]);
 
+  // '편집 완료' = 명시적 커밋. 디바운스 저장은 라벨 없는 알람을 제외하므로, 추가만 하고 이름을
+  // 안 지으면 반영되지 않았다. 여기서 빈 라벨엔 기본 이름을 채워(삭제 대신 유지) 즉시 저장한다.
+  const commit = () => {
+    const normalized = alarms.map((a) => (a.label.trim().length > 0 ? a : { ...a, label: '알람' }));
+    // 빈 라벨이 있었을 때만 로컬 상태 갱신(불필요한 재렌더 방지). 미변경 항목은 같은 참조 유지.
+    if (normalized.some((a, i) => a !== alarms[i])) setAlarms(normalized);
+    const timeSlots = normalized.map((a) => ({ label: a.label.trim(), time: uiTimeTo24(a.time) }));
+    const weekdays = [...days].sort((x, y) => x - y).map((i) => WEEKDAY_BY_INDEX[i]);
+    saveMutate({ enabled: notifOn, weekdays, timeSlots });
+  };
+
+  const onToggleEdit = () => {
+    if (editing) commit(); // 편집 → 편집 완료: 즉시 저장
+    setEditing((e) => !e);
+  };
+
   const toggleDay = (i: number) =>
     setDays((prev) => {
       const next = new Set(prev);
@@ -626,7 +601,7 @@ function NotificationSettingsForm({ initial }: { initial: NotificationSettings }
                 <Text className="text-[13px] leading-[17px] text-error">저장 실패</Text>
               ) : null}
             </View>
-            <Pressable accessibilityRole="button" onPress={() => setEditing((e) => !e)} hitSlop={8}>
+            <Pressable accessibilityRole="button" onPress={onToggleEdit} hitSlop={8}>
               <Text className="text-[16px] font-medium text-muted">
                 {editing ? '편집 완료' : '편집'}
               </Text>

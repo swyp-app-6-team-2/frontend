@@ -401,7 +401,7 @@ export default function RecipeViewScreen() {
                 </Text>
               </View>
               <Pressable
-                onPress={() => setShowComplete(false)}
+                onPress={() => router.replace('/home')}
                 accessibilityRole="button"
                 style={{
                   height: 52,

@@ -184,8 +184,41 @@ export default function OnboardingScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [step, setStep] = useState(0);
+  // 진입 인트로 팝업(알림 시간 설정 다음 화면) — 닫으면 코치마크 튜토리얼 시작.
+  const [intro, setIntro] = useState(true);
   const finish = () => router.replace('/home');
   const isCard = step === STEPS.length;
+
+  // 인트로 — 밤하늘 위 중앙 팝업(마스코트 + 별 게이미피케이션 안내)
+  if (intro) {
+    return (
+      <View className="flex-1 bg-background">
+        <NightSky />
+        <View pointerEvents="none" className="absolute inset-0 bg-black/60" />
+        <SafeAreaView
+          className="flex-1 items-center justify-center px-screen"
+          edges={['top', 'bottom']}
+        >
+          <View className="w-full items-center gap-6 rounded-card bg-surface px-6 py-7">
+            <Image
+              source={require('../assets/images/mascot-cook-complete.png')}
+              style={{ width: 254, height: 147, borderRadius: 12 }}
+              contentFit="contain"
+            />
+            <View className="items-center gap-2">
+              <AppText variant="subheading" className="text-center text-foreground">
+                별 따먹으러 가볼까요?
+              </AppText>
+              <AppText variant="body" className="text-center text-muted">
+                요리를 완료할 때마다{'\n'}밤하늘에 별이 켜져요
+              </AppText>
+            </View>
+            <Button label="시작하기" onPress={() => setIntro(false)} />
+          </View>
+        </SafeAreaView>
+      </View>
+    );
+  }
 
   // 튜토리얼 7 — 오늘의 추천 카드 (강조 카드 + 코치 텍스트 + 시작하기)
   if (isCard) {

@@ -1,5 +1,5 @@
 import type { ReactNode, Ref } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { Image, type ImageSource } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -27,6 +27,8 @@ export type ScreenProps = {
   bgImage?: ImageSource | number;
   /** Decorative image pinned to the bottom edge, behind content (402×257 기준). */
   bgBottomImage?: ImageSource | number;
+  /** 하단 고정 푸터(예: 저장 CTA). scroll 화면에서도 ScrollView 밖·폰 하단에 고정된다. */
+  footer?: ReactNode;
 };
 
 /**
@@ -51,6 +53,7 @@ export function Screen({
   contentClassName,
   bgImage,
   bgBottomImage,
+  footer,
 }: ScreenProps) {
   return (
     <View className="flex-1 bg-background">
@@ -83,14 +86,31 @@ export function Screen({
           />
         ) : null}
         {scroll ? (
-          <ScrollView
-            ref={scrollRef}
-            contentContainerClassName={`gap-4 px-screen py-4 ${contentClassName ?? ''}`}
-          >
-            {children}
-          </ScrollView>
+          // 스크롤 화면: iOS는 키보드 높이만큼 contentInset 자동 조정 →
+          // 하단 입력·버튼이 키보드에 가리지 않고 스크롤로 접근 가능. Android는 adjustResize가 처리.
+          // footer가 있으면 ScrollView 밖(폰 하단)에 고정한다 — 콘텐츠와 함께 스크롤되지 않게.
+          <View className="flex-1">
+            <ScrollView
+              ref={scrollRef}
+              className="flex-1"
+              automaticallyAdjustKeyboardInsets
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="interactive"
+              contentContainerClassName={`gap-4 px-screen py-4 ${contentClassName ?? ''}`}
+            >
+              {children}
+            </ScrollView>
+            {footer ? <View className="px-screen pb-4 pt-3">{footer}</View> : null}
+          </View>
         ) : (
-          <View className={`flex-1 px-screen ${contentClassName ?? ''}`}>{children}</View>
+          // 비스크롤 화면: 하단 고정 입력란은 키보드가 올라오면 위로 밀어 올린다(iOS padding).
+          <KeyboardAvoidingView
+            className="flex-1"
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          >
+            <View className={`flex-1 px-screen ${contentClassName ?? ''}`}>{children}</View>
+            {footer ? <View className="px-screen pb-4 pt-3">{footer}</View> : null}
+          </KeyboardAvoidingView>
         )}
       </SafeAreaView>
     </View>

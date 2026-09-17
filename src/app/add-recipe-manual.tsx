@@ -241,6 +241,13 @@ export default function AddRecipeManualScreen() {
       onClose={() => (isEdit ? router.back() : router.replace('/home'))}
       scroll
       scrollRef={scrollRef}
+      footer={
+        <Button
+          label={uploading ? '사진 업로드 중…' : isEdit ? '수정 완료' : '저장하기'}
+          onPress={onSave}
+          disabled={create.isPending || update.isPending || uploading}
+        />
+      }
     >
       {/* 대표 사진 추가 (선택) — 정사각 field 박스. 선택하면 미리보기, 없으면 카메라+안내 */}
       <Pressable
@@ -331,7 +338,13 @@ export default function AddRecipeManualScreen() {
           <View className="h-11 flex-1 flex-row items-center gap-[10px] rounded-pill bg-field px-4">
             <TextInput
               className="flex-1 text-foreground"
-              style={{ fontSize: 16, lineHeight: 21, textAlign: 'right' }}
+              style={{
+                fontSize: 16,
+                lineHeight: 21,
+                textAlign: 'right',
+                includeFontPadding: false,
+                textAlignVertical: 'center',
+              }}
               placeholder="0"
               placeholderTextColor={palette.muted}
               keyboardType="number-pad"
@@ -345,7 +358,13 @@ export default function AddRecipeManualScreen() {
           <View className="h-11 flex-1 flex-row items-center gap-[10px] rounded-pill bg-field px-4">
             <TextInput
               className="flex-1 text-foreground"
-              style={{ fontSize: 16, lineHeight: 21, textAlign: 'right' }}
+              style={{
+                fontSize: 16,
+                lineHeight: 21,
+                textAlign: 'right',
+                includeFontPadding: false,
+                textAlignVertical: 'center',
+              }}
               placeholder="0"
               placeholderTextColor={palette.muted}
               keyboardType="number-pad"
@@ -385,7 +404,13 @@ export default function AddRecipeManualScreen() {
         <View className="h-11 flex-row items-center gap-[10px] rounded-pill bg-field px-4">
           <TextInput
             className="flex-1 text-foreground"
-            style={{ fontSize: 16, lineHeight: 21, textAlign: 'right' }}
+            style={{
+              fontSize: 16,
+              lineHeight: 21,
+              textAlign: 'right',
+              includeFontPadding: false,
+              textAlignVertical: 'center',
+            }}
             placeholder="0"
             placeholderTextColor={palette.muted}
             keyboardType="number-pad"
@@ -415,7 +440,7 @@ export default function AddRecipeManualScreen() {
             <SearchBar
               leftIcon={null}
               placeholder="수량"
-              containerClassName="h-11 w-[122px]"
+              containerClassName="w-[122px]"
               value={ing.qty}
               onChangeText={(t) => setIngredient(i, 'qty', t)}
             />
@@ -507,12 +532,6 @@ export default function AddRecipeManualScreen() {
         {/* 위 12 = gap8+mt-1 */}
         <DashedAddButton label="단계 추가" onPress={addStep} className="mt-1" />
       </View>
-
-      <Button
-        label={uploading ? '사진 업로드 중…' : isEdit ? '수정 완료' : '저장하기'}
-        onPress={onSave}
-        disabled={create.isPending || update.isPending || uploading}
-      />
     </Screen>
   );
 }

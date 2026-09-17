@@ -1,7 +1,7 @@
 # API 스펙 (프론트 연동용)
 
 > 백엔드 레포 [`swyp-app-6-team-2/backend`](https://github.com/swyp-app-6-team-2/backend)(Spring Boot) 기준.
-> 백엔드 `docs/specs/*.md` + 컨트롤러/DTO에서 추출. **기준일 2026-09-16.**
+> 백엔드 `docs/specs/*.md` + 컨트롤러/DTO에서 추출. **기준일 2026-09-17. (BE main ca3c5ad)**
 > 백엔드가 계약을 바꾸면 이 문서도 갱신할 것. Swagger UI: `<host>/swagger-ui/index.html`.
 
 ---
@@ -149,8 +149,57 @@ type UploadUrlIssueResponse = {
 - 업로드 끝난 `objectKey`를 Recipe 생성/수정의 `coverImageKey`, CookHistory 생성의 `photoKey`로 전달.
 - **수정 시 기존과 같은 key를 다시 보내면** 소비 도메인이 "동일 → 이미지 작업 스킵"으로 처리(정상).
 
-**purpose별 prefix**: `RECIPE_COVER`→`recipe-covers`, `COOK_HISTORY_PHOTO`→`cook-history`, `INGESTION_INPUT`→`ingestion-inputs`.
+**purpose별 prefix**: `PROFILE_IMAGE`→`profile-images`, `RECIPE_COVER`→`recipe-covers`, `COOK_HISTORY_PHOTO`→`cook-history`, `INGESTION_INPUT`→`ingestion-inputs`, `INQUIRY_ATTACHMENT`→`inquiry-attachments`.
 **에러**: `400 REQUEST_VALIDATION_FAILED`(필드 누락/미지원 contentType) · `400 INVALID_REQUEST_FORMAT`(정의 안 된 purpose) · `401`.
+
+---
+
+## 2-1. 레시피 분석 — `Ingestion`
+
+URL·이미지를 AI로 분석해 레시피 초안을 만드는 비동기 작업. 구현·배포 완료(09-14). 인증 필요.
+흐름: **작업 생성 → 폴링 → 초안 확인·보정 → `POST /recipes`에 `ingestionJobId` 실어 저장**(§3 생성 참고).
+이미지 입력은 먼저 `POST /uploads/images`에 `purpose: "INGESTION_INPUT"`로 올린 `objectKey`들을 넘긴다.
+
+### `POST /api/v1/ingestion-jobs` — 분석 작업 생성 → **201** `{ ingestionJobId }`
+
+```ts
+// URL·IMAGE 중 정확히 하나(@AssertTrue). 앱 타입은 XOR로 강제.
+type IngestionJobCreateRequest =
+  | { inputType: 'URL'; url: string }
+  | { inputType: 'IMAGE'; inputImageKeys: string[] }; // INGESTION_INPUT 업로드 objectKey들
+// Response data: { ingestionJobId: number }
+```
+
+### `GET /api/v1/ingestion-jobs/{ingestionJobId}` — 작업 조회(폴링) → **200**
+
+```ts
+type IngestionJobResponse = {
+  ingestionJobId: number;
+  inputType: 'URL' | 'IMAGE';
+  status: 'QUEUED' | 'PROCESSING' | 'RESULT_READY' | 'FAILED' | 'EXPIRED';
+  previewImageUrl: string | null;      // 분석 원본 미리보기(확인 화면 대표사진 자리)
+  result: RecipeDraft | null;          // RESULT_READY일 때만. 아래
+  failureCode: IngestionFailureCode | null; // FAILED일 때만
+};
+// AI 초안 — 못 채운 필드는 null(사용자가 확인 화면에서 보정)
+type RecipeDraft = {
+  title: string | null;
+  categoryCode: RecipeCategory | null;
+  cookTimeMinutes: number | null;
+  servings: number | null;
+  ingredients: { ingredientId: number | null; name: string; amountText: string | null }[];
+  steps: { content: string }[];
+};
+type IngestionFailureCode =
+  | 'SOURCE_UNAVAILABLE'      // 링크/이미지를 열 수 없음
+  | 'CONTENT_NOT_RECOGNIZED'  // 재료·조리순서를 못 찾음
+  | 'MULTIPLE_RECIPES'        // 레시피가 여러 개 감지
+  | 'PROCESSING_FAILED';      // 분석 중 오류
+```
+
+- `QUEUED`/`PROCESSING` 동안 폴링(앱 2초 간격), terminal(`RESULT_READY`/`FAILED`/`EXPIRED`)이면 정지.
+- 작업은 **생성 24시간 뒤 만료**(`EXPIRED`). `POST /recipes`에 `ingestionJobId`로 소비하면 그 시점에 확정.
+- `result.ingredients[].ingredientId`는 마스터 매칭분만 채워지며, 레시피 저장 시 그대로 실어 보내면 재료 기반 추천에 잡힌다.
 
 ---
 
@@ -166,6 +215,7 @@ type UploadUrlIssueResponse = {
 | `RECIPE_INGREDIENT_INVALID` | 400 | 보낸 `ingredientId`가 마스터에 없음 |
 | `RECIPE_COVER_INVALID` | 400 | coverImageKey가 없음/남의것/다른용도/미업로드 |
 | `RECIPE_COVER_ALREADY_USED` | 409 | 이미 연결된 coverImageKey |
+| `RECIPE_SLOT_EXCEEDED` | 409 | 레시피 저장 슬롯 초과(별 슬롯 세부는 별도 전달) |
 
 ### `POST /api/v1/recipes/recommendations` — 추천 → **200** (홈 "랜덤/재료 기반")
 ```ts
@@ -189,11 +239,14 @@ type RecipeCreateRequest = {
     amountText?: string;      // 옵션 "300g"
   }[];
   steps?: { content: string }[]; // 배열 순서 = 표시 순서
+  ingestionJobId?: number;    // 옵션. 분석(URL/이미지)으로 만든 레시피면 그 Job id. → 2-1. Ingestion
 };
 // Response data: { recipeId: number }
 ```
-- `registrationMethod`는 서버가 `MANUAL`로 결정(요청에 없음). Ingestion(URL/이미지 분석)은 아직 미구현.
-- 에러: `400 REQUEST_VALIDATION_FAILED` · `400 RECIPE_INGREDIENT_INVALID` · `400 RECIPE_COVER_INVALID` · `409 RECIPE_COVER_ALREADY_USED`.
+- `registrationMethod`는 서버가 결정(요청에 없음): `ingestionJobId` 없으면 `MANUAL`, 있으면 해당 Job의 `URL`/`IMAGE`.
+- **`ingestionJobId`를 보내면**: 서버가 원본 정보(source_url·원본 사진 Key·원본 대표 이미지)를 붙이고 Job을 소비한다. 없으면 400이 아니라 조용히 `MANUAL`로 저장된다(원본·중복방지 없음).
+- **재요청 멱등**: 같은 `ingestionJobId`로 다시 생성하면 `409`가 아니라 **200 + 기존 `recipeId`**를 돌려준다(중복 저장 방지).
+- 에러: `400 REQUEST_VALIDATION_FAILED` · `400 RECIPE_INGREDIENT_INVALID` · `400 RECIPE_COVER_INVALID` · `409 RECIPE_COVER_ALREADY_USED` · `409 RECIPE_SLOT_EXCEEDED`.
 
 ### `GET /api/v1/recipes` — 목록·검색·필터(본인) → **200**
 
@@ -211,11 +264,13 @@ type RecipeListResponse = {
     title: string;
     categoryCode: RecipeCategory;
     coverImageUrl: string | null;   // 서명 URL, 없으면 null
+    thumbnailUrl: string | null;    // 분석 레시피 원본 썸네일. coverImageUrl 없을 때 카드 폴백
     ingredientNames: string[];      // 없으면 []
   }[];
 };
 ```
 - 카드 전용 필드만(memo/steps/source/cookTime/servings는 상세 전용).
+- 분석(URL/이미지) 레시피는 `coverImageUrl` 대신 `thumbnailUrl`만 올 수 있으므로 카드에서 `coverImageUrl ?? thumbnailUrl`로 폴백한다.
 - 에러: `400 REQUEST_VALIDATION_FAILED`(page<0/size 범위 밖) · `400 INVALID_REQUEST_FORMAT`(sort 오타/page 숫자 아님).
 
 ### `GET /api/v1/recipes/{recipeId}` — 상세 → **200**
@@ -235,7 +290,13 @@ type RecipeDetailResponse = {
     amountText: string;           // 없으면 빈 문자열/null
   }[];
   steps: { content: string }[];
-  source: null;                   // Ingestion 전까지 항상 null
+  // 분석 레시피면 객체, 직접 입력이면 null. **객체는 항상 truthy** — "원본 보기" 노출은
+  // source 유무가 아니라 originalUrl 유무로 판단할 것(그래야 IMAGE 레시피에 안 뜬다).
+  source: {
+    sourceType: 'URL' | 'IMAGE';
+    originalUrl: string | null;   // URL 분석이면 원본 링크, IMAGE면 null
+    thumbnailUrl: string | null;  // 원본 대표 이미지(coverImageUrl 없을 때 폴백)
+  } | null;
 };
 ```
 - 에러: `404 RECIPE_NOT_FOUND`.
@@ -292,7 +353,7 @@ type CookHistoryResponse = {
 
 ## 5. 재료 마스터 — `Ingredient`
 
-읽기 전용, 87개 고정. 서버 페이지네이션·검색·필터 없음(검색은 클라이언트가 `name`/`aliases`로).
+읽기 전용, 104개 고정. 서버 페이지네이션·검색·필터 없음(검색은 클라이언트가 `name`/`aliases`로).
 
 ### `GET /api/v1/ingredients` — 활성 재료 전체 → **200**
 
@@ -304,17 +365,18 @@ type IngredientListResponse = {
     name: string;              // 표시명(괄호/슬래시 그대로)
     categoryCode: IngredientCategory;
     aliases: string[];         // 검색어(표시용 아님), 없으면 []
+    iconUrl: string;           // 재료 아이콘(webp). 항상 내려간다
   }[];
 };
 ```
-- 정렬: 카테고리 enum 순(`MEAT→SEAFOOD→VEGETABLE→SAUCE→ETC`) → 같은 카테고리 내 `code` 오름차순. **배열 순서 그대로 사용**.
+- 정렬: 카테고리 enum 순(`MEAT→SEAFOOD→VEGETABLE→SAUCE→ETC`) → 같은 카테고리 내 **이름 가나다순**. **배열 순서 그대로 사용**.
 - 에러: 고유 에러 없음(`401`만). 비어도 `200 + { ingredients: [] }`.
 
 ---
 
 ## 5-1. 보유 재료 — My Ingredient
 
-> ⚠️ **백엔드 `feat/73-get-my-ingredients` 기준 (아직 origin/main 미머지).** 머지·배포 전까지 로컬 백엔드를 해당 브랜치로 띄워야 동작. 마스터(`GET /ingredients`)와 다른 소스 — "내가 등록한 재료"만. 인증 필요.
+> 마스터(`GET /ingredients`)와 다른 소스 — "내가 등록한 재료"만. 인증 필요. (origin/main 머지·배포 완료.)
 
 응답 항목(`UserIngredient`)은 마스터(`MASTER`)와 커스텀(`CUSTOM`, 직접 입력)을 같은 형태로 표현한다. 조회·등록·커스텀등록 응답이 공유.
 
@@ -336,7 +398,7 @@ type UserIngredient = {
 type MyIngredientListResponse = { ingredients: UserIngredient[] };
 ```
 - `searchQuery`(옵션): 재료명 부분검색. 빈 값/생략 = 전체.
-- 정렬: 카테고리 순 + 이름 가나다순. 보유한 비활성 재료도 포함.
+- 정렬: 마스터 재료를 카테고리 순 + 이름 가나다순으로 먼저 놓고, 그 **뒤에 커스텀(직접 입력) 재료를 이름·id순**으로 붙인다. 보유한 비활성 재료도 포함.
 
 ### `POST /api/v1/users/me/ingredients` — 보유 재료 추가 → **200**
 
@@ -483,7 +545,7 @@ Response = { sessionId; status; adUnitId; customData /*=sessionId, AdMob customD
 ### `GET /api/v1/ads/rewards/sessions/{sessionId}` — 결과 조회(폴링) → **200**
 ### `POST /api/v1/ads/rewards/sessions/{sessionId}/cancel` — 청구 포기 → **200**
 ```ts
-CancelRequest = { reason: 'LOAD_FAILED'|'USER_DISMISSED' }
+CancelRequest = { reason: 'LOAD_FAILED'|'USER_DISMISSED'|'USER_ABANDONED' }
 Result = { sessionId; status: 'PENDING'|'GRANTED'|'CANCELLED'|'EXPIRED'|'REJECTED';
            reasonCode: string|null; quotaDate; grantedAmount /*GRANTED 아니면 0*/; grantedAt: string|null;
            recipeSlotLimit; remainingRecipeSlots /*최신값*/ }
@@ -555,4 +617,4 @@ type AdRewardUnavailableReason = 'DAILY_LIMIT_REACHED' | 'REWARD_PENDING';
 ```
 
 - API 클라이언트: envelope를 벗겨 `data`만 반환하고, `status>=400`이면 `data.code`로 에러를 던지는 래퍼를 하나 두면 편하다.
-- 토큰: `accessToken`은 요청 헤더, 만료 시 `refreshToken` 재발급 흐름은 **백엔드에 refresh 엔드포인트가 확인되면** 추가(현재 미확인).
+- 토큰: `accessToken`은 요청 헤더, 만료 시 `refreshToken` 재발급 흐름(`POST /auth/token/refresh`, 위 `1. 인증` 참고)은 **확인됨 + 앱도 이미 구현**(`client.ts` single-flight).

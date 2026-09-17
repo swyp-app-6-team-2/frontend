@@ -7,7 +7,7 @@ export type ApiResponse<T> = {
   data: T;
 };
 
-export type FieldError = { field: string; message?: string };
+export type FieldError = { field: string; reason?: string };
 export type ErrorData = { code: string; errors?: FieldError[] };
 
 // ── enum ──────────────────────────────────────────────────────
@@ -104,6 +104,9 @@ export type RecipeCreateRequest = {
   coverImageKey?: string;
   ingredients?: RecipeIngredientInput[];
   steps?: RecipeStepInput[];
+  // 분석(Ingestion)으로 만든 레시피면 jobId 전달 → 서버가 원본(source)·원본대표이미지 연결 + Job 소비.
+  // 미전달 시 서버는 조용히 MANUAL로 저장(원본 없음). 같은 jobId 재요청은 200+기존 recipeId(중복 방지).
+  ingestionJobId?: number;
 };
 
 // PATCH: 미전달=유지 / null=제거 / 배열=전체교체([] 삭제)
@@ -125,6 +128,7 @@ export type RecipeListItem = {
   title: string;
   categoryCode: RecipeCategory;
   coverImageUrl: string | null;
+  thumbnailUrl: string | null; // 분석 원본 대표 이미지. 표시는 coverImageUrl ?? thumbnailUrl.
   ingredientNames: string[];
 };
 export type RecipeListResponse = { totalCount: number; recipes: RecipeListItem[] };
@@ -139,7 +143,14 @@ export type RecipeDetailResponse = {
   memo: string | null;
   ingredients: { ingredientId: number | null; name: string; amountText: string | null }[];
   steps: { content: string }[];
-  source: string | null; // 원본(URL) — Ingestion 전까지 런타임 항상 null
+  source: RecipeSource | null; // 분석 레시피의 원본. 직접 입력이면 null.
+};
+
+// 분석(Ingestion)으로 만든 레시피의 원본 정보. "원본 보기"는 originalUrl 유무로 노출.
+export type RecipeSource = {
+  sourceType: 'URL' | 'IMAGE';
+  originalUrl: string | null;
+  thumbnailUrl: string | null;
 };
 
 // GET /recipes — 목록·검색·필터. category·ingredientName 은 복수 선택(반복 파라미터).

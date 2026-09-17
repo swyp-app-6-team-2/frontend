@@ -518,6 +518,17 @@ const DEFAULT_ALARMS = [
   { id: 'a3', label: '저녁 알람', time: '오후 6:00' },
 ];
 
+// 서버는 시간대 중복을 400으로 막는다. '추가' 기본값을 항상 09:00으로 두면 두 번째 추가부터 충돌하므로,
+// 09시부터 1시간 간격으로 비어 있는 첫 슬롯을 고른다(24시간 다 차면 09:00 폴백).
+function nextFreeTime(existing: { time: string }[]): string {
+  const taken = new Set(existing.map((a) => uiTimeTo24(a.time)));
+  for (let k = 0; k < 24; k++) {
+    const t24 = `${String((9 + k) % 24).padStart(2, '0')}:00`;
+    if (!taken.has(t24)) return time24ToUi(t24);
+  }
+  return '오전 9:00';
+}
+
 function NotificationSettingsForm({ initial }: { initial: NotificationSettings }) {
   const [notifOn, setNotifOn] = useState(initial.enabled);
   const [editing, setEditing] = useState(false);
@@ -630,7 +641,7 @@ function NotificationSettingsForm({ initial }: { initial: NotificationSettings }
             onPress={() =>
               setAlarms((prev) => [
                 ...prev,
-                { id: `a${nextId.current++}`, label: '', time: '오전 9:00' },
+                { id: `a${nextId.current++}`, label: '', time: nextFreeTime(prev) },
               ])
             }
             className={`h-12 flex-row items-center justify-center gap-1 rounded-pill border border-disabled ${

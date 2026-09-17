@@ -58,12 +58,14 @@ function ActiveFilterTag({ label, onRemove }: { label: string; onRemove: () => v
 // Figma 카드 — 이미지 173×127(aspect 173/127), radius 12. 좌상단 4px 인셋에
 // 미니칩(field bg, pill, px12 py4, 12px bold). 제목은 이미지 아래 12px, 16px bold.
 function RecipeCard({ item, onPress }: { item: RecipeListItem; onPress: () => void }) {
+  // 분석 레시피는 커버 대신 원본 썸네일만 오므로 폴백해 빈 카드가 안 뜨게 한다.
+  const image = item.coverImageUrl ?? item.thumbnailUrl;
   return (
     <Pressable className="w-full active:opacity-90" onPress={onPress} accessibilityRole="button">
       <View className="aspect-[173/127] w-full overflow-hidden rounded-[12px] bg-field">
-        {item.coverImageUrl ? (
+        {image ? (
           <Image
-            source={{ uri: item.coverImageUrl }}
+            source={{ uri: image }}
             style={{ position: 'absolute', width: '100%', height: '100%' }}
             contentFit="cover"
           />

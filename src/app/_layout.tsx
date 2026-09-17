@@ -8,7 +8,7 @@ import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { QueryProvider } from '@/components/query-provider';
 import { useReduceMotion } from '@/hooks/use-reduce-motion';
-import { getAccessToken, hydrateTokens, setOnAuthExpired } from '@/lib/api';
+import { getAccessToken, hydrateTokens, notificationApi, setOnAuthExpired } from '@/lib/api';
 import { registerPushToken, subscribeNotificationOpen, subscribeTokenRefresh } from '@/lib/push';
 
 SplashScreen.preventAutoHideAsync();
@@ -46,7 +46,13 @@ export default function RootLayout() {
   useEffect(() => {
     if (getAccessToken()) void registerPushToken();
     const unsubRefresh = subscribeTokenRefresh();
-    const unsubOpen = subscribeNotificationOpen(() => router.replace('/home'));
+    const unsubOpen = subscribeNotificationOpen((data) => {
+      // 최초 오픈 기록(서버가 읽음 처리). 실패해도 이동엔 영향 없음.
+      if (data.notificationId != null) void notificationApi.markOpened(data.notificationId);
+      // 딥링크 계약(orca:///home)에서 스킴을 떼 라우터 경로로. 없으면 홈.
+      const path = data.deepLink?.replace(/^orca:\/\//, '') || '/home';
+      router.replace(path as Parameters<typeof router.replace>[0]);
+    });
     return () => {
       unsubRefresh();
       unsubOpen();

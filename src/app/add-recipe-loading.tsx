@@ -40,6 +40,8 @@ export default function AddRecipeLoadingScreen() {
         params: {
           draft: JSON.stringify(job?.result ?? null),
           previewImageUrl: job?.previewImageUrl ?? '',
+          // 확인 폼이 create 본문에 ingestionJobId로 실어 서버가 URL/IMAGE 출처로 저장(직접입력 아님).
+          jobId: numJobId != null ? String(numJobId) : '',
         },
       });
     } else if (status === 'FAILED' || status === 'EXPIRED' || isError) {
@@ -48,7 +50,16 @@ export default function AddRecipeLoadingScreen() {
         params: { code: job?.failureCode ?? '' },
       });
     }
-  }, [status, isError, isImage, job?.result, job?.previewImageUrl, job?.failureCode, router]);
+  }, [
+    status,
+    isError,
+    isImage,
+    numJobId,
+    job?.result,
+    job?.previewImageUrl,
+    job?.failureCode,
+    router,
+  ]);
 
   // 진행 상황이 "살아있음"을 보여주는 무한 인디케이터. 실제 진행률 API가
   // 붙으면 withRepeat 대신 withTiming(progress)로 교체(백엔드 연동 지점).

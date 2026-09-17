@@ -20,6 +20,7 @@ export function recommendationToListItem(r: RecipeRecommendationResponse): Recip
     title: r.title,
     categoryCode: r.category,
     coverImageUrl: r.thumbnailUrl,
+    thumbnailUrl: null, // 추천 응답은 썸네일을 이미 coverImageUrl로 매핑하므로 폴백 불필요
     ingredientNames: r.mainIngredients,
   };
 }

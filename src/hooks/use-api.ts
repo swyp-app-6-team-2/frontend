@@ -31,6 +31,7 @@ import type {
   SignupRequest,
   SocialLoginRequest,
 } from '@/lib/api/types';
+import { unregisterPushToken } from '@/lib/push';
 
 // queryKey 컨벤션 — 무효화 대상을 예측 가능하게 한 곳에서 관리.
 export const queryKeys = {
@@ -276,7 +277,12 @@ export function useCompleteOnboarding() {
 export function useLogout() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: () => authApi.logout(),
+    // 서버 세션 무효화 전에 이 기기 FCM 토큰부터 해제(둘 다 인증 필요 → 로컬 토큰 삭제 전에).
+    // 해제 실패는 삼켜지므로 로그아웃 흐름을 막지 않는다.
+    mutationFn: async () => {
+      await unregisterPushToken();
+      await authApi.logout();
+    },
     onSettled: () => {
       clearTokens();
       qc.clear();

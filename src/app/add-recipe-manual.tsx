@@ -22,7 +22,8 @@ const COOK_TIMES = [
   { label: '1시간', value: 60 },
 ];
 
-type Ingredient = { name: string; qty: string };
+// ingredientId: 마스터 재료 연결(추천 매칭 기준). 프리필/보유재료에서 채우고, 이름을 직접 고치면 버린다.
+type Ingredient = { name: string; qty: string; ingredientId?: number | null };
 
 // 점선 추가 버튼 (재료 추가 / 단계 추가 공용)
 function DashedAddButton({
@@ -55,14 +56,26 @@ export default function AddRecipeManualScreen() {
   const create = useCreateRecipe();
   // id 파라미터가 있으면 '수정' 모드 — 기존 레시피를 불러와 프리필하고 PATCH로 저장.
   // draft 파라미터(레시피 분석 결과)가 있으면 '내용 확인' 모드 — AI 초안을 프리필하고 신규 생성.
-  const { id, draft: draftParam } = useLocalSearchParams<{ id?: string; draft?: string }>();
+  // jobId: 레시피 분석 작업 id — 있으면 create 본문에 ingestionJobId로 실어 서버가 URL/IMAGE로 인식(직접입력 아님).
+  // previewImageUrl: 분석 원본 미리보기 — 확인 화면 대표사진 자리에 기본 표시.
+  const {
+    id,
+    draft: draftParam,
+    jobId,
+    previewImageUrl,
+  } = useLocalSearchParams<{
+    id?: string;
+    draft?: string;
+    jobId?: string;
+    previewImageUrl?: string;
+  }>();
   const editId = id ? Number(id) : null;
   const isEdit = editId != null && Number.isFinite(editId);
   const { data: existing } = useRecipe(isEdit ? editId : null);
   const update = useUpdateRecipe(isEdit ? editId : 0);
   // 보유 재료 추천 — 실제 등록한 재료만. 없으면 섹션 자체를 숨긴다.
   const { data: myIngredients } = useMyIngredients();
-  const owned = myIngredients?.ingredients.map((ing) => ing.name) ?? [];
+  const owned = myIngredients?.ingredients ?? [];
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState<RecipeCategory>('KOREAN');
   const [cookHour, setCookHour] = useState(''); // 조리시간 — 시
@@ -103,7 +116,11 @@ export default function AddRecipeManualScreen() {
     setServings(existing.servings ? String(existing.servings) : '');
     setIngredients(
       existing.ingredients.length
-        ? existing.ingredients.map((i) => ({ name: i.name, qty: i.amountText ?? '' }))
+        ? existing.ingredients.map((i) => ({
+            name: i.name,
+            qty: i.amountText ?? '',
+            ingredientId: i.ingredientId,
+          }))
         : [{ name: '', qty: '' }],
     );
     setSteps(existing.steps.length ? existing.steps.map((s) => s.content) : ['']);
@@ -114,6 +131,8 @@ export default function AddRecipeManualScreen() {
   // (수정 모드가 아닐 때만. 렌더 중 조정 — draftSeeded로 1회만.)
   if (!isEdit && !draftSeeded && draftParam) {
     setDraftSeeded(true);
+    // 분석 원본 미리보기를 대표사진 자리에 기본 표시(사용자가 새로 고르면 교체). 실제 커버는 서버가 job으로 붙인다.
+    if (previewImageUrl) setCoverUrl(previewImageUrl);
     try {
       const d = JSON.parse(draftParam) as RecipeDraft | null;
       if (d) {
@@ -124,7 +143,13 @@ export default function AddRecipeManualScreen() {
         setCookMin(mins % 60 ? String(mins % 60) : '');
         if (d.servings) setServings(String(d.servings));
         if (d.ingredients?.length) {
-          setIngredients(d.ingredients.map((i) => ({ name: i.name, qty: i.amountText ?? '' })));
+          setIngredients(
+            d.ingredients.map((i) => ({
+              name: i.name,
+              qty: i.amountText ?? '',
+              ingredientId: i.ingredientId,
+            })),
+          );
         }
         if (d.steps?.length) setSteps(d.steps.map((s) => s.content));
       }
@@ -178,7 +203,12 @@ export default function AddRecipeManualScreen() {
 
     const ingredientList = ingredients
       .filter((i) => i.name.trim())
-      .map((i) => ({ name: i.name.trim(), amountText: i.qty.trim() || undefined }));
+      .map((i) => ({
+        name: i.name.trim(),
+        amountText: i.qty.trim() || undefined,
+        // 마스터 재료 연결 id — 보유/프리필에서 살아있으면 함께 보내 재료 기반 추천에 잡히게 한다.
+        ingredientId: i.ingredientId ?? undefined,
+      }));
     const stepList = steps.filter((s) => s.trim()).map((s) => ({ content: s.trim() }));
 
     try {
@@ -203,6 +233,8 @@ export default function AddRecipeManualScreen() {
           servings: servings ? Number(servings) : undefined,
           ingredients: ingredientList,
           steps: stepList,
+          // 분석 경로면 job id를 실어 서버가 URL/IMAGE 출처로 저장(없으면 직접입력).
+          ingestionJobId: jobId ? Number(jobId) : undefined,
         });
         router.replace({ pathname: '/recipe-view', params: { id: String(res.recipeId) } });
       }
@@ -211,9 +243,17 @@ export default function AddRecipeManualScreen() {
     }
   };
 
-  const setIngredient = (i: number, key: keyof Ingredient, val: string) =>
-    setIngredients((prev) => prev.map((ing, idx) => (idx === i ? { ...ing, [key]: val } : ing)));
-  const addIngredient = (name = '') => setIngredients((prev) => [...prev, { name, qty: '' }]);
+  const setIngredient = (i: number, key: 'name' | 'qty', val: string) =>
+    setIngredients((prev) =>
+      prev.map((ing, idx) =>
+        // 이름을 직접 고치면 더는 마스터 재료가 아니므로 ingredientId를 버린다(오매칭 방지).
+        idx === i
+          ? { ...ing, [key]: val, ...(key === 'name' ? { ingredientId: null } : null) }
+          : ing,
+      ),
+    );
+  const addIngredient = (name = '', ingredientId: number | null = null) =>
+    setIngredients((prev) => [...prev, { name, qty: '', ingredientId }]);
   const removeIngredient = (i: number) =>
     setIngredients((prev) => (prev.length > 1 ? prev.filter((_, idx) => idx !== i) : prev));
 
@@ -472,11 +512,11 @@ export default function AddRecipeManualScreen() {
             </View>
             <View className="flex-row flex-wrap gap-1.5">
               {owned.map((o) => {
-                const added = ingredients.some((ing) => ing.name === o);
+                const added = ingredients.some((ing) => ing.name === o.name);
                 return (
                   <Pressable
-                    key={o}
-                    onPress={() => addIngredient(o)}
+                    key={`${o.ingredientType}:${o.ingredientId ?? o.customIngredientId}:${o.name}`}
+                    onPress={() => addIngredient(o.name, o.ingredientId)}
                     disabled={added}
                     accessibilityRole="button"
                     accessibilityState={{ disabled: added }}
@@ -484,7 +524,7 @@ export default function AddRecipeManualScreen() {
                       added ? 'opacity-40' : 'active:opacity-80'
                     }`}
                   >
-                    <Text className="text-[12px] leading-[14px] text-primary">{o}</Text>
+                    <Text className="text-[12px] leading-[14px] text-primary">{o.name}</Text>
                   </Pressable>
                 );
               })}

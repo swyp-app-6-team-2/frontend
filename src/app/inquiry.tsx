@@ -217,6 +217,7 @@ export default function InquiryScreen() {
                     style={{ fontSize: 16, lineHeight: 21, paddingVertical: 0 }}
                     placeholder="제목을 입력해주세요"
                     placeholderTextColor={palette.muted}
+                    maxLength={255} // 서버 제약 — 초과 입력 자체를 막아 400 방지
                     value={title}
                     onChangeText={setTitle}
                   />
@@ -231,6 +232,7 @@ export default function InquiryScreen() {
                     style={{ fontSize: 16, lineHeight: 21 }}
                     placeholder="내용을 입력해 주세요"
                     placeholderTextColor={palette.muted}
+                    maxLength={2000} // 서버 제약 — 초과 입력 자체를 막아 400 방지
                     multiline
                     textAlignVertical="top"
                     value={content}

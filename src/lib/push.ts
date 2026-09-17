@@ -60,6 +60,23 @@ export async function registerPushToken(): Promise<void> {
   }
 }
 
+/**
+ * 현재 FCM 토큰을 조회해 백엔드에서 해제(DELETE /push-tokens). 로그아웃 시 호출한다.
+ * 해제하지 않으면 로그아웃 후에도 이 기기로 계속 푸시가 간다(다른 계정 로그인 시 오배송).
+ * 모듈 부재·토큰 없음·네트워크 실패 시 조용히 반환.
+ */
+export async function unregisterPushToken(): Promise<void> {
+  const m = getApi();
+  if (!m) return;
+  try {
+    const messaging = m.getMessaging();
+    const token = await m.getToken(messaging);
+    if (token) await notificationApi.unregisterPushToken({ token });
+  } catch {
+    // 조용히 폴백.
+  }
+}
+
 /** 토큰 갱신 구독 → 갱신될 때마다 재등록. 반환 unsubscribe는 앱 생명주기 동안 유지. */
 export function subscribeTokenRefresh(): () => void {
   const m = getApi();
@@ -71,11 +88,27 @@ export function subscribeTokenRefresh(): () => void {
   }
 }
 
+// FCM data 페이로드는 항상 문자열이라 notificationId를 숫자로 되돌린다. deepLink는 orca:/// 라우트.
+export type NotificationOpenData = { notificationId?: number; deepLink?: string };
+
+function parseOpenData(
+  msg: { data?: Record<string, string | object> } | null,
+): NotificationOpenData {
+  const d = (msg?.data ?? {}) as Record<string, string | undefined>;
+  const id = d.notificationId != null ? Number(d.notificationId) : NaN;
+  return {
+    notificationId: Number.isFinite(id) ? id : undefined,
+    deepLink: typeof d.deepLink === 'string' ? d.deepLink : undefined,
+  };
+}
+
 /**
- * 알림 탭 시 콜백 실행(호출부에서 홈으로 라우팅 — 딥링크 계약 orca:///home).
+ * 알림 탭 시 콜백 실행. 페이로드의 notificationId(오픈 기록)·deepLink(이동 대상)를 넘긴다.
  * 백그라운드에서 탭(onNotificationOpenedApp) + 종료 상태에서 탭(getInitialNotification) 모두 처리.
  */
-export function subscribeNotificationOpen(onOpen: () => void): () => void {
+export function subscribeNotificationOpen(
+  onOpen: (data: NotificationOpenData) => void,
+): () => void {
   const m = getApi();
   if (!m) return () => {};
   try {
@@ -84,11 +117,11 @@ export function subscribeNotificationOpen(onOpen: () => void): () => void {
     void m
       .getInitialNotification(messaging)
       .then((msg) => {
-        if (msg) onOpen();
+        if (msg) onOpen(parseOpenData(msg));
       })
       .catch(() => {});
     // 백그라운드에서 알림 탭.
-    return m.onNotificationOpenedApp(messaging, () => onOpen());
+    return m.onNotificationOpenedApp(messaging, (msg) => onOpen(parseOpenData(msg)));
   } catch {
     return () => {};
   }

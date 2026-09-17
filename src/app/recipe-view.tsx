@@ -119,7 +119,10 @@ export default function RecipeViewScreen() {
     );
   }
 
-  const source = data.source; // 클로저에서 좁혀진 값 유지(원본 보기 링크).
+  // 원본 링크(URL 분석 레시피만 존재). 클로저에서 좁혀진 값 유지.
+  const originalUrl = data.source?.originalUrl ?? null;
+  // 대표 이미지 = 직접 올린 커버 우선, 없으면 분석 원본 대표 이미지(thumbnail).
+  const coverUrl = data.coverImageUrl ?? data.source?.thumbnailUrl ?? null;
 
   return (
     <Screen
@@ -139,9 +142,9 @@ export default function RecipeViewScreen() {
       <View className="flex-1">
         <ScrollView contentContainerClassName="pb-4" showsVerticalScrollIndicator={false}>
           {/* 대표 이미지 362x362 — 없으면 중립 플레이스홀더(샘플 사진 대신) */}
-          {data.coverImageUrl ? (
+          {coverUrl ? (
             <Image
-              source={{ uri: data.coverImageUrl }}
+              source={{ uri: coverUrl }}
               style={{ width: '100%', aspectRatio: 1, borderRadius: 12 }}
               contentFit="cover"
             />
@@ -180,13 +183,13 @@ export default function RecipeViewScreen() {
                 {data.cookTimeMinutes != null ? `${data.cookTimeMinutes}분` : '-'}
               </Text>
             </View>
-            {/* 원본 보기 — URL 등록 레시피의 출처 열기. source는 백엔드 Ingestion 전까지 null이라 그때 노출. */}
-            {source ? (
+            {/* 원본 보기 — 분석(URL) 레시피의 출처 열기. originalUrl 있을 때만 노출. */}
+            {originalUrl ? (
               <Pressable
                 className="flex-row items-center gap-2 active:opacity-70"
                 accessibilityRole="button"
                 accessibilityLabel="원본 보기"
-                onPress={() => Linking.openURL(source)}
+                onPress={() => Linking.openURL(originalUrl)}
               >
                 <Feather name="share" size={22} color={palette.muted} />
                 <Text className="text-[16px] leading-[19px] text-foreground">원본 보기</Text>

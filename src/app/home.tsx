@@ -36,14 +36,36 @@ type StarSpec = {
   delay: number;
   dur: number;
 };
-// 모듈 레벨(react-compiler가 렌더 내 Math.random을 막는다). 위치는 무작위·비겹침 지향.
+// 모듈 레벨(react-compiler가 렌더 내 Math.random을 막는다). 위치는 무작위지만 서로 안 뭉치게.
 // Figma: 별 = radial 글로우 2종 — 큰별 60px(밝게) / 작은별 40px(흐리게).
+// 화면이 세로로 길어(약 2.2:1) 세로 거리에 가중치를 줘야 시각적 간격이 고르다.
+const V_WEIGHT = 2.2;
+// best-candidate 샘플링: 새 별마다 후보 여럿 중 기존 별들과 가장 먼 위치를 골라 균등하게 퍼뜨린다.
 function makeStars(count: number): StarSpec[] {
-  return Array.from({ length: Math.min(Math.max(count, 0), MAX_STARS) }, () => {
+  const n = Math.min(Math.max(count, 0), MAX_STARS);
+  const placed: { left: number; top: number }[] = [];
+  return Array.from({ length: n }, () => {
+    let best = { left: 14 + Math.random() * 56, top: 15 + Math.random() * 48 };
+    let bestDist = -1;
+    for (let c = 0; c < 12; c++) {
+      const left = 14 + Math.random() * 56; // 14%~70% (큰 별이 좌우 가장자리에 안 붙게 안쪽으로)
+      const top = 15 + Math.random() * 48; // 15%~63% (제목 아래 ~ 캐릭터/드롭다운 위)
+      let minD = Infinity; // 가장 가까운 기존 별까지의 거리²
+      for (const p of placed) {
+        const dx = left - p.left;
+        const dy = (top - p.top) * V_WEIGHT;
+        minD = Math.min(minD, dx * dx + dy * dy);
+      }
+      if (minD > bestDist) {
+        bestDist = minD;
+        best = { left, top };
+      }
+    }
+    placed.push(best);
     const big = Math.random() < 0.4; // 큰별 약 40%
     return {
-      left: 14 + Math.random() * 56, // 14%~70% (큰 별이 좌우 가장자리에 안 붙게 안쪽으로)
-      top: 15 + Math.random() * 48, // 15%~63% (제목 아래 ~ 캐릭터/드롭다운 위)
+      left: best.left,
+      top: best.top,
       size: big ? 60 : 40, // 큰별 60 / 작은별 40
       bright: big ? 1 : 0.7, // 큰별 밝게 / 작은별 살짝 흐리게(개수는 셀 수 있게 유지)
       delay: Math.random() * 2200,

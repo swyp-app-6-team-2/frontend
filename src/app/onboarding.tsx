@@ -101,15 +101,25 @@ function NightSky() {
         style={StyleSheet.absoluteFill}
         contentFit="cover"
       />
-      {/* 홈 헤더 (배경) */}
+      {/* 홈 헤더 (배경) — 홈과 동일: 별따먹자 로고 이미지 + '남은 별' 칩 */}
       <View
         className="absolute left-5 right-5 flex-row items-center justify-between"
         style={{ top: insets.top + 8 }}
       >
-        <AppText variant="title">별따먹자</AppText>
-        <View className="flex-row items-center gap-1 rounded-pill border border-primary/40 bg-surface/60 px-3 py-1">
-          <Text className="text-primary">★</Text>
-          <Text className="font-bold text-foreground">5/10</Text>
+        <Image
+          source={require('../assets/images/home-title.png')}
+          style={{ width: 84, height: 24 }}
+          contentFit="contain"
+          accessibilityLabel="별따먹자"
+        />
+        <View className="h-[38px] flex-row items-center gap-1 rounded-pill border border-primary bg-star-chip px-4">
+          <Image
+            source={require('../assets/images/star-chip.png')}
+            style={{ width: 15, height: 15 }}
+            contentFit="contain"
+          />
+          <Text className="text-[14px] font-medium leading-[18px] text-foreground">남은 별</Text>
+          <Text className="text-[14px] font-medium leading-[18px] text-foreground">10</Text>
         </View>
       </View>
       {/* 바닥 돔(지평선) */}

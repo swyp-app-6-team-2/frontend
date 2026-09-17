@@ -168,6 +168,21 @@ export default function HomeScreen() {
   const { data: me } = useProfile();
   const remainingStars = remainingSlots(me, data?.totalCount ?? recipes.length);
 
+  // 밤하늘 더블탭 → 별똥별 애니메이션(GIF) 재생, 잠시 뒤 자동으로 사라진다.
+  const [shootingStar, setShootingStar] = useState(false);
+  const lastTap = useRef(0);
+  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => void (hideTimer.current && clearTimeout(hideTimer.current)), []);
+  const onSkyTap = () => {
+    const now = Date.now();
+    if (now - lastTap.current < 300) {
+      setShootingStar(true);
+      if (hideTimer.current) clearTimeout(hideTimer.current);
+      hideTimer.current = setTimeout(() => setShootingStar(false), 3000);
+    }
+    lastTap.current = now;
+  };
+
   // 추천 옵션 선택 → 백엔드 추천 API 호출 → 결과 팝업. previousRecipeId로 직전과 다르게.
   const onRecommend = async (label: string) => {
     setReco(label);
@@ -228,8 +243,22 @@ export default function HomeScreen() {
         />
       </View>
 
+      {/* 밤하늘 더블탭 감지 (빈 하늘). 별·칩·드롭다운·탭바는 위 레이어라 그대로 동작 */}
+      <Pressable className="absolute inset-0" onPress={onSkyTap} accessibilityLabel="밤하늘" />
+
       {/* 레시피 별 — 탭하면 그 레시피가 팝업으로 */}
       <StarField recipes={recipes} reduceMotion={reduceMotion} onPick={setRecommend} />
+
+      {/* 별똥별 애니메이션 — 더블탭 시 하늘을 가로질러 재생(터치 통과) */}
+      {shootingStar ? (
+        <Image
+          source={require('../assets/images/shooting-star.gif')}
+          style={StyleSheet.absoluteFill}
+          contentFit="contain"
+          pointerEvents="none"
+          accessibilityLabel="별똥별"
+        />
+      ) : null}
 
       <SafeAreaView className="flex-1" edges={['top', 'bottom']} pointerEvents="box-none">
         {/* 상단: 별따먹자 + 별 진행도 */}

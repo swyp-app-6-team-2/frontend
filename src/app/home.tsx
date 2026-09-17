@@ -168,7 +168,10 @@ export default function HomeScreen() {
   const { data: me } = useProfile();
   const remainingStars = remainingSlots(me, data?.totalCount ?? recipes.length);
 
-  // 밤하늘 더블탭 → 별똥별 애니메이션(GIF) 재생, 잠시 뒤 자동으로 사라진다.
+  // 밤하늘 더블탭 → 별똥별 애니메이션(GIF)을 딱 한 사이클만 재생하고 사라진다(루프 안 함).
+  // GIF 1회 길이 = 1480ms(37프레임). expo-image는 GIF를 무한 루프하므로 그만큼 뒤 언마운트해
+  // 두 번째 사이클이 안 보이게 한다.
+  const SHOOTING_STAR_MS = 1480;
   const [shootingStar, setShootingStar] = useState(false);
   const lastTap = useRef(0);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -178,7 +181,7 @@ export default function HomeScreen() {
     if (now - lastTap.current < 300) {
       setShootingStar(true);
       if (hideTimer.current) clearTimeout(hideTimer.current);
-      hideTimer.current = setTimeout(() => setShootingStar(false), 3000);
+      hideTimer.current = setTimeout(() => setShootingStar(false), SHOOTING_STAR_MS);
     }
     lastTap.current = now;
   };

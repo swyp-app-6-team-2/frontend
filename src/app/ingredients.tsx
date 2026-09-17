@@ -10,7 +10,6 @@ import {
   AlertDialog,
   AppRefreshControl,
   AppText,
-  Button,
   PressableScale,
   SearchBar,
 } from '@/components/ui';
@@ -112,6 +111,18 @@ function MenuRow({
   );
 }
 
+// 선택 삭제 안내 배너 — 에러가 아니라, 선택 모드 동안 상단에 상시 떠 있는 안내.
+function SelectBanner() {
+  return (
+    <View className="h-12 flex-row items-center gap-2.5 rounded-pill border border-error bg-error/15 px-4">
+      <Feather name="alert-circle" size={24} color={palette.error} />
+      <Text className="text-[14px] font-medium leading-[18px] text-foreground">
+        삭제할 재료를 선택해주세요
+      </Text>
+    </View>
+  );
+}
+
 // 재료관리 — 카테고리별 섹션 + 재료 칩. 더보기(⋯) → 전체/선택 삭제. + FAB → 재료 추가하기.
 export default function IngredientsScreen() {
   const router = useRouter();
@@ -163,6 +174,12 @@ export default function IngredientsScreen() {
     setSelected(new Set());
   };
 
+  // 헤더 삭제 아이콘 — 선택된 게 있을 때만 확인 팝업(0개면 안내 배너가 이미 떠 있음).
+  const onHeaderDelete = () => {
+    if (selected.size === 0) return;
+    setConfirm('SELECTED');
+  };
+
   const doDelete = () => {
     if (!confirm || del.isPending) return;
     const mode = confirm;
@@ -198,16 +215,33 @@ export default function IngredientsScreen() {
         >
           {/* 제목~검색바 간격은 나의 레시피(gap-4)와 통일 */}
           <View className="gap-4">
-            <View className="flex-row items-center justify-between">
-              <AppText variant="title">재료관리</AppText>
+            <View className="h-[26px] flex-row items-center justify-between">
               {selectMode ? (
                 <PressableScale
                   onPress={exitSelect}
                   haptic="light"
                   accessibilityRole="button"
-                  className="py-1"
+                  accessibilityLabel="선택 취소"
+                  className="h-6 w-6 items-center justify-center"
                 >
-                  <Text className="text-[16px] leading-[21px] text-muted">취소</Text>
+                  <Feather name="arrow-left" size={24} color={palette.foreground} />
+                </PressableScale>
+              ) : (
+                <AppText variant="title">재료관리</AppText>
+              )}
+              {selectMode ? (
+                <PressableScale
+                  onPress={onHeaderDelete}
+                  haptic="light"
+                  accessibilityRole="button"
+                  accessibilityLabel="선택 삭제"
+                  className="h-6 w-6 items-center justify-center"
+                >
+                  <Image
+                    source={require('../assets/images/ic-delete.png')}
+                    style={{ width: 24, height: 24 }}
+                    contentFit="contain"
+                  />
                 </PressableScale>
               ) : hasAny ? (
                 <PressableScale
@@ -227,6 +261,7 @@ export default function IngredientsScreen() {
               onChangeText={setQ}
               returnKeyType="search"
             />
+            {selectMode ? <SelectBanner /> : null}
           </View>
 
           {isLoading ? (
@@ -302,20 +337,8 @@ export default function IngredientsScreen() {
         <TabBar active="fridge" />
       </SafeAreaView>
 
-      {/* 하단: 선택 모드 → 삭제(N) 버튼 / 평소 → 재료 추가 FAB */}
-      {selectMode ? (
-        <View
-          className="absolute left-0 right-0 px-screen"
-          style={{ bottom: insets.bottom + 90 }}
-          pointerEvents="box-none"
-        >
-          <Button
-            label={selected.size ? `삭제 (${selected.size})` : '삭제'}
-            disabled={selected.size === 0 || del.isPending}
-            onPress={() => setConfirm('SELECTED')}
-          />
-        </View>
-      ) : (
+      {/* 재료 추가 FAB — 선택 모드에선 숨김(삭제는 헤더 아이콘으로) */}
+      {!selectMode ? (
         <View
           className="absolute right-5 items-end"
           style={{ bottom: insets.bottom + 90 }}
@@ -338,7 +361,7 @@ export default function IngredientsScreen() {
             <Feather name="plus" size={24} color={palette.ink} />
           </PressableScale>
         </View>
-      )}
+      ) : null}
 
       {/* 더보기 메뉴 — 전체/선택 삭제 */}
       {menuOpen ? (

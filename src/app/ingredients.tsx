@@ -67,13 +67,16 @@ export default function IngredientsScreen() {
           contentContainerClassName="gap-6 px-screen pb-[120px] pt-2"
           showsVerticalScrollIndicator={false}
         >
-          <AppText variant="title">재료관리</AppText>
-          <SearchBar
-            placeholder="재료명을 검색해보세요"
-            value={q}
-            onChangeText={setQ}
-            returnKeyType="search"
-          />
+          {/* 제목~검색바 간격은 나의 레시피(gap-4)와 통일 — 섹션 간격(gap-6)이 벌리지 않게 래퍼로 분리 */}
+          <View className="gap-4">
+            <AppText variant="title">재료관리</AppText>
+            <SearchBar
+              placeholder="재료명을 검색해보세요"
+              value={q}
+              onChangeText={setQ}
+              returnKeyType="search"
+            />
+          </View>
 
           {isLoading ? (
             <View className="items-center py-20">

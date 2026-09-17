@@ -38,7 +38,13 @@ export function SearchBar({
       <TextInput
         className="flex-1 text-foreground"
         // Figma: 16px / 130% (21px). Kept ≤24 so text never outgrows the icon frame.
-        style={{ fontSize: 16, lineHeight: 21 }}
+        // Android: includeFontPadding·textAlignVertical 로 고정높이 컨테이너에서 글자 클리핑 방지(iOS 무시).
+        style={{
+          fontSize: 16,
+          lineHeight: 21,
+          includeFontPadding: false,
+          textAlignVertical: 'center',
+        }}
         placeholder={placeholder}
         placeholderTextColor={palette.muted}
         {...rest}

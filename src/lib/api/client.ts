@@ -38,13 +38,20 @@ export class ApiError extends Error {
   }
 }
 
-type QueryValue = string | number | boolean | undefined | null;
+type QueryScalar = string | number | boolean;
+// 배열은 같은 키를 반복(category=KOREAN&category=CHINESE) — 백엔드 List 파라미터 계약.
+type QueryValue = QueryScalar | QueryScalar[] | undefined | null;
 
 function buildQuery(query?: Record<string, QueryValue>): string {
   if (!query) return '';
-  const parts = Object.entries(query)
-    .filter(([, v]) => v !== undefined && v !== null)
-    .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`);
+  const parts: string[] = [];
+  for (const [k, v] of Object.entries(query)) {
+    if (v === undefined || v === null) continue;
+    for (const item of Array.isArray(v) ? v : [v]) {
+      if (item === undefined || item === null) continue;
+      parts.push(`${encodeURIComponent(k)}=${encodeURIComponent(String(item))}`);
+    }
+  }
   return parts.length ? `?${parts.join('&')}` : '';
 }
 

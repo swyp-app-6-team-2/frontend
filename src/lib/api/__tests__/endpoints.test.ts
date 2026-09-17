@@ -5,6 +5,7 @@ import {
   myIngredientApi,
   notificationApi,
   recipeApi,
+  userApi,
 } from '@/lib/api/endpoints';
 import type {
   InquiryCreateRequest,
@@ -38,6 +39,45 @@ describe('recipeApi', () => {
     recipeApi.create(body);
     expect(mock).toHaveBeenCalledWith('/recipes', { method: 'POST', body });
   });
+  it('list는 검색·필터 파라미터를 query로 넘긴다', () => {
+    recipeApi.list({
+      sort: 'LATEST',
+      size: 100,
+      searchQuery: '찌개',
+      category: ['KOREAN', 'CHINESE'],
+      ingredientName: ['두부'],
+    });
+    expect(mock).toHaveBeenCalledWith('/recipes', {
+      query: {
+        sort: 'LATEST',
+        size: 100,
+        searchQuery: '찌개',
+        category: ['KOREAN', 'CHINESE'],
+        ingredientName: ['두부'],
+      },
+    });
+  });
+  it('recommend는 /recipes/recommendations POST + body', () => {
+    recipeApi.recommend({ recommendationMode: 'INGREDIENT_BASED', previousRecipeId: 7 });
+    expect(mock).toHaveBeenCalledWith('/recipes/recommendations', {
+      method: 'POST',
+      body: { recommendationMode: 'INGREDIENT_BASED', previousRecipeId: 7 },
+    });
+  });
+});
+
+describe('userApi (사용자/프로필/탈퇴)', () => {
+  it('withdraw는 DELETE /users/me', () => {
+    userApi.withdraw();
+    expect(mock).toHaveBeenCalledWith('/users/me', { method: 'DELETE' });
+  });
+  it('updateProfile는 PATCH /users/me/profile + body', () => {
+    userApi.updateProfile({ nickname: '별따', profileImageKey: null });
+    expect(mock).toHaveBeenCalledWith('/users/me/profile', {
+      method: 'PATCH',
+      body: { nickname: '별따', profileImageKey: null },
+    });
+  });
 });
 
 describe('cookingApi (레시피 하위 중첩 경로)', () => {
@@ -64,6 +104,13 @@ describe('myIngredientApi (보유 재료)', () => {
     expect(mock).toHaveBeenCalledWith('/users/me/ingredients', {
       method: 'POST',
       body: { ingredientIds: [1, 2, 3] },
+    });
+  });
+  it('addCustom: POST /users/me/ingredients/custom + name', () => {
+    myIngredientApi.addCustom('바질');
+    expect(mock).toHaveBeenCalledWith('/users/me/ingredients/custom', {
+      method: 'POST',
+      body: { name: '바질' },
     });
   });
 });

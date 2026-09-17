@@ -92,6 +92,35 @@ describe('apiFetch — 쿼리·헤더', () => {
     expect(url).toBe(`${BASE}/recipes?sort=LATEST&page=0`);
     expect((opts.headers as Record<string, string>).Authorization).toBe('Bearer tok');
   });
+
+  it('배열 쿼리는 같은 키를 반복해 붙이고 값을 인코딩한다(레시피 검색·필터 계약)', async () => {
+    const fetchMock = jest.fn(async () => ok(null));
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    await apiFetch('/recipes', {
+      query: {
+        sort: 'LATEST',
+        category: ['KOREAN', 'CHINESE'],
+        ingredientName: ['두부', '대파'],
+      },
+    });
+
+    const [url] = fetchMock.mock.calls[0] as unknown as [string];
+    expect(url).toBe(
+      `${BASE}/recipes?sort=LATEST&category=KOREAN&category=CHINESE` +
+        `&ingredientName=${encodeURIComponent('두부')}&ingredientName=${encodeURIComponent('대파')}`,
+    );
+  });
+
+  it('빈 배열 쿼리는 파라미터를 만들지 않는다', async () => {
+    const fetchMock = jest.fn(async () => ok(null));
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    await apiFetch('/recipes', { query: { sort: 'LATEST', category: [], ingredientName: [] } });
+
+    const [url] = fetchMock.mock.calls[0] as unknown as [string];
+    expect(url).toBe(`${BASE}/recipes?sort=LATEST`);
+  });
 });
 
 describe('apiFetch — 401 토큰 재발급', () => {

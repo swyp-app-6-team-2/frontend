@@ -1,7 +1,9 @@
 import {
+  CUSTOM_INGREDIENT_EMOJI,
   INGREDIENT_CATEGORY_EMOJI,
   INGREDIENT_CATEGORY_LABEL,
   INGREDIENT_CATEGORY_ORDER,
+  ingredientCategoryEmoji,
   RECIPE_CATEGORY_LABEL,
   RECIPE_CATEGORY_ORDER,
 } from '@/constants/labels';
@@ -54,5 +56,14 @@ describe('INGREDIENT_CATEGORY 라벨/이모지/순서', () => {
   it('ETC(기타)는 항상 마지막이다', () => {
     expect(INGREDIENT_CATEGORY_ORDER[INGREDIENT_CATEGORY_ORDER.length - 1]).toBe('ETC');
     expect(RECIPE_CATEGORY_ORDER[RECIPE_CATEGORY_ORDER.length - 1]).toBe('OTHER');
+  });
+
+  it('ingredientCategoryEmoji: 마스터는 해당 이모지, 커스텀(null)은 직접입력 폴백', () => {
+    for (const code of INGREDIENT_CODES) {
+      expect(ingredientCategoryEmoji(code)).toBe(INGREDIENT_CATEGORY_EMOJI[code]);
+    }
+    // 커스텀 재료는 categoryCode=null → 폴백 이모지(화면 undefined 방지)
+    expect(ingredientCategoryEmoji(null)).toBe(CUSTOM_INGREDIENT_EMOJI);
+    expect(CUSTOM_INGREDIENT_EMOJI).toBeTruthy();
   });
 });

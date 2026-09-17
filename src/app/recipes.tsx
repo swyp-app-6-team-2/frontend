@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
@@ -92,26 +92,34 @@ export default function RecipesScreen() {
   const insets = useSafeAreaInsets();
   const [menuOpen, setMenuOpen] = useState(false);
   const [q, setQ] = useState('');
-  const query = q.trim().toLowerCase();
+  // 검색어는 서버 파라미터라 키 입력마다 요청되지 않게 300ms 디바운스.
+  const [debouncedQuery, setDebouncedQuery] = useState('');
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedQuery(q.trim()), 300);
+    return () => clearTimeout(t);
+  }, [q]);
   // 필터: 정렬·카테고리·재료 + 시트 열림
   const [sort, setSort] = useState<RecipeListSort>('LATEST');
   const [selectedCats, setSelectedCats] = useState<Set<RecipeCategory>>(new Set());
   const [selectedIngs, setSelectedIngs] = useState<Set<string>>(new Set());
   const [sheet, setSheet] = useState<'filter' | 'sort' | null>(null);
 
-  const { data, isLoading, isError } = useRecipes({ sort });
+  // 서버 검색·필터. 페이지네이션 UI가 없어 슬롯 상한 내 전체를 한 번에 받는다(size=100=백엔드 최대).
+  // category·ingredientName 은 반복 파라미터로 전달되고, 재료명은 모두 포함(AND) 매칭이다.
+  const { data, isLoading, isError } = useRecipes({
+    sort,
+    size: 100,
+    searchQuery: debouncedQuery || undefined,
+    category: selectedCats.size > 0 ? [...selectedCats] : undefined,
+    ingredientName: selectedIngs.size > 0 ? [...selectedIngs] : undefined,
+  });
   // 필터의 재료 리스트는 마스터 전체가 아니라 내가 등록한 '보유 재료'만.
   // GET /users/me/ingredients (재료관리 화면과 동일 소스).
   const { data: myIngredientData } = useMyIngredients();
   const myIngredients = myIngredientData?.ingredients ?? [];
-  // 백엔드 서버검색 없음 → 로드된 목록에서 제목·카테고리·재료로 클라이언트 필터.
-  const recipes = (data?.recipes ?? []).filter((r) => {
-    if (query && !r.title.toLowerCase().includes(query)) return false;
-    if (selectedCats.size > 0 && !selectedCats.has(r.categoryCode)) return false;
-    if (selectedIngs.size > 0 && !r.ingredientNames.some((n) => selectedIngs.has(n))) return false;
-    return true;
-  });
-  const isFull = (data?.totalCount ?? 0) >= MAX_SLOTS;
+  const recipes = data?.recipes ?? [];
+  const total = data?.totalCount ?? 0;
+  const isFull = total >= MAX_SLOTS;
   const animate = useEnteringOnce('recipes'); // 최초 진입에만 카드 순차 등장
 
   const sortLabel = sort === 'LATEST' ? '최신순' : '오래된순';
@@ -148,9 +156,7 @@ export default function RecipesScreen() {
           {/* Figma: 1줄 = 총 N개(좌) + 정렬 컴팩트 드롭다운(우), 2줄 = 카테고리·재료 칩 */}
           <View className="gap-3">
             <View className="flex-row items-center justify-between">
-              <Text className="text-[14px] leading-[17px] text-foreground">
-                총 {recipes.length}개
-              </Text>
+              <Text className="text-[14px] leading-[17px] text-foreground">총 {total}개</Text>
               {/* 정렬 — 테두리 없는 컴팩트 드롭다운(최신순 탭 → 등록일순 시트) */}
               <PressableScale
                 onPress={() => setSheet('sort')}
@@ -202,7 +208,9 @@ export default function RecipesScreen() {
           ) : recipes.length === 0 ? (
             <View className="items-center py-20">
               <AppText variant="body" className="text-muted">
-                {query ? '검색 결과가 없어요.' : '아직 저장한 레시피가 없어요.'}
+                {debouncedQuery || selectedCats.size > 0 || selectedIngs.size > 0
+                  ? '검색 결과가 없어요.'
+                  : '아직 저장한 레시피가 없어요.'}
               </AppText>
             </View>
           ) : (

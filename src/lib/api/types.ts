@@ -63,8 +63,9 @@ export type MeResponse = {
   provider?: string; // KAKAO | NAVER | GOOGLE | APPLE
 };
 
-// PATCH /users/me/profile — nickname 1~6자 필수, profileImageKey 옵션(생략=기존 유지).
-export type ProfileUpdateRequest = { nickname: string; profileImageKey?: string };
+// PATCH /users/me/profile — nickname 1~6자 필수.
+// profileImageKey: 생략=유지 / null=삭제 / 값=PROFILE_IMAGE 업로드 objectKey로 교체.
+export type ProfileUpdateRequest = { nickname: string; profileImageKey?: string | null };
 export type ProfileResponse = {
   userId: number;
   nickname: string | null;
@@ -141,7 +142,16 @@ export type RecipeDetailResponse = {
   source: string | null; // 원본(URL) — Ingestion 전까지 런타임 항상 null
 };
 
-export type RecipeListParams = { page?: number; size?: number; sort?: RecipeListSort };
+// GET /recipes — 목록·검색·필터. category·ingredientName 은 복수 선택(반복 파라미터).
+// searchQuery=제목 부분검색, ingredientName=선택 재료명을 모두 포함(AND), category=하나라도 일치(OR).
+export type RecipeListParams = {
+  page?: number;
+  size?: number;
+  sort?: RecipeListSort;
+  searchQuery?: string;
+  category?: RecipeCategory[];
+  ingredientName?: string[];
+};
 
 // POST /recipes/recommendations — 홈 "랜덤으로 골라줘/재료 기반".
 // previousRecipeId: "다른 거 추천" 시 직전 추천 제외용(옵션).
@@ -207,18 +217,25 @@ export type Ingredient = {
 export type IngredientListResponse = { ingredients: Ingredient[] };
 
 // ── My Ingredient (보유 재료) ──────────────────────────────────
-// GET/POST /users/me/ingredients. 마스터(Ingredient)와 달리 iconUrl은 항상 채워지고
-// aliases/code는 없다(조회·등록 응답이 공유하는 축약형).
+// GET/POST /users/me/ingredients. 마스터와 커스텀(직접 입력)을 같은 형태로 표현한다.
+// - MASTER: ingredientId·categoryCode·iconUrl 채워짐, customIngredientId=null.
+// - CUSTOM: customIngredientId 채워짐, ingredientId·categoryCode·iconUrl=null(아이콘은 화면 폴백).
+export type IngredientType = 'MASTER' | 'CUSTOM';
 export type UserIngredient = {
-  ingredientId: number;
+  ingredientType: IngredientType;
+  ingredientId: number | null;
+  customIngredientId: number | null;
   name: string;
-  categoryCode: IngredientCategory;
-  iconUrl: string;
+  categoryCode: IngredientCategory | null;
+  iconUrl: string | null;
 };
 export type MyIngredientListResponse = { ingredients: UserIngredient[] };
 export type AddMyIngredientsRequest = { ingredientIds: number[] };
 // 새로 추가된 재료만 반환(이미 보유한 것은 무시). 전부 보유 중이면 빈 배열.
 export type AddMyIngredientsResponse = { ingredients: UserIngredient[] };
+// POST /users/me/ingredients/custom — 이름(1~50자)만 보내 커스텀 재료 1건 등록(항상 CUSTOM).
+// 마스터·기존 커스텀과 이름이 같아도 새 항목으로 등록된다.
+export type CustomIngredientCreateRequest = { name: string };
 
 // ── Inquiry (문의) ─────────────────────────────────────────────
 // 표시 이름·순서는 앱이 보유(constants). 서버는 코드만 주고받는다.
@@ -280,7 +297,7 @@ export type PushTokenUnregisterRequest = { token: string };
 // 보상형 광고 SSV 플로우. 슬롯 지급은 Google SSV 콜백(서버-서버)으로 확정되므로,
 // 앱은 세션 발급 → 광고 시청 → 결과 폴링(getSessionResult)으로 지급 여부를 확인한다.
 export type AdRewardPlatform = 'IOS' | 'ANDROID';
-export type AdRewardCancelReason = 'LOAD_FAILED' | 'USER_DISMISSED';
+export type AdRewardCancelReason = 'LOAD_FAILED' | 'USER_DISMISSED' | 'USER_ABANDONED';
 export type AdRewardSessionStatus = 'PENDING' | 'GRANTED' | 'CANCELLED' | 'EXPIRED' | 'REJECTED';
 export type AdRewardUnavailableReason = 'DAILY_LIMIT_REACHED' | 'REWARD_PENDING';
 

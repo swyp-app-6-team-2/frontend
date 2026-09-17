@@ -195,9 +195,13 @@ type RecipeCreateRequest = {
 - `registrationMethod`는 서버가 `MANUAL`로 결정(요청에 없음). Ingestion(URL/이미지 분석)은 아직 미구현.
 - 에러: `400 REQUEST_VALIDATION_FAILED` · `400 RECIPE_INGREDIENT_INVALID` · `400 RECIPE_COVER_INVALID` · `409 RECIPE_COVER_ALREADY_USED`.
 
-### `GET /api/v1/recipes` — 목록(본인) → **200**
+### `GET /api/v1/recipes` — 목록·검색·필터(본인) → **200**
 
 **Query**: `page`(기본 0, ≥0) · `size`(기본 20, 1~100) · `sort`(`LATEST`|`OLDEST`, 기본 LATEST)
+- `searchQuery`(옵션, ≤255자): 제목 부분검색. 앞뒤 공백·영문 대소문자 무시. 빈 값 무시.
+- `category`(옵션, 반복, ≤100개): 선택 카테고리 중 하나라도 일치(OR). 예 `category=KOREAN&category=CHINESE`.
+- `ingredientName`(옵션, 반복, ≤255자·≤100개): 선택 재료명을 **모두 포함**(AND). 공백·영문 대소문자 제외 정확 일치. 보유 여부는 확인 안 함. 예 `ingredientName=두부&ingredientName=대파`.
+- 세 조건은 함께 적용(AND). `totalCount`는 검색·필터 적용 후 전체 결과 수.
 
 ```ts
 type RecipeListResponse = {
@@ -211,7 +215,7 @@ type RecipeListResponse = {
   }[];
 };
 ```
-- 카드 전용 필드만(memo/steps/source/cookTime/servings는 상세 전용). 검색·필터 없음.
+- 카드 전용 필드만(memo/steps/source/cookTime/servings는 상세 전용).
 - 에러: `400 REQUEST_VALIDATION_FAILED`(page<0/size 범위 밖) · `400 INVALID_REQUEST_FORMAT`(sort 오타/page 숫자 아님).
 
 ### `GET /api/v1/recipes/{recipeId}` — 상세 → **200**
@@ -312,14 +316,17 @@ type IngredientListResponse = {
 
 > ⚠️ **백엔드 `feat/73-get-my-ingredients` 기준 (아직 origin/main 미머지).** 머지·배포 전까지 로컬 백엔드를 해당 브랜치로 띄워야 동작. 마스터(`GET /ingredients`)와 다른 소스 — "내가 등록한 재료"만. 인증 필요.
 
-응답 항목(`UserIngredient`)은 마스터와 달리 `iconUrl`이 항상 채워지고 `code`/`aliases`가 없다. 조회·등록 응답이 공유.
+응답 항목(`UserIngredient`)은 마스터(`MASTER`)와 커스텀(`CUSTOM`, 직접 입력)을 같은 형태로 표현한다. 조회·등록·커스텀등록 응답이 공유.
 
 ```ts
+type IngredientType = 'MASTER' | 'CUSTOM';
 type UserIngredient = {
-  ingredientId: number;
+  ingredientType: IngredientType;
+  ingredientId: number | null;        // MASTER만. CUSTOM은 null
+  customIngredientId: number | null;  // CUSTOM만. MASTER는 null
   name: string;
-  categoryCode: IngredientCategory;
-  iconUrl: string;            // 항상 채워짐(백엔드가 iconBaseUrl로 생성)
+  categoryCode: IngredientCategory | null; // CUSTOM은 null
+  iconUrl: string | null;             // CUSTOM은 null(화면 폴백 이모지)
 };
 ```
 
@@ -339,6 +346,15 @@ type AddMyIngredientsResponse = { ingredients: UserIngredient[] }; // 신규만(
 ```
 - 에러: `400`(요청값 오류/존재하지 않거나 비활성인 신규 재료) · `401`(인증 실패).
 
+### `POST /api/v1/users/me/ingredients/custom` — 커스텀(직접 입력) 재료 추가 → **200**
+
+```ts
+type CustomIngredientCreateRequest = { name: string };  // 앞뒤 공백 제거 후 1~50자
+// 응답은 UserIngredient 단건(항상 ingredientType='CUSTOM').
+```
+- 마스터·기존 커스텀과 이름이 같아도 **새 항목으로 등록**(중복 허용).
+- 에러: `400`(재료명 누락·공백·길이 초과) · `401`(인증 실패).
+
 ---
 
 ## 5-2. 사용자 / 프로필 / 온보딩 — `User`
@@ -352,13 +368,18 @@ type AddMyIngredientsResponse = { ingredients: UserIngredient[] }; // 신규만(
 
 ### `PATCH /api/v1/users/me/profile` — 프로필 수정 → **200**
 ```ts
-Request  = { nickname: string /*1~6자*/; profileImageKey?: string /*uploads/images key, 생략=유지*/ }
+// profileImageKey: 생략=유지 / null=삭제 / 값=PROFILE_IMAGE 업로드 objectKey로 교체
+Request  = { nickname: string /*1~6자*/; profileImageKey?: string | null }
 Response = { userId; nickname: string|null; profileImageUrl: string|null }
 ```
 
 ### `GET /api/v1/users/me/onboarding` — 온보딩 필요 여부 → **200**
 ### `POST /api/v1/users/me/onboarding/complete` — 온보딩 완료 → **200**
 둘 다 `{ onboardingRequired: boolean; onboardingCompletedAt: string|null }`.
+
+### `DELETE /api/v1/users/me` — 회원 탈퇴 → **200** `data: null`
+- 계정·사용자 데이터를 삭제한다(복구 불가). 중간 실패는 서버가 자동 복구. 외부 소셜 연결 해제는 안 함.
+- 성공 후 프론트는 로컬 토큰 삭제·캐시 비움 → 로그인 화면으로.
 
 ---
 
@@ -477,7 +498,8 @@ type RecipeCategory = 'KOREAN' | 'WESTERN' | 'CHINESE' | 'JAPANESE' | 'BUNSIK' |
 type RecipeListSort = 'LATEST' | 'OLDEST';
 type RecommendationMode = 'RANDOM' | 'INGREDIENT_BASED';
 type IngredientCategory = 'MEAT' | 'SEAFOOD' | 'VEGETABLE' | 'SAUCE' | 'ETC';
-type UploadPurpose = 'RECIPE_COVER' | 'COOK_HISTORY_PHOTO' | 'INGESTION_INPUT' | 'INQUIRY_ATTACHMENT';
+type IngredientType = 'MASTER' | 'CUSTOM';   // 보유 재료 항목 구분(커스텀=직접 입력)
+type UploadPurpose = 'PROFILE_IMAGE' | 'RECIPE_COVER' | 'COOK_HISTORY_PHOTO' | 'INGESTION_INPUT' | 'INQUIRY_ATTACHMENT';
 type ImageContentType = 'image/jpeg' | 'image/png' | 'image/webp';
 type InquiryType = 'RECIPE' | 'SLOT' | 'ACCOUNT' | 'NOTIFICATION' | 'BUG' | 'ETC';
 type InquiryStatus = 'RECEIVED' | 'ANSWERED'; // answer 유무로 서버가 계산
@@ -485,7 +507,7 @@ type Weekday = 'MONDAY' | 'TUESDAY' | 'WEDNESDAY' | 'THURSDAY' | 'FRIDAY' | 'SAT
 type PushPlatform = 'IOS' | 'ANDROID';
 // 광고 보상
 type AdRewardPlatform = 'IOS' | 'ANDROID';
-type AdRewardCancelReason = 'LOAD_FAILED' | 'USER_DISMISSED';
+type AdRewardCancelReason = 'LOAD_FAILED' | 'USER_DISMISSED' | 'USER_ABANDONED';
 type AdRewardSessionStatus = 'PENDING' | 'GRANTED' | 'CANCELLED' | 'EXPIRED' | 'REJECTED';
 type AdRewardUnavailableReason = 'DAILY_LIMIT_REACHED' | 'REWARD_PENDING';
 ```

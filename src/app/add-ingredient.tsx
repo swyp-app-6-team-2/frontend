@@ -3,11 +3,16 @@ import { Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
 import { AppText, Button, Screen, SearchBar } from '@/components/ui';
-import { useAddMyIngredients, useIngredients, useMyIngredients } from '@/hooks/use-api';
+import {
+  useAddCustomIngredient,
+  useAddMyIngredients,
+  useIngredients,
+  useMyIngredients,
+} from '@/hooks/use-api';
 import { ApiError } from '@/lib/api';
 
-// 재료 직접 입력 — 입력한 이름을 마스터(이름·별칭)에 매칭해 등록한다.
-// 백엔드는 마스터 재료 id만 저장할 수 있어(자유입력 저장 API 없음), 목록에 없는 이름은 등록 불가.
+// 재료 직접 입력 — 입력한 이름이 마스터(이름·별칭)와 일치하면 마스터로(아이콘·카테고리 포함),
+// 아니면 커스텀 재료로 등록한다(POST /users/me/ingredients/custom).
 export default function AddIngredientScreen() {
   const router = useRouter();
   const [name, setName] = useState('');
@@ -16,34 +21,45 @@ export default function AddIngredientScreen() {
   const { data: master } = useIngredients();
   const items = useMemo(() => master?.ingredients ?? [], [master]);
   const { data: mine } = useMyIngredients();
-  const owned = useMemo(
-    () => new Set((mine?.ingredients ?? []).map((it) => it.ingredientId)),
+  // 마스터 중복 방지용 보유 마스터 id 집합(커스텀은 같은 이름도 새 항목 허용이라 제외).
+  const ownedMaster = useMemo(
+    () =>
+      new Set(
+        (mine?.ingredients ?? [])
+          .filter((it) => it.ingredientType === 'MASTER')
+          .map((it) => it.ingredientId),
+      ),
     [mine],
   );
   const addMutation = useAddMyIngredients();
+  const customMutation = useAddCustomIngredient();
+  const pending = addMutation.isPending || customMutation.isPending;
 
-  const canSubmit = name.trim().length > 0 && !addMutation.isPending;
+  const canSubmit = name.trim().length > 0 && !pending;
 
   const onSubmit = () => {
     if (!canSubmit) return;
-    const typed = name.trim().toLowerCase();
+    const trimmed = name.trim();
+    const typed = trimmed.toLowerCase();
     const match = items.find(
       (it) => it.name.toLowerCase() === typed || it.aliases.some((a) => a.toLowerCase() === typed),
     );
-    if (!match) {
-      setError('목록에 없는 재료예요. ‘재료 추가하기’ 목록에서 찾아 등록해주세요.');
-      return;
-    }
-    if (owned.has(match.ingredientId)) {
-      setError('이미 등록된 재료예요.');
-      return;
-    }
-    // POST /users/me/ingredients → 성공 시 my-ingredients 무효화로 재료관리에 자동 반영.
-    addMutation.mutate([match.ingredientId], {
+    const handlers = {
       onSuccess: () => router.back(),
-      onError: (e) =>
+      onError: (e: unknown) =>
         setError(e instanceof ApiError ? e.message : '등록에 실패했어요. 다시 시도해주세요.'),
-    });
+    };
+    if (match) {
+      if (ownedMaster.has(match.ingredientId)) {
+        setError('이미 등록된 재료예요.');
+        return;
+      }
+      // 마스터 일치 → POST /users/me/ingredients (아이콘·카테고리 포함 등록).
+      addMutation.mutate([match.ingredientId], handlers);
+      return;
+    }
+    // 마스터에 없으면 커스텀으로 등록. 성공 시 my-ingredients 무효화로 재료관리에 자동 반영.
+    customMutation.mutate(trimmed, handlers);
   };
 
   return (
@@ -72,7 +88,7 @@ export default function AddIngredientScreen() {
 
       <View className="pb-8">
         <Button
-          label={addMutation.isPending ? '등록 중…' : '완료하기'}
+          label={pending ? '등록 중…' : '완료하기'}
           disabled={!canSubmit}
           onPress={onSubmit}
         />

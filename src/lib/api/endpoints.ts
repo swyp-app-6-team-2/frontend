@@ -9,6 +9,7 @@ import type {
   AdRewardStatusResponse,
   CookHistoryCreateRequest,
   CookHistoryItem,
+  CustomIngredientCreateRequest,
   ImageContentType,
   IngestionJobCreateRequest,
   IngestionJobCreateResponse,
@@ -41,6 +42,7 @@ import type {
   SocialLoginResponse,
   UploadPurpose,
   UploadUrlIssueResponse,
+  UserIngredient,
 } from './types';
 
 // ── Auth ──────────────────────────────────────────────────────
@@ -64,6 +66,8 @@ export const userApi = {
   getOnboarding: () => apiFetch<OnboardingResponse>('/users/me/onboarding'),
   completeOnboarding: () =>
     apiFetch<OnboardingResponse>('/users/me/onboarding/complete', { method: 'POST' }),
+  // 회원 탈퇴 — 계정·사용자 데이터 삭제(복구 불가). 소셜 연결 해제는 서버가 안 함.
+  withdraw: () => apiFetch<null>('/users/me', { method: 'DELETE' }),
 };
 
 // ── Upload ────────────────────────────────────────────────────
@@ -128,6 +132,12 @@ export const myIngredientApi = {
     apiFetch<AddMyIngredientsResponse>('/users/me/ingredients', {
       method: 'POST',
       body: { ingredientIds } satisfies AddMyIngredientsRequest,
+    }),
+  // 커스텀 재료(직접 입력) 등록 — 이름만. 마스터에 없어도 등록되며 항상 새 CUSTOM 항목.
+  addCustom: (name: string) =>
+    apiFetch<UserIngredient>('/users/me/ingredients/custom', {
+      method: 'POST',
+      body: { name } satisfies CustomIngredientCreateRequest,
     }),
 };
 

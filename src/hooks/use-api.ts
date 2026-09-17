@@ -278,6 +278,27 @@ export function useLogout() {
   });
 }
 
+// 회원 탈퇴 — 계정·데이터 삭제(복구 불가). 성공 시에만 로컬 토큰 삭제·캐시 비움.
+export function useWithdraw() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => userApi.withdraw(),
+    onSuccess: () => {
+      clearTokens();
+      qc.clear();
+    },
+  });
+}
+
+// 커스텀 재료(직접 입력) 등록. 성공 시 보유재료 목록 무효화 → 자동 반영.
+export function useAddCustomIngredient() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (name: string) => myIngredientApi.addCustom(name),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['my-ingredients'] }),
+  });
+}
+
 // ── 레시피 추천 ───────────────────────────────────────────────
 // 홈 "랜덤으로 골라줘/재료 기반". 결과는 화면 상태로 다뤄 매번 새로 뽑으므로 mutation.
 export function useRecommendRecipe() {

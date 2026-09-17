@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import {
-  INGREDIENT_CATEGORY_EMOJI,
+  ingredientCategoryEmoji,
   RECIPE_CATEGORY_LABEL,
   RECIPE_CATEGORY_ORDER,
 } from '@/constants/labels';
@@ -82,8 +82,12 @@ export function RecipeFilterSheet({
           <View className="flex-row flex-wrap gap-2">
             {ingredients.map((ing) => (
               <Chip
-                key={ing.ingredientId}
-                label={`${INGREDIENT_CATEGORY_EMOJI[ing.categoryCode]} ${ing.name}`}
+                key={
+                  ing.ingredientType === 'CUSTOM'
+                    ? `c${ing.customIngredientId}`
+                    : `m${ing.ingredientId}`
+                }
+                label={`${ingredientCategoryEmoji(ing.categoryCode)} ${ing.name}`}
                 active={ings.has(ing.name)}
                 onPress={() => setIngs((s) => toggle(s, ing.name))}
               />

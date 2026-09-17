@@ -657,7 +657,9 @@ function NotificationSettingsForm({ initial }: { initial: NotificationSettings }
                   haptic="selection"
                   accessibilityRole="button"
                   accessibilityState={{ selected: on }}
-                  className={`h-[42px] w-[42px] items-center justify-center rounded-full ${
+                  // rounded-full(9999px)은 Android에서 border와 함께 그릴 때 각지게 렌더 →
+                  // 요소 절반값(21px=42/2)으로 명시해 양 플랫폼 모두 완전한 원.
+                  className={`h-[42px] w-[42px] items-center justify-center rounded-[21px] ${
                     on ? 'border border-primary bg-surface' : ''
                   }`}
                 >

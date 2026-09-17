@@ -8,9 +8,12 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { TabBar } from '@/components/tab-bar';
 import { AppText, PressableScale, SearchBar } from '@/components/ui';
 import {
+  CUSTOM_INGREDIENT_EMOJI,
+  CUSTOM_INGREDIENT_LABEL,
   INGREDIENT_CATEGORY_EMOJI,
   INGREDIENT_CATEGORY_LABEL,
   INGREDIENT_CATEGORY_ORDER,
+  ingredientCategoryEmoji,
 } from '@/constants/labels';
 import { palette } from '@/constants/tokens';
 import { useMyIngredients } from '@/hooks/use-api';
@@ -30,7 +33,7 @@ function IngredientChip({ ing }: { ing: UserIngredient }) {
           transition={150}
         />
       ) : (
-        <Text className="text-[14px]">{INGREDIENT_CATEGORY_EMOJI[ing.categoryCode]}</Text>
+        <Text className="text-[14px]">{ingredientCategoryEmoji(ing.categoryCode)}</Text>
       )}
       <Text className="text-[14px] leading-[17px] text-foreground">{ing.name}</Text>
     </View>
@@ -59,6 +62,15 @@ export default function IngredientsScreen() {
       })).filter((s) => s.items.length > 0),
     [items, query],
   );
+  // 커스텀(직접 입력) 재료는 카테고리가 없어 카테고리 섹션에 안 잡힌다 → 맨 아래 별도 섹션.
+  const customItems = useMemo(
+    () =>
+      items.filter(
+        (it) => it.ingredientType === 'CUSTOM' && (!query || it.name.toLowerCase().includes(query)),
+      ),
+    [items, query],
+  );
+  const hasAny = sections.length > 0 || customItems.length > 0;
 
   return (
     <View className="flex-1 bg-background">
@@ -88,29 +100,46 @@ export default function IngredientsScreen() {
                 재료를 불러오지 못했어요.
               </AppText>
             </View>
-          ) : sections.length === 0 ? (
+          ) : !hasAny ? (
             <View className="items-center py-20">
               <AppText variant="body" className="text-muted">
                 {query ? '검색 결과가 없어요.' : '아직 재료가 없어요.'}
               </AppText>
             </View>
           ) : (
-            sections.map((s) => (
-              <View key={s.cat} className="gap-3">
-                {/* 섹션 라벨 — 이모지 + 카테고리명 */}
-                <View className="flex-row items-center gap-1.5">
-                  <Text className="text-[16px]">{INGREDIENT_CATEGORY_EMOJI[s.cat]}</Text>
-                  <AppText variant="body" className="font-medium text-foreground">
-                    {INGREDIENT_CATEGORY_LABEL[s.cat]}
-                  </AppText>
+            <>
+              {sections.map((s) => (
+                <View key={s.cat} className="gap-3">
+                  {/* 섹션 라벨 — 이모지 + 카테고리명 */}
+                  <View className="flex-row items-center gap-1.5">
+                    <Text className="text-[16px]">{INGREDIENT_CATEGORY_EMOJI[s.cat]}</Text>
+                    <AppText variant="body" className="font-medium text-foreground">
+                      {INGREDIENT_CATEGORY_LABEL[s.cat]}
+                    </AppText>
+                  </View>
+                  <View className="flex-row flex-wrap gap-2">
+                    {s.items.map((ing) => (
+                      <IngredientChip key={`m${ing.ingredientId}`} ing={ing} />
+                    ))}
+                  </View>
                 </View>
-                <View className="flex-row flex-wrap gap-2">
-                  {s.items.map((ing) => (
-                    <IngredientChip key={ing.ingredientId} ing={ing} />
-                  ))}
+              ))}
+              {customItems.length > 0 ? (
+                <View className="gap-3">
+                  <View className="flex-row items-center gap-1.5">
+                    <Text className="text-[16px]">{CUSTOM_INGREDIENT_EMOJI}</Text>
+                    <AppText variant="body" className="font-medium text-foreground">
+                      {CUSTOM_INGREDIENT_LABEL}
+                    </AppText>
+                  </View>
+                  <View className="flex-row flex-wrap gap-2">
+                    {customItems.map((ing) => (
+                      <IngredientChip key={`c${ing.customIngredientId}`} ing={ing} />
+                    ))}
+                  </View>
                 </View>
-              </View>
-            ))
+              ) : null}
+            </>
           )}
         </ScrollView>
 

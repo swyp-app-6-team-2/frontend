@@ -49,3 +49,12 @@ export const INGREDIENT_CATEGORY_EMOJI: Record<IngredientCategory, string> = {
   SAUCE: '🧂',
   ETC: '🍽️',
 };
+
+// 커스텀(직접 입력) 재료 — 카테고리가 없다(categoryCode=null). 섹션/칩 폴백.
+export const CUSTOM_INGREDIENT_LABEL = '직접 입력';
+export const CUSTOM_INGREDIENT_EMOJI = '📝';
+
+/** 재료 카테고리 이모지 — 커스텀(null)은 직접 입력 폴백 이모지. */
+export function ingredientCategoryEmoji(categoryCode: IngredientCategory | null): string {
+  return categoryCode ? INGREDIENT_CATEGORY_EMOJI[categoryCode] : CUSTOM_INGREDIENT_EMOJI;
+}

@@ -95,8 +95,12 @@ export async function uploadImage(
 // ── Recipe ────────────────────────────────────────────────────
 export const recipeApi = {
   // 추천 — 홈 "랜덤으로 골라줘/재료 기반". previousRecipeId로 직전 추천 제외.
+  // 후보가 없으면 백엔드가 200 + data:null → 여기서도 null이 반환된다(전체 랜덤으로 전환 안 함).
   recommend: (body: RecipeRecommendationRequest) =>
-    apiFetch<RecipeRecommendationResponse>('/recipes/recommendations', { method: 'POST', body }),
+    apiFetch<RecipeRecommendationResponse | null>('/recipes/recommendations', {
+      method: 'POST',
+      body,
+    }),
   list: (params: RecipeListParams = {}) =>
     apiFetch<RecipeListResponse>('/recipes', { query: params }),
   detail: (recipeId: number) => apiFetch<RecipeDetailResponse>(`/recipes/${recipeId}`),

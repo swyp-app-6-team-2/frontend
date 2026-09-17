@@ -18,7 +18,7 @@ function Chip({ label, active, onPress }: { label: string; active: boolean; onPr
       accessibilityRole="button"
       accessibilityState={{ selected: active }}
       className={`h-9 flex-row items-center justify-center gap-1.5 rounded-pill px-4 active:opacity-80 ${
-        active ? 'bg-primary' : 'border border-muted'
+        active ? 'border border-primary bg-primary' : 'border border-muted'
       }`}
     >
       <Text className={`text-[14px] leading-[17px] ${active ? 'text-ink' : 'text-muted'}`}>

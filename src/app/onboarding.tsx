@@ -241,7 +241,9 @@ export default function OnboardingScreen() {
   if (isCard) {
     return (
       <View className="flex-1 bg-background">
-        <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
+        {/* 화면 아무 곳이나 탭해도 완료(홈으로) — 버튼은 위 레이어에서 각자 처리 */}
+        <Pressable className="absolute inset-0" onPress={finish} accessibilityLabel="다음" />
+        <SafeAreaView className="flex-1" edges={['top', 'bottom']} pointerEvents="box-none">
           {/* 헤더 — 뒤로 + 건너뛰기 */}
           <View className="h-[38px] flex-row items-center justify-between px-screen">
             <Pressable onPress={() => setStep((v) => v - 1)} hitSlop={8} accessibilityLabel="이전">
@@ -261,7 +263,7 @@ export default function OnboardingScreen() {
             >
               <Image
                 source={require('../assets/images/ic-close.png')}
-                style={{ width: 24, height: 24 }}
+                style={{ width: 16, height: 16 }}
                 tintColor={palette.foreground}
                 contentFit="contain"
               />

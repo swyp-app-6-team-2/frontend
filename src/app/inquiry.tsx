@@ -1,9 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   Image,
-  Keyboard,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -15,7 +14,8 @@ import {
   type NativeSyntheticEvent,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
   INQUIRY_TYPE_LABEL,
@@ -40,23 +40,7 @@ function formatInquiryDate(iso: string) {
 export default function InquiryScreen() {
   const router = useRouter();
   const { width } = useWindowDimensions();
-  const insets = useSafeAreaInsets();
   const pagerRef = useRef<ScrollView>(null);
-
-  // 키보드 높이 추적 — 작성 폼(가로 페이저 안)에서는 KeyboardAvoidingView가 프레임을
-  // 제대로 못 재서 하단 고정 버튼이 가린다. 페이지 컨테이너에 키보드 높이만큼 아래 여백을
-  // 줘서 입력란·버튼을 키보드 위로 밀어 올린다. safe-area 하단은 키보드가 덮으므로 뺀다.
-  const [keyboardPad, setKeyboardPad] = useState(0);
-  useEffect(() => {
-    const show = Keyboard.addListener('keyboardWillShow', (e) =>
-      setKeyboardPad(Math.max(0, e.endCoordinates.height - insets.bottom)),
-    );
-    const hide = Keyboard.addListener('keyboardWillHide', () => setKeyboardPad(0));
-    return () => {
-      show.remove();
-      hide.remove();
-    };
-  }, [insets.bottom]);
   const params = useLocalSearchParams<{ tab?: string }>();
   const initialTab = params.tab === 'history' ? 1 : 0; // inquiry-success에서 오면 내역 탭
   const [tab, setTab] = useState(initialTab); // 0=작성, 1=내역
@@ -171,12 +155,16 @@ export default function InquiryScreen() {
           onMomentumScrollEnd={onPaged}
           className="flex-1"
         >
-          {/* 페이지 0 — 작성 폼. 키보드 높이만큼 아래 여백 → 입력란·하단 버튼이 키보드 위로. */}
-          <View style={{ width, paddingBottom: keyboardPad }} className="flex-1">
-            <ScrollView
-              contentContainerClassName="gap-6 px-screen pb-6 pt-6"
+          {/* 페이지 0 — 작성 폼. Screen 스크롤 화면과 동일: KeyboardAwareScrollView가 포커스
+              입력란을 키보드 위로 넉넉히(bottomOffset) 올리고, 문의접수 버튼은 흐름 안 마지막
+              요소(mt-auto: 짧으면 바닥 고정)로 콘텐츠와 함께 올라간다. */}
+          <View style={{ width }} className="flex-1">
+            <KeyboardAwareScrollView
+              className="flex-1"
+              bottomOffset={140}
               keyboardShouldPersistTaps="handled"
               keyboardDismissMode="interactive"
+              contentContainerClassName="gap-6 px-screen pb-8 pt-6"
             >
               {/* 문의유형 (드롭다운) — Figma: 라벨행(pad 8/16/8/8) + 인풋 h44 + 24 chevron */}
               <View>
@@ -285,26 +273,25 @@ export default function InquiryScreen() {
                   ) : null}
                 </View>
               </View>
-            </ScrollView>
-
-            {/* 하단 고정 버튼 — 완료하기(단일). 취소는 헤더 뒤로가기로 대체됨 */}
-            <View className="px-screen pb-8 pt-4">
-              <Pressable
-                className={`h-[52px] items-center justify-center rounded-[30px] active:opacity-90 ${
-                  canSubmit ? 'bg-primary' : 'bg-disabled'
-                }`}
-                accessibilityRole="button"
-                accessibilityState={{ disabled: !canSubmit }}
-                disabled={!canSubmit}
-                onPress={() => setConfirm('submit')}
-              >
-                <Text
-                  className={`text-body font-semibold ${canSubmit ? 'text-ink' : 'text-muted'}`}
+              {/* 문의접수 버튼 — 콘텐츠 마지막 요소(스크롤하면 나옴) */}
+              <View className="pt-4">
+                <Pressable
+                  className={`h-[52px] items-center justify-center rounded-[30px] active:opacity-90 ${
+                    canSubmit ? 'bg-primary' : 'bg-disabled'
+                  }`}
+                  accessibilityRole="button"
+                  accessibilityState={{ disabled: !canSubmit }}
+                  disabled={!canSubmit}
+                  onPress={() => setConfirm('submit')}
                 >
-                  문의접수
-                </Text>
-              </Pressable>
-            </View>
+                  <Text
+                    className={`text-body font-semibold ${canSubmit ? 'text-ink' : 'text-muted'}`}
+                  >
+                    문의접수
+                  </Text>
+                </Pressable>
+              </View>
+            </KeyboardAwareScrollView>
           </View>
 
           {/* 페이지 1 — 문의내역 확인 */}

@@ -31,7 +31,7 @@ export type ScreenProps = {
   bgImage?: ImageSource | number;
   /** Decorative image pinned to the bottom edge, behind content (402×257 기준). */
   bgBottomImage?: ImageSource | number;
-  /** 하단 푸터(예: 저장 CTA). 콘텐츠가 짧으면 화면 바닥에 붙고, 길면 콘텐츠 끝에 온다.
+  /** 하단 푸터(예: 저장 CTA). 스크롤 콘텐츠의 마지막 요소로 배치돼 콘텐츠와 함께 스크롤·이동한다.
    *  키보드가 올라오면 콘텐츠와 함께 위로 밀려 올라가 가리지 않는다. */
   footer?: ReactNode;
 };
@@ -91,21 +91,21 @@ export function Screen({
           />
         ) : null}
         {scroll ? (
-          // 스크롤 화면: KeyboardAwareScrollView가 키보드가 뜨면 콘텐츠 전체를 키보드 높이만큼
-          // 위로 밀어 올린다(포커스 입력창이 항상 키보드 위). footer는 떠 있는 오버레이가 아니라
-          // 스크롤 콘텐츠의 마지막 요소로 흐름에 넣어(mt-auto: 콘텐츠가 짧으면 바닥 고정) 콘텐츠와
-          // 함께 올라가고 절대 겹치지 않는다.
+          // 스크롤 화면: KeyboardAwareScrollView가 키보드가 뜨면 포커스 입력창을 키보드 위로
+          // (bottomOffset만큼 여유 두고) 올린다. footer는 떠 있는 오버레이가 아니라 스크롤 콘텐츠의
+          // 마지막 요소로 흐름에 넣어 콘텐츠와 함께 스크롤·이동하고 절대 겹치지 않는다.
           <KeyboardAwareScrollView
             ref={scrollRef}
             className="flex-1"
-            bottomOffset={16}
+            // 포커스된 입력란을 키보드 위로 넉넉히(입력 박스+주변 버튼까지) 띄운다. 값이 작으면
+            // 입력란이 키보드 경계에 딱 붙어 박스 아랫부분이 가린다.
+            bottomOffset={140}
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode="interactive"
-            contentContainerStyle={{ flexGrow: 1 }}
             contentContainerClassName={`gap-4 px-screen py-4 ${contentClassName ?? ''}`}
           >
             {children}
-            {footer ? <View className="mt-auto pt-2">{footer}</View> : null}
+            {footer ? <View className="pt-2">{footer}</View> : null}
           </KeyboardAwareScrollView>
         ) : (
           // 비스크롤 화면: 키보드가 올라오면 본문+푸터를 키보드 높이만큼 위로 밀어 올린다.

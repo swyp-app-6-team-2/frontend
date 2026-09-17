@@ -8,7 +8,7 @@ import { AppText, Button, Screen } from '@/components/ui';
 import { palette } from '@/constants/tokens';
 import { useCreateIngestionJob } from '@/hooks/use-api';
 import { ApiError, uploadImage } from '@/lib/api';
-import { ImagePickerUnavailableError, pickImage, type PickedImage } from '@/lib/pick-image';
+import { ImagePickerUnavailableError, pickImages, type PickedImage } from '@/lib/pick-image';
 
 // 17 이미지로 등록 — 캡처 이미지 업로드 → OCR 로딩으로.
 export default function AddRecipeImageScreen() {
@@ -42,11 +42,11 @@ export default function AddRecipeImageScreen() {
     }
   };
 
-  // 갤러리에서 원본 사진 선택(OCR용이라 크롭 안 함). 여러 장은 반복 탭.
+  // 갤러리에서 원본 사진 선택(OCR용이라 크롭 안 함). 여러 장을 한 번에 골라 누적한다.
   const addImage = async () => {
     try {
-      const picked = await pickImage();
-      if (picked) setImages((prev) => [...prev, picked]);
+      const picked = await pickImages();
+      if (picked.length) setImages((prev) => [...prev, ...picked]);
     } catch (e) {
       if (e instanceof ImagePickerUnavailableError) {
         Alert.alert('사진 기능 준비 중', '앱을 다시 빌드하면 사진 추가를 사용할 수 있어요.');

@@ -50,19 +50,28 @@ export type PickImageOptions = {
   aspect?: [number, number];
 };
 
-/**
- * 갤러리에서 이미지 1장 선택. 취소·권한거부 시 null.
- * expo-image-picker는 네이티브 모듈이라 정적 import하면 리빌드 전 앱이 크래시하므로
- * 사용 시점에 동적 import한다. 모듈이 없으면(import 실패 또는 호출 시)
- * ImagePickerUnavailableError로 변환해 화면이 우아하게 안내하도록 한다.
- */
-export async function pickImage(opts: PickImageOptions = {}): Promise<PickedImage | null> {
-  let ImagePicker: typeof import('expo-image-picker');
+// 갤러리 asset → PickedImage. 콘텐츠 타입은 mimeType→확장자→jpeg 순 추론.
+function toPickedImage(asset: { uri: string; mimeType?: string }): PickedImage {
+  return { uri: asset.uri, contentType: resolveContentType(asset.mimeType, asset.uri) };
+}
+
+// expo-image-picker는 네이티브 모듈이라 정적 import하면 리빌드 전 앱이 크래시하므로
+// 사용 시점에 동적 import한다. 모듈이 없으면 ImagePickerUnavailableError로 변환.
+async function loadPicker(): Promise<typeof import('expo-image-picker')> {
   try {
-    ImagePicker = await import('expo-image-picker');
+    return await import('expo-image-picker');
   } catch {
     throw new ImagePickerUnavailableError();
   }
+}
+
+/**
+ * 갤러리에서 이미지 1장 선택. 취소·권한거부 시 null.
+ * 모듈이 없으면(import 실패 또는 호출 시) ImagePickerUnavailableError를 던져
+ * 화면이 우아하게 안내하도록 한다.
+ */
+export async function pickImage(opts: PickImageOptions = {}): Promise<PickedImage | null> {
+  const ImagePicker = await loadPicker();
 
   try {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -80,8 +89,34 @@ export async function pickImage(opts: PickImageOptions = {}): Promise<PickedImag
     });
     if (result.canceled || !result.assets?.length) return null;
 
-    const asset = result.assets[0];
-    return { uri: asset.uri, contentType: resolveContentType(asset.mimeType, asset.uri) };
+    return toPickedImage(result.assets[0]);
+  } catch (e) {
+    if (isNativeModuleMissing(e)) throw new ImagePickerUnavailableError();
+    throw e;
+  }
+}
+
+/**
+ * 갤러리에서 이미지 여러 장을 한 번에 선택(OCR 입력용). 취소·권한거부 시 빈 배열.
+ * allowsMultipleSelection은 크롭(allowsEditing)과 상호 배타라 원본 그대로 반환한다.
+ * selectionLimit=0(기본)은 시스템 최대치(무제한).
+ */
+export async function pickImages(selectionLimit = 0): Promise<PickedImage[]> {
+  const ImagePicker = await loadPicker();
+
+  try {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) return [];
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsMultipleSelection: true,
+      selectionLimit,
+      quality: 0.8,
+    });
+    if (result.canceled || !result.assets?.length) return [];
+
+    return result.assets.map(toPickedImage);
   } catch (e) {
     if (isNativeModuleMissing(e)) throw new ImagePickerUnavailableError();
     throw e;

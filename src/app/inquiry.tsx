@@ -1,10 +1,9 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   Image,
-  KeyboardAvoidingView,
-  Platform,
+  Keyboard,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -16,7 +15,7 @@ import {
   type NativeSyntheticEvent,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
   INQUIRY_TYPE_LABEL,
@@ -41,7 +40,23 @@ function formatInquiryDate(iso: string) {
 export default function InquiryScreen() {
   const router = useRouter();
   const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const pagerRef = useRef<ScrollView>(null);
+
+  // 키보드 높이 추적 — 작성 폼(가로 페이저 안)에서는 KeyboardAvoidingView가 프레임을
+  // 제대로 못 재서 하단 고정 버튼이 가린다. 페이지 컨테이너에 키보드 높이만큼 아래 여백을
+  // 줘서 입력란·버튼을 키보드 위로 밀어 올린다. safe-area 하단은 키보드가 덮으므로 뺀다.
+  const [keyboardPad, setKeyboardPad] = useState(0);
+  useEffect(() => {
+    const show = Keyboard.addListener('keyboardWillShow', (e) =>
+      setKeyboardPad(Math.max(0, e.endCoordinates.height - insets.bottom)),
+    );
+    const hide = Keyboard.addListener('keyboardWillHide', () => setKeyboardPad(0));
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, [insets.bottom]);
   const params = useLocalSearchParams<{ tab?: string }>();
   const initialTab = params.tab === 'history' ? 1 : 0; // inquiry-success에서 오면 내역 탭
   const [tab, setTab] = useState(initialTab); // 0=작성, 1=내역
@@ -147,151 +162,145 @@ export default function InquiryScreen() {
           onMomentumScrollEnd={onPaged}
           className="flex-1"
         >
-          {/* 페이지 0 — 작성 폼 */}
-          <View style={{ width }} className="flex-1">
-            {/* 키보드가 올라오면 내용을 위로 밀어 하단 입력·고정 버튼이 가리지 않게(iOS padding) */}
-            <KeyboardAvoidingView
-              className="flex-1"
-              behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          {/* 페이지 0 — 작성 폼. 키보드 높이만큼 아래 여백 → 입력란·하단 버튼이 키보드 위로. */}
+          <View style={{ width, paddingBottom: keyboardPad }} className="flex-1">
+            <ScrollView
+              contentContainerClassName="gap-6 px-screen pb-6 pt-6"
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="interactive"
             >
-              <ScrollView
-                contentContainerClassName="gap-6 px-screen pb-6 pt-6"
-                keyboardShouldPersistTaps="handled"
-                keyboardDismissMode="interactive"
-              >
-                {/* 문의유형 (드롭다운) — Figma: 라벨행(pad 8/16/8/8) + 인풋 h44 + 24 chevron */}
-                <View>
-                  <View className="flex-row items-center py-2 pl-2 pr-4">
-                    <AppText variant="body">문의유형</AppText>
-                  </View>
-                  <Pressable
-                    className="h-[44px] flex-row items-center justify-between rounded-pill bg-field px-4 active:opacity-80"
-                    accessibilityRole="button"
-                    accessibilityState={{ expanded: typeSheet }}
-                    onPress={() => {
-                      fireHaptic('selection');
-                      setTypeSheet(true);
-                    }}
-                  >
-                    <AppText
-                      variant="body"
-                      className={type ? 'font-normal text-foreground' : 'font-normal text-muted'}
-                    >
-                      {type ? INQUIRY_TYPE_LABEL[type] : '문의 유형을 선택해주세요.'}
-                    </AppText>
-                    <Image
-                      source={require('../assets/images/ic-chevron-down.png')}
-                      style={{ width: 24, height: 24, tintColor: palette.muted }}
-                      resizeMode="contain"
-                    />
-                  </Pressable>
+              {/* 문의유형 (드롭다운) — Figma: 라벨행(pad 8/16/8/8) + 인풋 h44 + 24 chevron */}
+              <View>
+                <View className="flex-row items-center py-2 pl-2 pr-4">
+                  <AppText variant="body">문의유형</AppText>
                 </View>
-
-                {/* 제목 (필수) — Figma: 라벨행(pad 8/16/8/8) + pill input h44 */}
-                <View>
-                  <View className="flex-row items-center py-2 pl-2 pr-4">
-                    <AppText variant="body">제목</AppText>
-                  </View>
-                  <View className="h-[44px] flex-row items-center rounded-pill bg-field px-4">
-                    <TextInput
-                      className="flex-1 text-foreground"
-                      style={{ fontSize: 16, lineHeight: 21, paddingVertical: 0 }}
-                      placeholder="제목을 입력해주세요"
-                      placeholderTextColor={palette.muted}
-                      value={title}
-                      onChangeText={setTitle}
-                    />
-                  </View>
-                </View>
-
-                {/* 문의내용 (멀티라인, 필수·최소 10자) — Figma: 박스 h177 r12 pad 10/16, 라벨 없음 */}
-                <View>
-                  <View className="h-[177px] rounded-[12px] bg-field px-4 py-2.5">
-                    <TextInput
-                      className="flex-1 text-foreground"
-                      style={{ fontSize: 16, lineHeight: 21 }}
-                      placeholder="내용을 입력해 주세요"
-                      placeholderTextColor={palette.muted}
-                      multiline
-                      textAlignVertical="top"
-                      value={content}
-                      onChangeText={setContent}
-                    />
-                  </View>
-                  {content.trim().length > 0 && content.trim().length < 10 ? (
-                    <Text className="mt-1 pl-2 text-[13px] leading-[17px] text-muted">
-                      최소 10자 이상 입력해주세요.
-                    </Text>
-                  ) : null}
-                </View>
-
-                {/* 사진첨부 (최대 5장) */}
-                <View className="gap-2">
-                  <AppText variant="body">사진첨부</AppText>
-                  <View className="flex-row flex-wrap gap-2">
-                    {photos.map((p, i) => (
-                      <View
-                        key={`${p.uri}-${i}`}
-                        className="h-[100px] w-[100px] overflow-hidden rounded-[12px]"
-                      >
-                        <Image
-                          source={{ uri: p.uri }}
-                          style={{ width: '100%', height: '100%' }}
-                          resizeMode="cover"
-                        />
-                        <Pressable
-                          onPress={() => removePhoto(i)}
-                          hitSlop={8}
-                          accessibilityRole="button"
-                          accessibilityLabel="첨부 사진 삭제"
-                          className="absolute right-1 top-1 h-6 w-6 items-center justify-center rounded-full bg-background/80"
-                        >
-                          <Text className="text-[14px] leading-[14px] text-foreground">×</Text>
-                        </Pressable>
-                      </View>
-                    ))}
-                    {photos.length < 5 ? (
-                      <Pressable
-                        className="h-[100px] w-[100px] items-center justify-center rounded-[12px] border border-dashed border-disabled active:opacity-80"
-                        accessibilityRole="button"
-                        accessibilityLabel="사진 첨부"
-                        onPress={onPickPhoto}
-                      >
-                        <Text className="text-muted" style={{ fontSize: 24 }}>
-                          ＋
-                        </Text>
-                      </Pressable>
-                    ) : null}
-                  </View>
-                </View>
-              </ScrollView>
-
-              {/* 하단 고정 버튼 (취소 / 문의 접수) */}
-              <View className="flex-row gap-3 px-screen pb-2 pt-4">
                 <Pressable
-                  className="h-[52px] flex-1 items-center justify-center rounded-[30px] bg-popup-button active:opacity-90"
+                  className="h-[44px] flex-row items-center justify-between rounded-pill bg-field px-4 active:opacity-80"
                   accessibilityRole="button"
-                  onPress={() => setConfirm('leave')}
+                  accessibilityState={{ expanded: typeSheet }}
+                  onPress={() => {
+                    fireHaptic('selection');
+                    setTypeSheet(true);
+                  }}
                 >
-                  <Text className="text-body font-semibold text-popup-button-text">취소</Text>
-                </Pressable>
-                <Pressable
-                  className={`h-[52px] flex-1 items-center justify-center rounded-[30px] active:opacity-90 ${
-                    canSubmit ? 'bg-primary' : 'bg-disabled'
-                  }`}
-                  accessibilityRole="button"
-                  accessibilityState={{ disabled: !canSubmit }}
-                  disabled={!canSubmit}
-                  onPress={() => setConfirm('submit')}
-                >
-                  <Text
-                    className={`text-body font-semibold ${canSubmit ? 'text-ink' : 'text-muted'}`}
+                  <AppText
+                    variant="body"
+                    className={type ? 'font-normal text-foreground' : 'font-normal text-muted'}
                   >
-                    문의 접수
-                  </Text>
+                    {type ? INQUIRY_TYPE_LABEL[type] : '문의 유형을 선택해주세요.'}
+                  </AppText>
+                  <Image
+                    source={require('../assets/images/ic-chevron-down.png')}
+                    style={{ width: 24, height: 24, tintColor: palette.muted }}
+                    resizeMode="contain"
+                  />
                 </Pressable>
               </View>
-            </KeyboardAvoidingView>
+
+              {/* 제목 (필수) — Figma: 라벨행(pad 8/16/8/8) + pill input h44 */}
+              <View>
+                <View className="flex-row items-center py-2 pl-2 pr-4">
+                  <AppText variant="body">제목</AppText>
+                </View>
+                <View className="h-[44px] flex-row items-center rounded-pill bg-field px-4">
+                  <TextInput
+                    className="flex-1 text-foreground"
+                    style={{ fontSize: 16, lineHeight: 21, paddingVertical: 0 }}
+                    placeholder="제목을 입력해주세요"
+                    placeholderTextColor={palette.muted}
+                    value={title}
+                    onChangeText={setTitle}
+                  />
+                </View>
+              </View>
+
+              {/* 문의내용 (멀티라인, 필수·최소 10자) — Figma: 박스 h177 r12 pad 10/16, 라벨 없음 */}
+              <View>
+                <View className="h-[177px] rounded-[12px] bg-field px-4 py-2.5">
+                  <TextInput
+                    className="flex-1 text-foreground"
+                    style={{ fontSize: 16, lineHeight: 21 }}
+                    placeholder="내용을 입력해 주세요"
+                    placeholderTextColor={palette.muted}
+                    multiline
+                    textAlignVertical="top"
+                    value={content}
+                    onChangeText={setContent}
+                  />
+                </View>
+                {content.trim().length > 0 && content.trim().length < 10 ? (
+                  <Text className="mt-1 pl-2 text-[13px] leading-[17px] text-muted">
+                    최소 10자 이상 입력해주세요.
+                  </Text>
+                ) : null}
+              </View>
+
+              {/* 사진첨부 (최대 5장) */}
+              <View className="gap-2">
+                <AppText variant="body">사진첨부</AppText>
+                <View className="flex-row flex-wrap gap-2">
+                  {photos.map((p, i) => (
+                    <View
+                      key={`${p.uri}-${i}`}
+                      className="h-[100px] w-[100px] overflow-hidden rounded-[12px]"
+                    >
+                      <Image
+                        source={{ uri: p.uri }}
+                        style={{ width: '100%', height: '100%' }}
+                        resizeMode="cover"
+                      />
+                      <Pressable
+                        onPress={() => removePhoto(i)}
+                        hitSlop={8}
+                        accessibilityRole="button"
+                        accessibilityLabel="첨부 사진 삭제"
+                        className="absolute right-1 top-1 h-6 w-6 items-center justify-center rounded-full bg-background/80"
+                      >
+                        <Text className="text-[14px] leading-[14px] text-foreground">×</Text>
+                      </Pressable>
+                    </View>
+                  ))}
+                  {photos.length < 5 ? (
+                    <Pressable
+                      className="h-[100px] w-[100px] items-center justify-center rounded-[12px] border border-dashed border-disabled active:opacity-80"
+                      accessibilityRole="button"
+                      accessibilityLabel="사진 첨부"
+                      onPress={onPickPhoto}
+                    >
+                      <Text className="text-muted" style={{ fontSize: 24 }}>
+                        ＋
+                      </Text>
+                    </Pressable>
+                  ) : null}
+                </View>
+              </View>
+            </ScrollView>
+
+            {/* 하단 고정 버튼 (취소 / 문의 접수) */}
+            <View className="flex-row gap-3 px-screen pb-2 pt-4">
+              <Pressable
+                className="h-[52px] flex-1 items-center justify-center rounded-[30px] bg-popup-button active:opacity-90"
+                accessibilityRole="button"
+                onPress={() => setConfirm('leave')}
+              >
+                <Text className="text-body font-semibold text-popup-button-text">취소</Text>
+              </Pressable>
+              <Pressable
+                className={`h-[52px] flex-1 items-center justify-center rounded-[30px] active:opacity-90 ${
+                  canSubmit ? 'bg-primary' : 'bg-disabled'
+                }`}
+                accessibilityRole="button"
+                accessibilityState={{ disabled: !canSubmit }}
+                disabled={!canSubmit}
+                onPress={() => setConfirm('submit')}
+              >
+                <Text
+                  className={`text-body font-semibold ${canSubmit ? 'text-ink' : 'text-muted'}`}
+                >
+                  문의 접수
+                </Text>
+              </Pressable>
+            </View>
           </View>
 
           {/* 페이지 1 — 문의내역 확인 */}

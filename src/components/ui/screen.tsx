@@ -1,7 +1,14 @@
-import type { ReactNode, Ref } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { useEffect, useState, type ReactNode, type Ref } from 'react';
+import {
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  View,
+} from 'react-native';
 import { Image, type ImageSource } from 'expo-image';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ScreenHeader } from './screen-header';
 
@@ -55,6 +62,26 @@ export function Screen({
   bgBottomImage,
   footer,
 }: ScreenProps) {
+  const insets = useSafeAreaInsets();
+  // 스크롤 화면의 하단 고정 footer는 ScrollView 밖이라 automaticallyAdjustKeyboardInsets가
+  // 못 올려 키보드에 가린다(iOS). 키보드 높이만큼 footer만 위로 들어 올린다.
+  // Android는 adjustResize가 창을 줄여 footer가 자동으로 올라가므로 iOS에서만 추적한다.
+  const hasFooter = footer != null;
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  useEffect(() => {
+    if (Platform.OS !== 'ios' || !hasFooter) return;
+    const show = Keyboard.addListener('keyboardWillShow', (e) =>
+      setKeyboardHeight(e.endCoordinates.height),
+    );
+    const hide = Keyboard.addListener('keyboardWillHide', () => setKeyboardHeight(0));
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, [hasFooter]);
+  // SafeAreaView가 이미 하단 인셋만큼 패딩을 주므로 그만큼 빼야 정확히 키보드 위에 붙는다.
+  const footerLift = Math.max(0, keyboardHeight - insets.bottom);
+
   return (
     <View className="flex-1 bg-background">
       {bgImage ? (
@@ -100,7 +127,11 @@ export function Screen({
             >
               {children}
             </ScrollView>
-            {footer ? <View className="px-screen pb-4 pt-3">{footer}</View> : null}
+            {footer ? (
+              <View style={{ marginBottom: footerLift }} className="px-screen pb-4 pt-3">
+                {footer}
+              </View>
+            ) : null}
           </View>
         ) : (
           // 비스크롤 화면: 하단 고정 입력란은 키보드가 올라오면 위로 밀어 올린다(iOS padding).

@@ -169,20 +169,25 @@ export default function HomeScreen() {
   const remainingStars = remainingSlots(me, data?.totalCount ?? recipes.length);
 
   // 밤하늘 더블탭 → 별똥별 애니메이션(GIF)을 딱 한 사이클만 재생하고 사라진다(루프 안 함).
-  // GIF 1회 길이 = 1480ms(37프레임). expo-image는 GIF를 무한 루프하므로 그만큼 뒤 언마운트해
-  // 두 번째 사이클이 안 보이게 한다.
+  // GIF 1회 길이 = 1480ms(37프레임). 숨김 타이머는 setState가 아니라 실제 첫 프레임 표시
+  // 시점(onDisplay)부터 잰다 — 로드·디코드 지연으로 끝(별 낙하)이 잘리는 것 방지.
   const SHOOTING_STAR_MS = 1480;
   const [shootingStar, setShootingStar] = useState(false);
   const lastTap = useRef(0);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => void (hideTimer.current && clearTimeout(hideTimer.current)), []);
+  // GIF가 실제로 표시된 순간 호출 → 한 사이클 뒤 숨김(두 번째 루프 전에).
+  // onDisplay가 중복 호출돼도 타이머를 연장하지 않도록 이미 예약됐으면 무시.
+  const onShootingStarDisplay = () => {
+    if (hideTimer.current) return;
+    hideTimer.current = setTimeout(() => {
+      setShootingStar(false);
+      hideTimer.current = null; // 다음 더블탭에 다시 재생되도록 초기화
+    }, SHOOTING_STAR_MS);
+  };
   const onSkyTap = () => {
     const now = Date.now();
-    if (now - lastTap.current < 300) {
-      setShootingStar(true);
-      if (hideTimer.current) clearTimeout(hideTimer.current);
-      hideTimer.current = setTimeout(() => setShootingStar(false), SHOOTING_STAR_MS);
-    }
+    if (now - lastTap.current < 300) setShootingStar(true);
     lastTap.current = now;
   };
 
@@ -260,6 +265,7 @@ export default function HomeScreen() {
           contentFit="contain"
           pointerEvents="none"
           accessibilityLabel="별똥별"
+          onDisplay={onShootingStarDisplay}
         />
       ) : null}
 

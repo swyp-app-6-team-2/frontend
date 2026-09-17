@@ -16,6 +16,7 @@ import { palette } from '@/constants/tokens';
 import { useMyIngredients, useProfile, useRecipes } from '@/hooks/use-api';
 import { useEnteringOnce } from '@/hooks/use-entering-once';
 import type { RecipeCategory, RecipeListItem, RecipeListSort } from '@/lib/api/types';
+import { remainingSlots } from '@/lib/slots';
 
 // Figma 필터칩 — h36, pill, 투명 bg + 1px border #1E2230(field), gap4, px16.
 // 라벨 14px 흰색 + 우측 16px 드롭다운 아이콘. 화살표는 다크 배경에서 보이도록
@@ -117,8 +118,9 @@ export default function RecipesScreen() {
   const recipes = data?.recipes ?? [];
   const total = data?.totalCount ?? 0;
   // 남은 별(레시피 저장 슬롯)이 0이면 생성 불가 → slot-full 팝업. 로딩 중(me 없음)엔 막지 않는다.
+  // 남은 별 = 슬롯 한도 − 등록 레시피 수(홈·마이와 동일 기준).
   const { data: me } = useProfile();
-  const isFull = me != null && me.remainingRecipeSlots <= 0;
+  const isFull = me != null && remainingSlots(me, total) <= 0;
   const animate = useEnteringOnce('recipes'); // 최초 진입에만 카드 순차 등장
 
   const sortLabel = sort === 'LATEST' ? '최신순' : '오래된순';

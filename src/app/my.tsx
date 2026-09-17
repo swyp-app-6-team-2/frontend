@@ -7,9 +7,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { TabBar } from '@/components/tab-bar';
 import { AppText, Chevron, ListRow } from '@/components/ui';
 import { staggerDelay } from '@/constants/animation';
-import { useProfile } from '@/hooks/use-api';
+import { useProfile, useRecipes } from '@/hooks/use-api';
 import { useEnteringOnce } from '@/hooks/use-entering-once';
 import { getLoginProvider } from '@/lib/api';
+import { remainingSlots } from '@/lib/slots';
 
 // 마이페이지 — 프로필 + 남은 별(슬롯) + 설정 메뉴.
 // 닉네임 옆 배지 — 마지막 로그인 provider 로고. require는 정적이라 미리 맵으로 선언한다.
@@ -34,6 +35,9 @@ export default function MyScreen() {
   const animate = useEnteringOnce('my'); // 최초 진입에만 메뉴 순차 등장
   // 프로필 — 백엔드 GET /users/me 생기면 실데이터, 아직 없으면 폴백값.
   const { data: me } = useProfile();
+  // 남은 별 = 슬롯 한도 − 등록 레시피 수(홈과 동일 기준). 홈과 같은 쿼리 키로 캐시 공유.
+  const { data: recipesData } = useRecipes({ sort: 'LATEST', size: 100 });
+  const remaining = remainingSlots(me, recipesData?.totalCount ?? 0);
   // provider 로고 — 서버 /users/me가 provider를 주면 그걸 우선, 없으면 로그인 시 저장한 값으로 폴백.
   // 값이 없거나 매칭 안 되면 배지 자체를 안 그린다(틀린 로고 방지).
   const providerCode = me?.provider ?? getLoginProvider();
@@ -88,7 +92,7 @@ export default function MyScreen() {
                 남은 별
               </AppText>
               <AppText variant="body" className="font-bold">
-                {me?.remainingRecipeSlots ?? 0}
+                {remaining}
               </AppText>
             </View>
             <Pressable

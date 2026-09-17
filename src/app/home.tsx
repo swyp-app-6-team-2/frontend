@@ -23,6 +23,7 @@ import { ApiError } from '@/lib/api';
 import type { RecipeListItem } from '@/lib/api/types';
 import { recommendationModeFor, recommendationToListItem } from '@/lib/recommend';
 import { dismissSlotAdded, useSlotJustAdded } from '@/lib/slot-ads';
+import { remainingSlots } from '@/lib/slots';
 
 const RECO = ['랜덤으로 골라줘', '내재료로 골라줘'];
 
@@ -163,9 +164,9 @@ export default function HomeScreen() {
   const [recommend, setRecommend] = useState<RecipeListItem | null>(null);
   const recommendRecipe = useRecommendRecipe();
   const lastRecoId = useRef<number | undefined>(undefined); // 재추천 시 직전 제외용
-  // 남은 별 개수 = 남은 레시피 저장 슬롯(GET /users/me). 로드 전엔 0.
+  // 남은 별 = 슬롯 한도 − 등록된 레시피 수(별 개수와 일치). 로드 전엔 0.
   const { data: me } = useProfile();
-  const remainingStars = me?.remainingRecipeSlots ?? 0;
+  const remainingStars = remainingSlots(me, data?.totalCount ?? recipes.length);
 
   // 추천 옵션 선택 → 백엔드 추천 API 호출 → 결과 팝업. previousRecipeId로 직전과 다르게.
   const onRecommend = async (label: string) => {

@@ -168,10 +168,11 @@ export default function HomeScreen() {
   const { data: me } = useProfile();
   const remainingStars = remainingSlots(me, data?.totalCount ?? recipes.length);
 
-  // 밤하늘 더블탭 → 별똥별 애니메이션(GIF)을 딱 한 사이클만 재생하고 사라진다(루프 안 함).
-  // GIF 1회 길이 = 1480ms(37프레임). 숨김 타이머는 setState가 아니라 실제 첫 프레임 표시
-  // 시점(onDisplay)부터 잰다 — 로드·디코드 지연으로 끝(별 낙하)이 잘리는 것 방지.
-  const SHOOTING_STAR_MS = 1480;
+  // 밤하늘 더블탭 → 별똥별 애니메이션(GIF)을 한 번만 재생하고 사라진다.
+  // GIF는 loop=1로 패치돼(무한루프 X) 1회 재생 후 마지막 프레임에서 멈춘다. 그래서 넉넉히(2000ms)
+  // 잡아도 2번째 사이클이 안 보이고, 렌더 지연이 있어도 끝(별 낙하)까지 확실히 보인 뒤 사라진다.
+  // 타이머는 실제 첫 프레임 표시(onDisplay)부터 잰다.
+  const SHOOTING_STAR_MS = 2000;
   const [shootingStar, setShootingStar] = useState(false);
   const lastTap = useRef(0);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);

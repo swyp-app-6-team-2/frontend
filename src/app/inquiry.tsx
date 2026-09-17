@@ -399,7 +399,7 @@ export default function InquiryScreen() {
               message="작성한 내용은 모두 사라져요"
               actions={[
                 { label: '취소', onPress: () => setConfirm(null) },
-                { label: '나가기', tone: 'primary', onPress: () => router.back() },
+                { label: '나가기', tone: 'primary', onPress: () => router.replace('/my') },
               ]}
             />
           ) : (

@@ -9,11 +9,11 @@ export default function SlotFullScreen() {
   return (
     <AlertDialog
       icon={<Text className="text-[26px]">🪄</Text>}
-      title="저장 슬롯이 가득 찼어요"
-      message={'레시피 저장 슬롯을 모두 사용했어요.\n슬롯을 확장하면 계속 저장할 수 있어요.'}
+      title="별을 다 썼어요"
+      message={'남은 별을 모두 사용했어요.\n광고를 보고 별을 늘리면 계속 저장할 수 있어요.'}
       actions={[
-        { label: '직접 입력', onPress: () => router.replace('/add-recipe-manual') },
-        { label: '다시 시도', tone: 'danger', onPress: () => router.back() },
+        { label: '닫기', onPress: () => router.back() },
+        { label: '슬롯 확장', tone: 'primary', onPress: () => router.replace('/slot-expand') },
       ]}
     />
   );

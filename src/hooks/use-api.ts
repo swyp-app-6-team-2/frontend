@@ -141,7 +141,10 @@ export function useCreateRecipe() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (body: RecipeCreateRequest) => recipeApi.create(body),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['recipes'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['recipes'] });
+      qc.invalidateQueries({ queryKey: queryKeys.me() }); // 남은 별(슬롯) 갱신
+    },
   });
 }
 
@@ -160,7 +163,10 @@ export function useDeleteRecipe() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (recipeId: number) => recipeApi.remove(recipeId),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['recipes'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['recipes'] });
+      qc.invalidateQueries({ queryKey: queryKeys.me() }); // 슬롯 회수 반영
+    },
   });
 }
 

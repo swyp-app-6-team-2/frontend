@@ -3,6 +3,8 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -24,8 +26,9 @@ import {
 import { AlertDialog, AppText, PressableScale, ScreenHeader } from '@/components/ui';
 import { palette } from '@/constants/tokens';
 import { useCreateInquiry, useInquiries } from '@/hooks/use-api';
-import { ApiError } from '@/lib/api';
+import { ApiError, uploadImage } from '@/lib/api';
 import { fireHaptic } from '@/lib/haptics';
+import { ImagePickerUnavailableError, pickImage, type PickedImage } from '@/lib/pick-image';
 
 // 접수 시각 표기 — 서버 UTC ISO → 로컬 "YYYY.MM.DD HH:mm".
 function formatInquiryDate(iso: string) {
@@ -55,12 +58,38 @@ export default function InquiryScreen() {
   const inquiries = historyData?.inquiries ?? [];
   const createInquiry = useCreateInquiry();
 
-  // 접수 확인 팝업 '확인' → 서버 접수 → 완료 화면. (사진 첨부는 아직 미수집 → 빈 배열)
+  // 첨부 이미지(최대 5장). 선택 시 로컬로 담아두고, 접수 시점에 업로드해 objectKey로 보낸다.
+  const [photos, setPhotos] = useState<PickedImage[]>([]);
+  const onPickPhoto = async () => {
+    if (photos.length >= 5) return;
+    try {
+      const img = await pickImage();
+      if (img) setPhotos((prev) => [...prev, img]);
+    } catch (e) {
+      Alert.alert(
+        '사진을 불러올 수 없어요',
+        e instanceof ImagePickerUnavailableError
+          ? '앱을 다시 빌드한 뒤 사용할 수 있어요.'
+          : '다시 시도해주세요.',
+      );
+    }
+  };
+  const removePhoto = (i: number) => setPhotos((prev) => prev.filter((_, k) => k !== i));
+
+  // 접수 확인 팝업 '확인' → 첨부 업로드 → 서버 접수 → 완료 화면.
   const onSubmit = async () => {
-    if (!canSubmit || type == null) return;
+    if (!canSubmit || type == null || createInquiry.isPending) return;
     setConfirm(null);
     try {
-      await createInquiry.mutateAsync({ type, title: title.trim(), content: content.trim() });
+      const attachmentKeys = await Promise.all(
+        photos.map((p) => uploadImage('INQUIRY_ATTACHMENT', p)),
+      );
+      await createInquiry.mutateAsync({
+        type,
+        title: title.trim(),
+        content: content.trim(),
+        attachmentKeys: attachmentKeys.length ? attachmentKeys : undefined,
+      });
       fireHaptic('success');
       router.replace('/inquiry-success');
     } catch (e) {
@@ -120,7 +149,16 @@ export default function InquiryScreen() {
         >
           {/* 페이지 0 — 작성 폼 */}
           <View style={{ width }} className="flex-1">
-            <ScrollView contentContainerClassName="gap-6 px-screen pb-6 pt-6">
+            {/* 키보드가 올라오면 내용을 위로 밀어 하단 입력·고정 버튼이 가리지 않게(iOS padding) */}
+            <KeyboardAvoidingView
+              className="flex-1"
+              behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            >
+              <ScrollView
+                contentContainerClassName="gap-6 px-screen pb-6 pt-6"
+                keyboardShouldPersistTaps="handled"
+                keyboardDismissMode="interactive"
+              >
               {/* 문의유형 (드롭다운) — Figma: 라벨행(pad 8/16/8/8) + 인풋 h44 + 24 chevron */}
               <View>
                 <View className="flex-row items-center py-2 pl-2 pr-4">
@@ -187,19 +225,44 @@ export default function InquiryScreen() {
                 ) : null}
               </View>
 
-              {/* 사진첨부 */}
+              {/* 사진첨부 (최대 5장) */}
               <View className="gap-2">
                 <AppText variant="body">사진첨부</AppText>
-                <Pressable
-                  className="h-[100px] w-[100px] items-center justify-center rounded-[12px] border border-dashed border-disabled active:opacity-80"
-                  accessibilityRole="button"
-                  accessibilityLabel="사진 첨부"
-                  onPress={() => {}}
-                >
-                  <Text className="text-muted" style={{ fontSize: 24 }}>
-                    ＋
-                  </Text>
-                </Pressable>
+                <View className="flex-row flex-wrap gap-2">
+                  {photos.map((p, i) => (
+                    <View
+                      key={`${p.uri}-${i}`}
+                      className="h-[100px] w-[100px] overflow-hidden rounded-[12px]"
+                    >
+                      <Image
+                        source={{ uri: p.uri }}
+                        style={{ width: '100%', height: '100%' }}
+                        resizeMode="cover"
+                      />
+                      <Pressable
+                        onPress={() => removePhoto(i)}
+                        hitSlop={8}
+                        accessibilityRole="button"
+                        accessibilityLabel="첨부 사진 삭제"
+                        className="absolute right-1 top-1 h-6 w-6 items-center justify-center rounded-full bg-background/80"
+                      >
+                        <Text className="text-[14px] leading-[14px] text-foreground">×</Text>
+                      </Pressable>
+                    </View>
+                  ))}
+                  {photos.length < 5 ? (
+                    <Pressable
+                      className="h-[100px] w-[100px] items-center justify-center rounded-[12px] border border-dashed border-disabled active:opacity-80"
+                      accessibilityRole="button"
+                      accessibilityLabel="사진 첨부"
+                      onPress={onPickPhoto}
+                    >
+                      <Text className="text-muted" style={{ fontSize: 24 }}>
+                        ＋
+                      </Text>
+                    </Pressable>
+                  ) : null}
+                </View>
               </View>
             </ScrollView>
 

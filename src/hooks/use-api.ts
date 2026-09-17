@@ -17,6 +17,7 @@ import type {
   AdRewardSessionCancelRequest,
   AdRewardSessionCreateRequest,
   CookHistoryCreateRequest,
+  DeleteIngredientsRequest,
   IngestionJobCreateRequest,
   InquiryCreateRequest,
   InquiryListParams,
@@ -307,6 +308,15 @@ export function useAddCustomIngredient() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (name: string) => myIngredientApi.addCustom(name),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['my-ingredients'] }),
+  });
+}
+
+// 보유 재료 선택/전체 삭제(재료관리 더보기 메뉴). 성공 시 목록 무효화 → 자동 반영.
+export function useDeleteMyIngredients() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: DeleteIngredientsRequest) => myIngredientApi.remove(body),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['my-ingredients'] }),
   });
 }

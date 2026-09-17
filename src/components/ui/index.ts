@@ -1,3 +1,4 @@
+export { AppRefreshControl, type AppRefreshControlProps } from './app-refresh-control';
 export { AppText, type AppTextProps, type TextVariant } from './app-text';
 export { Button, type ButtonProps, type ButtonVariant } from './button';
 export { Chevron, type ChevronProps } from './chevron';

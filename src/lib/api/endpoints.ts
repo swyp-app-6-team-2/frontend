@@ -10,6 +10,8 @@ import type {
   CookHistoryCreateRequest,
   CookHistoryItem,
   CustomIngredientCreateRequest,
+  DeleteIngredientsRequest,
+  DeleteIngredientsResponse,
   ImageContentType,
   IngestionJobCreateRequest,
   IngestionJobCreateResponse,
@@ -143,6 +145,9 @@ export const myIngredientApi = {
       method: 'POST',
       body: { name } satisfies CustomIngredientCreateRequest,
     }),
+  // 선택/전체 삭제(마스터·커스텀 공용). deletedCount 반환.
+  remove: (body: DeleteIngredientsRequest) =>
+    apiFetch<DeleteIngredientsResponse>('/users/me/ingredients', { method: 'DELETE', body }),
 };
 
 // ── Inquiry (문의) ─────────────────────────────────────────────

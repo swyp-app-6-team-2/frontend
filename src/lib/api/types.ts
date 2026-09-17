@@ -248,6 +248,17 @@ export type AddMyIngredientsResponse = { ingredients: UserIngredient[] };
 // 마스터·기존 커스텀과 이름이 같아도 새 항목으로 등록된다.
 export type CustomIngredientCreateRequest = { name: string };
 
+// DELETE /users/me/ingredients — 보유 재료 선택/전체 삭제(마스터·커스텀 공용).
+// SELECTED: ingredients에 담은 것만 / ALL: 전체(ingredients는 빈 배열).
+// item.id 는 MASTER면 ingredientId, CUSTOM이면 customIngredientId.
+export type IngredientDeleteMode = 'SELECTED' | 'ALL';
+export type DeleteIngredientItem = { type: IngredientType; id: number };
+export type DeleteIngredientsRequest = {
+  mode: IngredientDeleteMode;
+  ingredients: DeleteIngredientItem[];
+};
+export type DeleteIngredientsResponse = { deletedCount: number };
+
 // ── Inquiry (문의) ─────────────────────────────────────────────
 // 표시 이름·순서는 앱이 보유(constants). 서버는 코드만 주고받는다.
 export type InquiryType = 'RECIPE' | 'SLOT' | 'ACCOUNT' | 'NOTIFICATION' | 'BUG' | 'ETC';

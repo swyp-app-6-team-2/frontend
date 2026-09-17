@@ -1,14 +1,7 @@
-import { useEffect, useState, type ReactNode, type Ref } from 'react';
-import {
-  Keyboard,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  View,
-} from 'react-native';
+import type { ReactNode, Ref } from 'react';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { Image, type ImageSource } from 'expo-image';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ScreenHeader } from './screen-header';
 
@@ -62,26 +55,6 @@ export function Screen({
   bgBottomImage,
   footer,
 }: ScreenProps) {
-  const insets = useSafeAreaInsets();
-  // 스크롤 화면의 하단 고정 footer는 ScrollView 밖이라 automaticallyAdjustKeyboardInsets가
-  // 못 올려 키보드에 가린다(iOS). 키보드 높이만큼 footer만 위로 들어 올린다.
-  // Android는 adjustResize가 창을 줄여 footer가 자동으로 올라가므로 iOS에서만 추적한다.
-  const hasFooter = footer != null;
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
-  useEffect(() => {
-    if (Platform.OS !== 'ios' || !hasFooter) return;
-    const show = Keyboard.addListener('keyboardWillShow', (e) =>
-      setKeyboardHeight(e.endCoordinates.height),
-    );
-    const hide = Keyboard.addListener('keyboardWillHide', () => setKeyboardHeight(0));
-    return () => {
-      show.remove();
-      hide.remove();
-    };
-  }, [hasFooter]);
-  // SafeAreaView가 이미 하단 인셋만큼 패딩을 주므로 그만큼 빼야 정확히 키보드 위에 붙는다.
-  const footerLift = Math.max(0, keyboardHeight - insets.bottom);
-
   return (
     <View className="flex-1 bg-background">
       {bgImage ? (
@@ -113,9 +86,9 @@ export function Screen({
           />
         ) : null}
         {scroll ? (
-          // 스크롤 화면: iOS는 키보드 높이만큼 contentInset 자동 조정 →
-          // 하단 입력·버튼이 키보드에 가리지 않고 스크롤로 접근 가능. Android는 adjustResize가 처리.
-          // footer가 있으면 ScrollView 밖(폰 하단)에 고정한다 — 콘텐츠와 함께 스크롤되지 않게.
+          // 스크롤 화면: automaticallyAdjustKeyboardInsets가 포커스된 입력창을 키보드 위로
+          // 자동 스크롤 + 하단 inset 조정. footer는 ScrollView 밖(폰 하단)에 고정 →
+          // 타이핑 중엔 키보드 뒤에 있다가 키보드를 내리면 다시 보인다. Android는 adjustResize가 처리.
           <View className="flex-1">
             <ScrollView
               ref={scrollRef}
@@ -127,11 +100,7 @@ export function Screen({
             >
               {children}
             </ScrollView>
-            {footer ? (
-              <View style={{ marginBottom: footerLift }} className="px-screen pb-4 pt-3">
-                {footer}
-              </View>
-            ) : null}
+            {footer ? <View className="px-screen pb-4 pt-3">{footer}</View> : null}
           </View>
         ) : (
           // 비스크롤 화면: 하단 고정 입력란은 키보드가 올라오면 위로 밀어 올린다(iOS padding).

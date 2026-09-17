@@ -115,6 +115,15 @@ export default function InquiryScreen() {
     }
   };
 
+  // 뒤로가기 — 작성 탭에서 작성 중이면 이탈 확인 팝업(취소 버튼을 대체), 아니면 그냥 뒤로.
+  const hasDraft =
+    type != null || title.trim().length > 0 || content.trim().length > 0 || photos.length > 0;
+  const onBack = () => {
+    if (tab === 0 && hasDraft) setConfirm('leave');
+    else if (router.canGoBack()) router.back();
+    else router.replace('/');
+  };
+
   const goTab = (i: number) => {
     fireHaptic('selection');
     setTab(i);
@@ -128,7 +137,7 @@ export default function InquiryScreen() {
   return (
     <View className="flex-1 bg-background">
       <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
-        <ScreenHeader title="문의하기" back />
+        <ScreenHeader title="문의하기" back onClose={onBack} />
 
         {/* 탭: 문의하기 / 문의내역 확인 */}
         <View className="flex-row border-b border-field px-screen">
@@ -276,17 +285,10 @@ export default function InquiryScreen() {
               </View>
             </ScrollView>
 
-            {/* 하단 고정 버튼 (취소 / 문의 접수) */}
-            <View className="flex-row gap-3 px-screen pb-2 pt-4">
+            {/* 하단 고정 버튼 — 완료하기(단일). 취소는 헤더 뒤로가기로 대체됨 */}
+            <View className="px-screen pb-8 pt-4">
               <Pressable
-                className="h-[52px] flex-1 items-center justify-center rounded-[30px] bg-popup-button active:opacity-90"
-                accessibilityRole="button"
-                onPress={() => setConfirm('leave')}
-              >
-                <Text className="text-body font-semibold text-popup-button-text">취소</Text>
-              </Pressable>
-              <Pressable
-                className={`h-[52px] flex-1 items-center justify-center rounded-[30px] active:opacity-90 ${
+                className={`h-[52px] items-center justify-center rounded-[30px] active:opacity-90 ${
                   canSubmit ? 'bg-primary' : 'bg-disabled'
                 }`}
                 accessibilityRole="button"
@@ -297,7 +299,7 @@ export default function InquiryScreen() {
                 <Text
                   className={`text-body font-semibold ${canSubmit ? 'text-ink' : 'text-muted'}`}
                 >
-                  문의 접수
+                  문의접수
                 </Text>
               </Pressable>
             </View>

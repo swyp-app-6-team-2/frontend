@@ -1,10 +1,10 @@
 import { useRef, useState } from 'react';
-import { Alert, Pressable, Text, TextInput, View, type ScrollView } from 'react-native';
+import { Alert, Pressable, Text, TextInput, View } from 'react-native';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 
-import { AppText, Button, Screen, SearchBar } from '@/components/ui';
+import { AppText, Button, Screen, SearchBar, type ScreenScrollRef } from '@/components/ui';
 import { RECIPE_CATEGORY_LABEL, RECIPE_CATEGORY_ORDER } from '@/constants/labels';
 import { palette } from '@/constants/tokens';
 import { useCreateRecipe, useMyIngredients, useRecipe, useUpdateRecipe } from '@/hooks/use-api';
@@ -51,7 +51,7 @@ function DashedAddButton({
 // 18 레시피 직접 입력 — 사진·이름·카테고리·재료·방법 (Figma 619:9650).
 export default function AddRecipeManualScreen() {
   const router = useRouter();
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<ScreenScrollRef>(null);
   const create = useCreateRecipe();
   // id 파라미터가 있으면 '수정' 모드 — 기존 레시피를 불러와 프리필하고 PATCH로 저장.
   // draft 파라미터(레시피 분석 결과)가 있으면 '내용 확인' 모드 — AI 초안을 프리필하고 신규 생성.

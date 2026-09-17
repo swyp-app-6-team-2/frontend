@@ -3,6 +3,7 @@ import { LogBox, useColorScheme } from 'react-native';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { QueryProvider } from '@/components/query-provider';
@@ -54,19 +55,21 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <QueryProvider>
-        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-          <AnimatedSplashOverlay />
-          <Stack screenOptions={{ headerShown: false, animation }}>
-            <Stack.Screen name="(tabs)" options={{ animation: 'none' }} />
-            <Stack.Screen name="home" options={{ animation: 'none' }} />
-            <Stack.Screen name="fridge" options={{ animation: 'none' }} />
-            <Stack.Screen name="ingredients" options={{ animation: 'none' }} />
-            <Stack.Screen name="recipes" options={{ animation: 'none' }} />
-            <Stack.Screen name="my" options={{ animation: 'none' }} />
-          </Stack>
-        </ThemeProvider>
-      </QueryProvider>
+      <KeyboardProvider>
+        <QueryProvider>
+          <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+            <AnimatedSplashOverlay />
+            <Stack screenOptions={{ headerShown: false, animation }}>
+              <Stack.Screen name="(tabs)" options={{ animation: 'none' }} />
+              <Stack.Screen name="home" options={{ animation: 'none' }} />
+              <Stack.Screen name="fridge" options={{ animation: 'none' }} />
+              <Stack.Screen name="ingredients" options={{ animation: 'none' }} />
+              <Stack.Screen name="recipes" options={{ animation: 'none' }} />
+              <Stack.Screen name="my" options={{ animation: 'none' }} />
+            </Stack>
+          </ThemeProvider>
+        </QueryProvider>
+      </KeyboardProvider>
     </GestureHandlerRootView>
   );
 }

@@ -1,9 +1,13 @@
-import type { ReactNode, Ref } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
+import type { ComponentRef, ReactNode, Ref } from 'react';
+import { KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
 import { Image, type ImageSource } from 'expo-image';
+import { KeyboardAwareScrollView, KeyboardStickyView } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ScreenHeader } from './screen-header';
+
+// scrollRef 대상 — KeyboardAwareScrollView(내부 ScrollView) 인스턴스. scrollToEnd 등 지원.
+export type ScreenScrollRef = ComponentRef<typeof KeyboardAwareScrollView>;
 
 export type ScreenProps = {
   children: ReactNode;
@@ -20,7 +24,7 @@ export type ScreenProps = {
   /** Wrap the body in a vertical ScrollView. Default false. */
   scroll?: boolean;
   /** Ref to the inner ScrollView (only with `scroll`) — e.g. to scrollToEnd. */
-  scrollRef?: Ref<ScrollView>;
+  scrollRef?: Ref<ScreenScrollRef>;
   /** Extra classes on the body container / scroll content. */
   contentClassName?: string;
   /** Full-bleed background image behind content (e.g. require('...')). */
@@ -86,21 +90,25 @@ export function Screen({
           />
         ) : null}
         {scroll ? (
-          // 스크롤 화면: automaticallyAdjustKeyboardInsets가 포커스된 입력창을 키보드 위로
-          // 자동 스크롤 + 하단 inset 조정. footer는 ScrollView 밖(폰 하단)에 고정 →
-          // 타이핑 중엔 키보드 뒤에 있다가 키보드를 내리면 다시 보인다. Android는 adjustResize가 처리.
+          // 스크롤 화면: KeyboardAwareScrollView가 포커스된 입력창을 키보드 위로 자동 스크롤한다.
+          // footer가 있으면 그만큼(bottomOffset) 더 띄워 입력창이 footer에도 가리지 않게 하고,
+          // footer 자체는 KeyboardStickyView로 키보드 위에 붙여 둘 다 보이게 한다.
           <View className="flex-1">
-            <ScrollView
+            <KeyboardAwareScrollView
               ref={scrollRef}
               className="flex-1"
-              automaticallyAdjustKeyboardInsets
+              bottomOffset={footer ? 88 : 16}
               keyboardShouldPersistTaps="handled"
               keyboardDismissMode="interactive"
               contentContainerClassName={`gap-4 px-screen py-4 ${contentClassName ?? ''}`}
             >
               {children}
-            </ScrollView>
-            {footer ? <View className="px-screen pb-4 pt-3">{footer}</View> : null}
+            </KeyboardAwareScrollView>
+            {footer ? (
+              <KeyboardStickyView>
+                <View className="px-screen pb-4 pt-3">{footer}</View>
+              </KeyboardStickyView>
+            ) : null}
           </View>
         ) : (
           // 비스크롤 화면: 하단 고정 입력란은 키보드가 올라오면 위로 밀어 올린다(iOS padding).

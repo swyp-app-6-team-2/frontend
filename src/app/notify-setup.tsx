@@ -4,10 +4,28 @@ import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { AppText, Screen } from '@/components/ui';
+import { useSaveNotificationSettings } from '@/hooks/use-api';
+import type { Weekday } from '@/lib/api/types';
 
 // 알림 시간대 설정 — 신규 가입(약관 동의) 후. 선택한 시간대에 '별똥별' 알림을 보낸다.
 // 시간대 라벨은 임시(스펙 확정 시 교체). 복수 선택 가능(Figma: 2개 활성 예시).
 const SLOTS = ['아침', '점심', '저녁', '야식'];
+// 라벨 → 서버 저장 시각(HH:mm). 스펙 확정 전 기본값.
+const SLOT_TIME: Record<string, string> = {
+  아침: '08:00',
+  점심: '12:00',
+  저녁: '18:00',
+  야식: '22:00',
+};
+const ALL_WEEKDAYS: Weekday[] = [
+  'MONDAY',
+  'TUESDAY',
+  'WEDNESDAY',
+  'THURSDAY',
+  'FRIDAY',
+  'SATURDAY',
+  'SUNDAY',
+];
 
 // 172×52 미니 토글 — on=골드·ink 글자, off=#36398A(slot)·흰 글자. radius 30.
 function TimeSlot({ label, on, onPress }: { label: string; on: boolean; onPress: () => void }) {
@@ -34,6 +52,7 @@ export default function NotifySetupScreen() {
   const { nick } = useLocalSearchParams<{ nick?: string }>();
   const nickname = nick || '요리사';
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const saveSettings = useSaveNotificationSettings();
 
   const toggle = (s: string) =>
     setSelected((prev) => {
@@ -46,8 +65,13 @@ export default function NotifySetupScreen() {
   const canSubmit = selected.size > 0;
   const onSubmit = () => {
     if (!canSubmit) return;
-    // TODO: 선택 시간대를 알림 설정 API로 저장.
-    // 신규 가입 흐름: 알림 시간대 설정 → 온보딩 튜토리얼.
+    // 선택 시간대를 알림 설정으로 저장(활성·매일·선택 슬롯). SLOTS 순서대로 정렬해 저장.
+    const timeSlots = SLOTS.filter((s) => selected.has(s)).map((label) => ({
+      label,
+      time: SLOT_TIME[label],
+    }));
+    saveSettings.mutate({ enabled: true, weekdays: ALL_WEEKDAYS, timeSlots });
+    // 저장 성공 여부와 무관하게 온보딩으로 진행(실패해도 알림 설정 화면에서 다시 조정 가능).
     router.replace('/onboarding');
   };
 

@@ -17,7 +17,7 @@ import { RecommendPopup } from '@/components/recommend-popup';
 import { SlotAddedPopup } from '@/components/slot-added-popup';
 import { TabBar } from '@/components/tab-bar';
 import { palette } from '@/constants/tokens';
-import { useIngredients, useRecipes, useRecommendRecipe } from '@/hooks/use-api';
+import { useIngredients, useProfile, useRecipes, useRecommendRecipe } from '@/hooks/use-api';
 import { useReduceMotion } from '@/hooks/use-reduce-motion';
 import { ApiError } from '@/lib/api';
 import type { RecipeListItem, RecipeRecommendationResponse } from '@/lib/api/types';
@@ -151,8 +151,9 @@ export default function HomeScreen() {
   const recommendRecipe = useRecommendRecipe();
   const lastRecoId = useRef<number | undefined>(undefined); // 재추천 시 직전 제외용
   const lastTap = useRef(0);
-  // 남은 별 개수 — 별 데이터 레이어 생기면 서버 값으로 교체(현재 placeholder).
-  const remainingStars = 10;
+  // 남은 별 개수 = 남은 레시피 저장 슬롯(GET /users/me). 로드 전엔 0.
+  const { data: me } = useProfile();
+  const remainingStars = me?.remainingRecipeSlots ?? 0;
 
   // 추천 옵션 선택 → 백엔드 추천 API 호출 → 결과 팝업. previousRecipeId로 직전과 다르게.
   const onRecommend = async (label: string) => {

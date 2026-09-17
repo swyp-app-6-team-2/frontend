@@ -88,7 +88,7 @@ export default function MyScreen() {
                 남은 별
               </AppText>
               <AppText variant="body" className="font-bold">
-                35
+                {me?.remainingRecipeSlots ?? 0}
               </AppText>
             </View>
             <Pressable

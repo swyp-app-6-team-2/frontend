@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="color-scheme" content="light dark" />
+<title>소셜 로그인 서명값 등록 가이드 — 별따먹자 Android</title>
+<style>
+  :root {
+    --bg: #0b0f1e;
+    --surface: #141a2b;
+    --surface-2: #1b2236;
+    --text: #f4f6fb;
+    --muted: #99a3bd;
+    --line: #29314c;
+    --accent: #ffd457;
+    --accent-soft: rgba(255, 212, 87, 0.12);
+    --code: #ffe38a;
+    --ok: #2fa96b;
+    --google: #4285f4;
+    --kakao: #fee500;
+    --kakao-ink: #3a1d1d;
+    --naver: #03c75a;
+    --radius: 14px;
+    --mono: ui-monospace, "SF Mono", "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial,
+      "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f5f7fc; --surface: #ffffff; --surface-2: #eef1f8; --text: #131829;
+      --muted: #5a6480; --line: #e2e7f1; --accent: #9a7400; --accent-soft: rgba(255, 212, 87, 0.22); --code: #7a5c00;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0b0f1e; --surface: #141a2b; --surface-2: #1b2236; --text: #f4f6fb;
+    --muted: #99a3bd; --line: #29314c; --accent: #ffd457; --accent-soft: rgba(255, 212, 87, 0.12); --code: #ffe38a;
+  }
+  :root[data-theme="light"] {
+    --bg: #f5f7fc; --surface: #ffffff; --surface-2: #eef1f8; --text: #131829;
+    --muted: #5a6480; --line: #e2e7f1; --accent: #9a7400; --accent-soft: rgba(255, 212, 87, 0.22); --code: #7a5c00;
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { margin: 0; }
+  .wrap {
+    font-family: var(--sans); background: var(--bg); color: var(--text);
+    min-height: 100vh; padding: clamp(24px, 5vw, 64px) clamp(18px, 5vw, 40px) 72px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .inner { max-width: 780px; margin: 0 auto; }
+
+  .theme-toggle {
+    position: fixed; top: 16px; right: 16px; z-index: 10;
+    font-family: var(--sans); font-size: 13px; font-weight: 600; color: var(--text);
+    background: var(--surface); border: 1px solid var(--line); border-radius: 999px;
+    padding: 8px 14px; cursor: pointer;
+  }
+  .theme-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .eyebrow { font-size: 12px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); margin: 0 0 12px; }
+  h1 { font-size: clamp(26px, 5vw, 38px); line-height: 1.15; font-weight: 800; margin: 0 0 14px; letter-spacing: -0.02em; text-wrap: balance; }
+  .lede { font-size: 16px; line-height: 1.6; color: var(--muted); margin: 0; max-width: 60ch; }
+  .lede b { color: var(--text); font-weight: 600; }
+
+  h2 { font-size: 13px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin: 44px 0 16px; display: flex; align-items: center; gap: 10px; }
+  h2::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+
+  .keys { display: flex; flex-direction: column; gap: 10px; }
+  .key { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; grid-template-columns: 1fr auto; gap: 6px 14px; align-items: center; }
+  .key.primary { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); background: linear-gradient(180deg, var(--accent-soft), transparent), var(--surface); }
+  .key dt { grid-column: 1 / -1; font-size: 12px; font-weight: 700; letter-spacing: 0.04em; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+  .key dt .tag { font-weight: 600; letter-spacing: 0; font-size: 11px; color: var(--accent); background: var(--accent-soft); padding: 2px 8px; border-radius: 999px; text-transform: none; }
+  .key .val { font-family: var(--mono); font-size: 14px; line-height: 1.5; color: var(--code); overflow-wrap: anywhere; user-select: all; font-variant-numeric: tabular-nums; }
+  .key .val.big { font-size: 15px; }
+  button.copy { font-family: var(--sans); font-size: 12px; font-weight: 600; color: var(--text); background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; padding: 7px 12px; cursor: pointer; white-space: nowrap; align-self: start; transition: background 0.15s, border-color 0.15s; }
+  button.copy:hover { border-color: var(--accent); }
+  button.copy:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  button.copy.done { color: var(--ok); border-color: var(--ok); }
+
+  .providers { display: flex; flex-direction: column; gap: 16px; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+  .card > .bar { height: 4px; }
+  .card.google > .bar { background: var(--google); }
+  .card.kakao > .bar { background: var(--kakao); }
+  .card.naver > .bar { background: var(--naver); }
+  .card .body { padding: 20px 20px 22px; }
+  .chip { display: inline-flex; align-items: center; gap: 7px; font-weight: 700; font-size: 13px; padding: 5px 12px; border-radius: 999px; margin-bottom: 4px; }
+  .chip.google { background: color-mix(in srgb, var(--google) 16%, transparent); color: var(--google); }
+  .chip.kakao { background: var(--kakao); color: var(--kakao-ink); }
+  .chip.naver { background: color-mix(in srgb, var(--naver) 18%, transparent); color: var(--naver); }
+  .card h3 { font-size: 18px; font-weight: 700; margin: 10px 0 4px; letter-spacing: -0.01em; }
+  .card .where { font-size: 13px; color: var(--muted); margin: 0 0 16px; overflow-wrap: anywhere; }
+  .card .where a { color: var(--accent); text-decoration: none; border-bottom: 1px solid color-mix(in srgb, var(--accent) 40%, transparent); }
+  .card .where a:hover { border-bottom-color: var(--accent); }
+
+  ol.steps { margin: 0 0 16px; padding: 0; list-style: none; counter-reset: s; display: flex; flex-direction: column; gap: 9px; }
+  ol.steps li { position: relative; padding-left: 30px; font-size: 14.5px; line-height: 1.55; counter-increment: s; }
+  ol.steps li::before { content: counter(s); position: absolute; left: 0; top: 1px; width: 20px; height: 20px; border-radius: 6px; background: var(--surface-2); border: 1px solid var(--line); font-size: 11px; font-weight: 700; color: var(--muted); display: grid; place-items: center; font-variant-numeric: tabular-nums; }
+  ol.steps code, .note code { font-family: var(--mono); font-size: 13px; background: var(--surface-2); padding: 1px 6px; border-radius: 5px; overflow-wrap: anywhere; }
+
+  .paste { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; background: var(--surface-2); border: 1px dashed var(--line); border-radius: 10px; padding: 12px 14px; }
+  .paste .plabel { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+  .paste .val { flex: 1; min-width: 200px; font-family: var(--mono); font-size: 13.5px; color: var(--code); overflow-wrap: anywhere; user-select: all; }
+
+  .note { margin-top: 40px; background: var(--accent-soft); border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--line)); border-radius: var(--radius); padding: 18px 20px; font-size: 14px; line-height: 1.6; }
+  .note strong { color: var(--text); }
+  .note ul { margin: 8px 0 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; color: var(--muted); }
+  .note ul b { color: var(--text); font-weight: 600; }
+  footer { margin-top: 30px; font-size: 12.5px; color: var(--muted); line-height: 1.6; border-top: 1px solid var(--line); padding-top: 16px; }
+  footer code { font-family: var(--mono); }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<button class="theme-toggle" type="button" id="themeToggle" aria-label="테마 전환">◐ 테마</button>
+<div class="wrap">
+  <div class="inner">
+    <header>
+      <p class="eyebrow">별따먹자 · Android · 소셜 로그인</p>
+      <h1>서명값(지문) 등록 가이드</h1>
+      <p class="lede">
+        공유 APK는 <b>EAS 키스토어</b>로 서명됩니다. 카카오·네이버·구글 로그인이 되려면 이 서명 지문을 각
+        provider 콘솔에 등록해야 합니다. 등록은 <b>Expo/EAS가 아니라 provider 콘솔</b>에서 하고,
+        등록 후 <b>리빌드는 필요 없습니다</b> — 저장하면 지금 공유한 APK에서 바로 로그인 재시도하면 됩니다.
+      </p>
+    </header>
+
+    <h2>핵심 값 (풀 값)</h2>
+    <dl class="keys">
+      <div class="key">
+        <dt>패키지명 <span class="tag">세 콘솔 공통</span></dt>
+        <span class="val big">com.byeolddameokja.app</span>
+        <button class="copy" type="button" data-copy="com.byeolddameokja.app">복사</button>
+      </div>
+      <div class="key primary">
+        <dt>SHA-1 <span class="tag">EAS 서명 · 구글/네이버</span></dt>
+        <span class="val big">E0:1A:52:79:6D:21:B1:A5:01:42:17:60:41:12:AB:E4:55:C1:20:86</span>
+        <button class="copy" type="button" data-copy="E0:1A:52:79:6D:21:B1:A5:01:42:17:60:41:12:AB:E4:55:C1:20:86">복사</button>
+      </div>
+      <div class="key primary">
+        <dt>카카오 키해시 <span class="tag">base64 · 카카오</span></dt>
+        <span class="val big">4BpSeW0hsaUBQhdgQRKr5FXBIIY=</span>
+        <button class="copy" type="button" data-copy="4BpSeW0hsaUBQhdgQRKr5FXBIIY=">복사</button>
+      </div>
+      <div class="key">
+        <dt>SHA-256 <span class="tag">EAS 서명 · 요구 시</span></dt>
+        <span class="val">A1:69:9D:63:02:C3:F1:88:DB:A7:DB:5B:E4:A1:2D:D4:1B:58:CA:D0:88:0C:CE:28:52:0F:16:5A:21:5A:CA:0E</span>
+        <button class="copy" type="button" data-copy="A1:69:9D:63:02:C3:F1:88:DB:A7:DB:5B:E4:A1:2D:D4:1B:58:CA:D0:88:0C:CE:28:52:0F:16:5A:21:5A:CA:0E">복사</button>
+      </div>
+      <div class="key">
+        <dt>SHA-1 (debug) <span class="tag">로컬 expo run:android 용</span></dt>
+        <span class="val">DD:D8:25:19:DB:D4:FB:6E:CA:0A:EE:E8:9A:A8:36:60:78:98:8E:52</span>
+        <button class="copy" type="button" data-copy="DD:D8:25:19:DB:D4:FB:6E:CA:0A:EE:E8:9A:A8:36:60:78:98:8E:52">복사</button>
+      </div>
+    </dl>
+
+    <h2>콘솔별 등록</h2>
+    <div class="providers">
+      <section class="card google">
+        <div class="bar"></div>
+        <div class="body">
+          <span class="chip google">Google · Firebase</span>
+          <h3>구글 — SHA-1 지문 등록</h3>
+          <p class="where">Firebase Console → <a href="https://console.firebase.google.com" target="_blank" rel="noopener">console.firebase.google.com</a> (이 앱은 FCM을 써서 Firebase 경로가 가장 쉬움)</p>
+          <ol class="steps">
+            <li>프로젝트 → <b>⚙️ 프로젝트 설정 → 내 앱 → Android 앱</b> (<code>com.byeolddameokja.app</code>) 선택</li>
+            <li><b>SHA 인증서 지문 → 지문 추가</b></li>
+            <li>아래 <b>SHA-1</b> 붙여넣기 (SHA-256도 함께 넣으면 더 안전)</li>
+            <li>Firebase에 넣으면 연결된 GCP OAuth 클라이언트에 자동 반영. (Firebase 미사용 시 GCP 콘솔 → 사용자 인증 정보 → Android용 OAuth 클라이언트에 직접 추가)</li>
+          </ol>
+          <div class="paste">
+            <span class="plabel">붙여넣기</span>
+            <span class="val">E0:1A:52:79:6D:21:B1:A5:01:42:17:60:41:12:AB:E4:55:C1:20:86</span>
+            <button class="copy" type="button" data-copy="E0:1A:52:79:6D:21:B1:A5:01:42:17:60:41:12:AB:E4:55:C1:20:86">복사</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="card kakao">
+        <div class="bar"></div>
+        <div class="body">
+          <span class="chip kakao">Kakao</span>
+          <h3>카카오 — 키 해시 등록</h3>
+          <p class="where">Kakao Developers → <a href="https://developers.kakao.com/console/app" target="_blank" rel="noopener">developers.kakao.com/console/app</a></p>
+          <ol class="steps">
+            <li>해당 앱 → <b>앱 설정 → 플랫폼 → Android</b></li>
+            <li><b>키 해시</b> 항목에 아래 값 추가</li>
+            <li>패키지명 <code>com.byeolddameokja.app</code> 등록돼 있는지 확인</li>
+          </ol>
+          <div class="paste">
+            <span class="plabel">붙여넣기</span>
+            <span class="val">4BpSeW0hsaUBQhdgQRKr5FXBIIY=</span>
+            <button class="copy" type="button" data-copy="4BpSeW0hsaUBQhdgQRKr5FXBIIY=">복사</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="card naver">
+        <div class="bar"></div>
+        <div class="body">
+          <span class="chip naver">Naver</span>
+          <h3>네이버 — 패키지명 등록</h3>
+          <p class="where">Naver Developers → <a href="https://developers.naver.com/apps" target="_blank" rel="noopener">developers.naver.com/apps</a></p>
+          <ol class="steps">
+            <li>해당 앱 → <b>API 설정 → 로그인 오픈 API 서비스 환경 → Android</b></li>
+            <li><b>패키지 이름</b> <code>com.byeolddameokja.app</code> + 다운로드 URL(테스트면 임의 Play URL 가능) 등록</li>
+            <li>네이버는 주로 패키지명으로 매칭. 콘솔이 SHA-1을 요구하면 위 EAS SHA-1 사용</li>
+          </ol>
+          <div class="paste">
+            <span class="plabel">패키지</span>
+            <span class="val">com.byeolddameokja.app</span>
+            <button class="copy" type="button" data-copy="com.byeolddameokja.app">복사</button>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <aside class="note">
+      <strong>등록 전 확인 / 주의</strong>
+      <ul>
+        <li><b>같은 구글 프로젝트</b>여야 함 — dev 백엔드가 검증하는 <code>GOOGLE_CLIENT_ID</code>와 동일 프로젝트에 Android 지문을 넣어야 통과. 다른 프로젝트에 넣으면 계속 실패.</li>
+        <li><b>리빌드 불필요</b> — APK 서명은 고정. 콘솔에 등록·저장하면 기존 APK에서 바로 로그인 재시도(보통 수 분 내 반영).</li>
+        <li><b>서명키가 다르면 값도 다름</b> — 공유 APK는 <b>EAS 서명(위 값)</b>. 로컬 <code>expo run:android</code>까지 테스트하려면 debug SHA-1도 함께 등록.</li>
+      </ul>
+    </aside>
+
+    <footer>
+      출처: EAS Android 키스토어 (alias <code>2f483c71d4901582b36304f90c6d283f</code>, default) · 프로젝트 <code>@leeseunghwan123/orca</code> · 조회일 2026-09-16.
+    </footer>
+  </div>
+</div>
+
+<script>
+  // 테마 토글(수동) — OS 설정을 무시하고 사용자가 고정. localStorage 유지.
+  (function () {
+    var root = document.documentElement;
+    var saved = null;
+    try { saved = localStorage.getItem("signing-guide-theme"); } catch (e) {}
+    if (saved === "dark" || saved === "light") root.setAttribute("data-theme", saved);
+    document.getElementById("themeToggle").addEventListener("click", function () {
+      var isDark = getComputedStyle(root).getPropertyValue("--bg").trim().indexOf("#0b") === 0
+        || (root.getAttribute("data-theme") === "dark");
+      var next = isDark ? "light" : "dark";
+      root.setAttribute("data-theme", next);
+      try { localStorage.setItem("signing-guide-theme", next); } catch (e) {}
+    });
+  })();
+
+  document.querySelectorAll("button.copy").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var text = btn.getAttribute("data-copy");
+      var restore = function () {
+        var original = "복사";
+        btn.textContent = "복사됨 ✓";
+        btn.classList.add("done");
+        setTimeout(function () { btn.textContent = original; btn.classList.remove("done"); }, 1400);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(restore, restore);
+      } else {
+        var ta = document.createElement("textarea");
+        ta.value = text; document.body.appendChild(ta); ta.select();
+        try { document.execCommand("copy"); } catch (e) {}
+        document.body.removeChild(ta); restore();
+      }
+    });
+  });
+</script>
+</body>
+</html>

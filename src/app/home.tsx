@@ -262,7 +262,8 @@ export default function HomeScreen() {
       {shootingStar ? (
         <Image
           source={require('../assets/images/shooting-star.gif')}
-          style={StyleSheet.absoluteFill}
+          // contain이라 세로 중앙에 오는 GIF를 위로 올려 더 높은 데서 떨어지게 한다.
+          style={[StyleSheet.absoluteFill, { transform: [{ translateY: -140 }] }]}
           contentFit="contain"
           pointerEvents="none"
           accessibilityLabel="별똥별"

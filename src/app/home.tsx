@@ -20,21 +20,11 @@ import { palette } from '@/constants/tokens';
 import { useIngredients, useProfile, useRecipes, useRecommendRecipe } from '@/hooks/use-api';
 import { useReduceMotion } from '@/hooks/use-reduce-motion';
 import { ApiError } from '@/lib/api';
-import type { RecipeListItem, RecipeRecommendationResponse } from '@/lib/api/types';
+import type { RecipeListItem } from '@/lib/api/types';
+import { recommendationModeFor, recommendationToListItem } from '@/lib/recommend';
 import { dismissSlotAdded, useSlotJustAdded } from '@/lib/slot-ads';
 
 const RECO = ['랜덤으로 골라줘', '내재료로 골라줘'];
-
-// 추천 응답(백엔드) → RecommendPopup이 받는 목록아이템 형태로 매핑.
-function toListItem(r: RecipeRecommendationResponse): RecipeListItem {
-  return {
-    recipeId: r.recipeId,
-    title: r.title,
-    categoryCode: r.category,
-    coverImageUrl: r.thumbnailUrl,
-    ingredientNames: r.mainIngredients,
-  };
-}
 
 // 레시피 수만큼 밤하늘에 흩뿌리는 반짝이별 — 시야를 안 가리게 상단~중앙 하늘 영역에만.
 const MAX_STARS = 24;
@@ -55,7 +45,7 @@ function makeStars(count: number): StarSpec[] {
       left: 14 + Math.random() * 56, // 14%~70% (큰 별이 좌우 가장자리에 안 붙게 안쪽으로)
       top: 15 + Math.random() * 48, // 15%~63% (제목 아래 ~ 캐릭터/드롭다운 위)
       size: big ? 60 : 40, // 큰별 60 / 작은별 40
-      bright: big ? 1 : 0.45, // 큰별 밝게 / 작은별 흐리게
+      bright: big ? 1 : 0.7, // 큰별 밝게 / 작은별 살짝 흐리게(개수는 셀 수 있게 유지)
       delay: Math.random() * 2200,
       dur: 1600 + Math.random() * 1600, // 1.6~3.2s 반짝임 주기
     };
@@ -88,8 +78,9 @@ function TwinkleStar({
     );
   }, [reduceMotion, v, spec.delay, spec.dur]);
   const style = useAnimatedStyle(() => ({
-    // 큰별/작은별 밝기 차이(spec.bright)를 반짝임 위에 곱한다.
-    opacity: (0.08 + v.value * 0.92) * spec.bright,
+    // 반짝여도 최소 밝기를 유지해 별 개수가 항상 셀 수 있게 한다(사라지지 않음).
+    // 큰별/작은별 밝기 차이(spec.bright)는 곱으로 유지.
+    opacity: spec.bright * (0.6 + v.value * 0.4),
     transform: [{ scale: 0.65 + v.value * 0.35 }],
   }));
   return (
@@ -138,19 +129,18 @@ function StarField({
 
 export default function HomeScreen() {
   const router = useRouter();
-  // 나의 레시피 화면과 같은 쿼리 키(sort:'LATEST')를 써서 캐시를 공유 → 탭 진입 즉시 표시.
-  const { data } = useRecipes({ sort: 'LATEST' });
+  // 별 = 내 레시피(1개당 1개, 최대 MAX_STARS). '나의 레시피' 화면과 같은 쿼리(size:100)를 써서
+  // 캐시를 공유 → 별 개수가 목록의 '총 N개'와 항상 일치. recipes[i] 로 각 별이 레시피에 매핑된다.
+  const { data } = useRecipes({ sort: 'LATEST', size: 100 });
   const recipes = data?.recipes ?? [];
   useIngredients(); // 재료관리 탭 워밍업(staleTime Infinity라 세션당 1회만 fetch)
   const reduceMotion = useReduceMotion(); // 밤하늘 별 = 내 레시피 수(1개당 1개, 탭 시 팝업)
   const slotAdded = useSlotJustAdded(); // 슬롯 확장에서 광고 시청 후 복귀 → 성공 팝업
-  const [hasStar, setHasStar] = useState(true);
   const [reco, setReco] = useState(RECO[0]);
   const [open, setOpen] = useState(false);
   const [recommend, setRecommend] = useState<RecipeListItem | null>(null);
   const recommendRecipe = useRecommendRecipe();
   const lastRecoId = useRef<number | undefined>(undefined); // 재추천 시 직전 제외용
-  const lastTap = useRef(0);
   // 남은 별 개수 = 남은 레시피 저장 슬롯(GET /users/me). 로드 전엔 0.
   const { data: me } = useProfile();
   const remainingStars = me?.remainingRecipeSlots ?? 0;
@@ -159,27 +149,30 @@ export default function HomeScreen() {
   const onRecommend = async (label: string) => {
     setReco(label);
     setOpen(false);
-    const recommendationMode = label === RECO[0] ? 'RANDOM' : 'INGREDIENT_BASED';
+    const recommendationMode = recommendationModeFor(label, RECO);
     try {
       const r = await recommendRecipe.mutateAsync({
         recommendationMode,
         previousRecipeId: lastRecoId.current,
       });
+      // 후보 없음(200 + null) — 방식별로 다른 안내. 전체 랜덤으로 자동 전환하지 않는다(백엔드 계약).
+      if (!r) {
+        Alert.alert(
+          '추천할 레시피가 없어요',
+          recommendationMode === 'INGREDIENT_BASED'
+            ? '보유 재료와 맞는 레시피가 없어요.\n재료를 추가하거나 랜덤으로 골라보세요.'
+            : '먼저 레시피를 저장해주세요.',
+        );
+        return;
+      }
       lastRecoId.current = r.recipeId;
-      setRecommend(toListItem(r));
+      setRecommend(recommendationToListItem(r));
     } catch (e) {
       Alert.alert(
-        '추천할 레시피가 없어요',
-        e instanceof ApiError ? e.message : '먼저 레시피를 저장해주세요.',
+        '추천을 불러오지 못했어요',
+        e instanceof ApiError ? e.message : '잠시 후 다시 시도해주세요.',
       );
     }
-  };
-
-  // 더블탭 → 별 토글(별똥별 떨어짐)
-  const onSkyTap = () => {
-    const now = Date.now();
-    if (now - lastTap.current < 300) setHasStar((s) => !s);
-    lastTap.current = now;
   };
 
   return (
@@ -212,10 +205,7 @@ export default function HomeScreen() {
         />
       </View>
 
-      {/* 빈 하늘 더블탭 영역 */}
-      <Pressable className="absolute inset-0" onPress={onSkyTap} accessibilityLabel="밤하늘" />
-
-      {/* 레시피 별 — 탭하면 그 레시피가 팝업으로 (더블탭 하늘 위 레이어) */}
+      {/* 레시피 별 — 탭하면 그 레시피가 팝업으로 */}
       <StarField recipes={recipes} reduceMotion={reduceMotion} onPick={setRecommend} />
 
       <SafeAreaView className="flex-1" edges={['top', 'bottom']} pointerEvents="box-none">
@@ -244,16 +234,8 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* 중앙 별 */}
-        <View className="flex-1 items-center justify-center" pointerEvents="none">
-          {hasStar ? (
-            <Image
-              source={require('../assets/images/star.png')}
-              style={{ width: 40, height: 40 }}
-              contentFit="contain"
-            />
-          ) : null}
-        </View>
+        {/* 중앙 여백 — 헤더와 하단 추천 사이 (예전 중앙 별 자리) */}
+        <View className="flex-1" pointerEvents="none" />
 
         {/* 하단: 추천 드롭다운 (캐릭터는 배경 오버레이로 이동) */}
         <View className="px-screen pb-3" pointerEvents="box-none">

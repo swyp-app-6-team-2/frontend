@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import type { InquiryType } from '@/lib/api/types';
@@ -26,7 +25,7 @@ export const INQUIRY_TYPE_ORDER: InquiryType[] = [
   'ETC',
 ];
 
-// 문의유형 선택 시트 — 문의유형 드롭다운 탭 시. 단일 선택(라디오).
+// 문의유형 선택 시트 — 항목 탭 시 즉시 적용하고 닫힌다(확인/취소 없음).
 export function InquiryTypeSheet({
   selected,
   onCancel,
@@ -36,32 +35,35 @@ export function InquiryTypeSheet({
   onCancel: () => void;
   onApply: (type: InquiryType) => void;
 }) {
-  const [sel, setSel] = useState(selected);
-
   return (
-    <SheetShell onCancel={onCancel} onConfirm={() => (sel ? onApply(sel) : onCancel())}>
-      <AppText variant="body" className="text-foreground">
-        문의유형
-      </AppText>
-      <View className="mb-6 mt-8 gap-1">
-        {INQUIRY_TYPE_ORDER.map((type) => (
-          <Pressable
-            key={type}
-            onPress={() => setSel(type)}
-            accessibilityRole="button"
-            accessibilityState={{ selected: sel === type }}
-            className="h-12 items-center justify-center active:opacity-80"
-          >
-            <Text
-              className={`text-[16px] leading-[21px] ${
-                sel === type ? 'font-semibold text-foreground' : 'text-muted'
-              }`}
-            >
-              {INQUIRY_TYPE_LABEL[type]}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
+    <SheetShell onCancel={onCancel} hideActions>
+      {(close) => (
+        <>
+          <AppText variant="body" className="text-foreground">
+            문의유형
+          </AppText>
+          <View className="mt-8 gap-1">
+            {INQUIRY_TYPE_ORDER.map((type) => (
+              <Pressable
+                key={type}
+                // 슬라이드로 닫힌 뒤 적용 → 탭 한 번으로 선택·닫힘.
+                onPress={() => close(() => onApply(type))}
+                accessibilityRole="button"
+                accessibilityState={{ selected: selected === type }}
+                className="h-12 items-center justify-center active:opacity-80"
+              >
+                <Text
+                  className={`text-[16px] leading-[21px] ${
+                    selected === type ? 'font-semibold text-foreground' : 'text-muted'
+                  }`}
+                >
+                  {INQUIRY_TYPE_LABEL[type]}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        </>
+      )}
     </SheetShell>
   );
 }

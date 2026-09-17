@@ -195,8 +195,6 @@ export default function OnboardingScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [step, setStep] = useState(0);
-  // 진입 인트로 팝업(알림 시간 설정 다음 화면) — 닫으면 코치마크 튜토리얼 시작.
-  const [intro, setIntro] = useState(true);
   const completeOnboarding = useCompleteOnboarding();
   // 튜토리얼 종료 → 백엔드에 온보딩 완료 기록(재진입 시 온보딩 스킵) 후 홈으로.
   // 기록 실패해도 홈 진입은 막지 않는다(다음 진입에서 다시 시도됨).
@@ -205,37 +203,6 @@ export default function OnboardingScreen() {
     router.replace('/home');
   };
   const isCard = step === STEPS.length;
-
-  // 인트로 — 밤하늘 위 중앙 팝업(마스코트 + 별 게이미피케이션 안내)
-  if (intro) {
-    return (
-      <View className="flex-1 bg-background">
-        <NightSky />
-        <View pointerEvents="none" className="absolute inset-0 bg-black/60" />
-        <SafeAreaView
-          className="flex-1 items-center justify-center px-screen"
-          edges={['top', 'bottom']}
-        >
-          <View className="w-full items-center gap-6 rounded-card bg-surface px-6 py-7">
-            <Image
-              source={require('../assets/images/mascot-cook-complete.png')}
-              style={{ width: 254, height: 147, borderRadius: 12 }}
-              contentFit="contain"
-            />
-            <View className="items-center gap-2">
-              <AppText variant="subheading" className="text-center text-foreground">
-                별 따먹으러 가볼까요?
-              </AppText>
-              <AppText variant="body" className="text-center text-muted">
-                요리를 완료할 때마다{'\n'}밤하늘에 별이 켜져요
-              </AppText>
-            </View>
-            <Button label="시작하기" onPress={() => setIntro(false)} />
-          </View>
-        </SafeAreaView>
-      </View>
-    );
-  }
 
   // 튜토리얼 7 — 오늘의 추천 카드 (강조 카드 + 코치 텍스트 + 시작하기)
   if (isCard) {
@@ -340,7 +307,25 @@ export default function OnboardingScreen() {
     <View className="flex-1 bg-background">
       {/* 대상 화면 배경: 나의 레시피 단계는 레시피 화면, 그 외엔 밤하늘 */}
       {s.header === '나의 레시피' ? <RecipesBackground /> : <NightSky />}
-      <View pointerEvents="none" className="absolute inset-0 bg-black/45" />
+
+      {/* 온보딩 6 — 추천 결과 팝업을 딤 아래 backdrop로 깔아 함께 어둡게 (Figma 2329:5118) */}
+      {s.spot === 'reco-card' ? (
+        <View
+          pointerEvents="none"
+          className="absolute inset-x-0 items-center px-screen"
+          style={{ top: insets.top + 140 }}
+        >
+          <View className="w-full max-w-[362px]">
+            <RecoCard onSelect={next} />
+          </View>
+        </View>
+      ) : null}
+
+      {/* 딤 — reco-card는 카드까지 함께 덮어야 하므로 더 진하게 (Figma Rectangle 625) */}
+      <View
+        pointerEvents="none"
+        className={`absolute inset-0 ${s.spot === 'reco-card' ? 'bg-background/60' : 'bg-black/45'}`}
+      />
 
       {/* 아무 데나 탭해도 다음 (강조 요소·헤더 버튼은 각자 처리) */}
       <Pressable className="absolute inset-0" onPress={next} accessibilityLabel="다음" />
@@ -421,22 +406,30 @@ export default function OnboardingScreen() {
         </>
       ) : null}
 
-      {/* 온보딩 6 — 추천 카드 강조(코치마크). 카드/버튼 탭 → 다음(7단계로) */}
+      {/* 온보딩 6 — 딤 위 코치 오버레이: 음식 이미지 위 코치 문구 + 버튼 위 더블탭 손 */}
       {s.spot === 'reco-card' ? (
-        <View
-          className="absolute inset-x-0 items-center px-screen"
-          style={{ top: 210 }}
-          pointerEvents="box-none"
-        >
-          <View className="w-full max-w-[362px]">
-            <RecoCard onSelect={next} />
+        <>
+          {/* 코치 문구 — 음식 이미지 하단부(카드 상단 +149, Figma Frame …044). 탭은 아래 Pressable로 통과 */}
+          <View
+            pointerEvents="none"
+            className="absolute inset-x-0 px-screen"
+            style={{ top: insets.top + 140 + 149 }}
+          >
+            {coachText}
           </View>
-          <Image
-            source={require('../assets/images/tap.png')}
-            style={{ width: 96, height: 64, marginTop: 16 }}
-            contentFit="contain"
-          />
-        </View>
+          {/* 더블탭 손 — 버튼 위 (Figma image806 104×69) */}
+          <View
+            pointerEvents="none"
+            className="absolute inset-x-0 items-center"
+            style={{ top: insets.top + 140 + 289 }}
+          >
+            <Image
+              source={require('../assets/images/tap.png')}
+              style={{ width: 104, height: 69 }}
+              contentFit="contain"
+            />
+          </View>
+        </>
       ) : null}
 
       <SafeAreaView className="flex-1 px-screen" edges={['top', 'bottom']} pointerEvents="box-none">
@@ -477,11 +470,8 @@ export default function OnboardingScreen() {
             {coachText}
           </View>
         ) : s.spot === 'reco-card' ? (
-          // 온보딩 6 — 코치 텍스트는 상단(강조 카드 위), 아래는 스페이서로 네비바 하단 고정
-          <>
-            <View pointerEvents="none">{coachText}</View>
-            <View className="flex-1" pointerEvents="none" />
-          </>
+          // 온보딩 6 — 코치/카드는 딤 오버레이로 처리(위). 여기선 스페이서만(네비바 하단 고정)
+          <View className="flex-1" pointerEvents="none" />
         ) : (
           <>
             {/* 하단 블록을 바닥에 고정하는 스페이서 */}

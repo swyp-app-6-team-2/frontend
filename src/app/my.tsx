@@ -5,10 +5,11 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { TabBar } from '@/components/tab-bar';
-import { AppText, Chevron, ListRow } from '@/components/ui';
+import { AppRefreshControl, AppText, Chevron, ListRow } from '@/components/ui';
 import { staggerDelay } from '@/constants/animation';
 import { useProfile, useRecipes } from '@/hooks/use-api';
 import { useEnteringOnce } from '@/hooks/use-entering-once';
+import { useRefresh } from '@/hooks/use-refresh';
 import { getLoginProvider } from '@/lib/api';
 import { remainingSlots } from '@/lib/slots';
 
@@ -42,6 +43,7 @@ export default function MyScreen() {
   // 값이 없거나 매칭 안 되면 배지 자체를 안 그린다(틀린 로고 방지).
   const providerCode = me?.provider ?? getLoginProvider();
   const providerLogo = providerCode ? PROVIDER_LOGO[providerCode.toUpperCase()] : undefined;
+  const refresh = useRefresh();
 
   return (
     <View className="flex-1 bg-background">
@@ -49,6 +51,7 @@ export default function MyScreen() {
         <ScrollView
           contentContainerClassName="gap-4 px-screen pb-[120px] pt-2"
           showsVerticalScrollIndicator={false}
+          refreshControl={<AppRefreshControl {...refresh} />}
         >
           {/* 헤더 (Figma 원본은 "나의 거래" — 마이 탭에 맞춰 "마이페이지") */}
           <AppText variant="title">마이페이지</AppText>

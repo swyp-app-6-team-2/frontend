@@ -15,7 +15,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AppText, Button, Screen } from '@/components/ui';
+import { AppRefreshControl, AppText, Button, Screen } from '@/components/ui';
 import { RECIPE_CATEGORY_LABEL } from '@/constants/labels';
 import { palette } from '@/constants/tokens';
 import {
@@ -24,6 +24,7 @@ import {
   useDeleteRecipe,
   useRecipe,
 } from '@/hooks/use-api';
+import { useRefresh } from '@/hooks/use-refresh';
 import { ApiError } from '@/lib/api';
 
 // 요리 기록 날짜 표기 — 서버는 UTC ISO만 주고 로컬 포맷·상대시간은 클라가 계산(api-spec).
@@ -58,6 +59,7 @@ export default function RecipeViewScreen() {
   const recipeId = Number(id);
   const { data, isLoading, isError } = useRecipe(Number.isFinite(recipeId) ? recipeId : null);
   const { data: cookData } = useCookHistories(Number.isFinite(recipeId) ? recipeId : null);
+  const refresh = useRefresh();
   const cookHistories = cookData ?? [];
   const createCook = useCreateCookHistory(recipeId);
   const deleteRecipe = useDeleteRecipe();
@@ -140,7 +142,11 @@ export default function RecipeViewScreen() {
       }
     >
       <View className="flex-1">
-        <ScrollView contentContainerClassName="pb-4" showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerClassName="pb-4"
+          showsVerticalScrollIndicator={false}
+          refreshControl={<AppRefreshControl {...refresh} />}
+        >
           {/* 대표 이미지 362x362 — 없으면 중립 플레이스홀더(샘플 사진 대신) */}
           {coverUrl ? (
             <Image

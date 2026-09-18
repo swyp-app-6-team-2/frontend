@@ -4,6 +4,9 @@ import { Image, type ImageSource } from 'expo-image';
 import { KeyboardAvoidingView, KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { useRefresh } from '@/hooks/use-refresh';
+
+import { AppRefreshControl } from './app-refresh-control';
 import { ScreenHeader } from './screen-header';
 
 // scrollRef 대상 — KeyboardAwareScrollView(내부 ScrollView) 인스턴스. scrollToEnd 등 지원.
@@ -23,6 +26,8 @@ export type ScreenProps = {
   headerRight?: ReactNode;
   /** Wrap the body in a vertical ScrollView. Default false. */
   scroll?: boolean;
+  /** 당겨서 새로고침 — `scroll`일 때만 동작. 화면의 활성 쿼리를 다시 불러온다. */
+  pullToRefresh?: boolean;
   /** Ref to the inner ScrollView (only with `scroll`) — e.g. to scrollToEnd. */
   scrollRef?: Ref<ScreenScrollRef>;
   /** Extra classes on the body container / scroll content. */
@@ -54,12 +59,14 @@ export function Screen({
   onClose,
   headerRight,
   scroll,
+  pullToRefresh,
   scrollRef,
   contentClassName,
   bgImage,
   bgBottomImage,
   footer,
 }: ScreenProps) {
+  const refresh = useRefresh();
   return (
     <View className="flex-1 bg-background">
       {bgImage ? (
@@ -97,6 +104,7 @@ export function Screen({
           <KeyboardAwareScrollView
             ref={scrollRef}
             className="flex-1"
+            refreshControl={pullToRefresh ? <AppRefreshControl {...refresh} /> : undefined}
             // 포커스된 입력란을 키보드 위로 넉넉히(입력 박스+주변 버튼까지) 띄운다. 값이 작으면
             // 입력란이 키보드 경계에 딱 붙어 박스 아랫부분이 가린다.
             bottomOffset={140}

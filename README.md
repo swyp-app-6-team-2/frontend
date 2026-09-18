@@ -36,10 +36,10 @@ _"저장"이 아니라 "해먹었다"는 완료 기록으로 요리 실행을 �
 
 | 축 | 내용 |
 |---|---|
-| 🍳 **나의 레시피** | 저장한 레시피 목록 · 검색 · 필터 · 상세 · **요리 완료 기록(별 점등)** |
+| 🍳 **나의 레시피** | 저장한 레시피 목록 · 검색 · 필터 · 상세 · **요리 완료 기록 · 완료 축하 팝업** |
 | 🧊 **재료 관리(내 냉장고)** | 보유 재료 목록·검색(`GET /users/me/ingredients`) · 마스터 104종에서 카테고리 필터로 추가 |
 | ➕ **3경로 등록** | URL/영상 → AI 분석 · 이미지 → OCR · 직접 입력 폼 (모두 하나의 `Recipe`로 수렴) |
-| 🏠 **홈 / 마이** | 남은 별 · 추천 / 프로필(로그인 provider 배지) · 저장 슬롯 · **알림 설정** · **문의하기** |
+| 🏠 **홈 / 마이** | 남은 별 · 추천(랜덤·재료 기반) · 광고로 별(슬롯) 확장 / 프로필(로그인 provider 배지) · **알림 설정** · **문의하기(사진 첨부)** |
 | 🔐 **소셜 로그인** | 카카오 · 네이버 · Google · Apple · 신규 가입(약관 동의) · 토큰 자동 재발급 |
 | 🔔 **알림** | 푸시 알림(FCM) · 알림 시간대 설정 · 딥링크 진입 |
 
@@ -57,7 +57,7 @@ flowchart LR
   F --> G
   G -->|초과| H[슬롯 확장 안내]
   G -->|여유| I[레시피 상세]
-  I -->|요리 완료 버튼| J[⭐ 별 점등]
+  I -->|요리 완료| J[완료 축하 팝업 · 요리 기록]
 ```
 
 ---
@@ -68,12 +68,12 @@ flowchart LR
   <tr>
     <td align="center"><b>홈 · 별 진행도</b></td>
     <td align="center"><b>나의 레시피</b></td>
-    <td align="center"><b>요리 완료 ⭐</b></td>
+    <td align="center"><b>요리 완료 축하 ⭐</b></td>
   </tr>
   <tr>
     <td><img src="docs/screenshots/home.png" width="240" alt="홈 화면 — 별 캐릭터와 남은 별 칩" /></td>
     <td><img src="docs/screenshots/recipes.png" width="240" alt="나의 레시피 목록 — 검색·필터·카드 그리드" /></td>
-    <td><img src="docs/screenshots/cook-complete.png" width="240" alt="요리 완료 — 별에 불이 켜졌어요" /></td>
+    <td><img src="docs/screenshots/cook-complete.png" width="240" alt="요리 완료 — 요리를 완료하였어요 축하 팝업" /></td>
   </tr>
   <tr>
     <td align="center"><b>재료관리(내 냉장고)</b></td>
@@ -137,8 +137,9 @@ graph TD
 | **라우팅** | expo-router (파일 기반, `typedRoutes`) |
 | **스타일** | NativeWind v4 + Tailwind v3 (다크 전용 토큰) |
 | **서버 상태** | @tanstack/react-query |
-| **모션 / UX** | react-native-reanimated 4 · expo-haptics |
+| **모션 / UX** | react-native-reanimated 4 · expo-haptics · react-native-keyboard-controller |
 | **인증** | 카카오/네이버/Google/Apple 네이티브 SDK · JWT 자동 재발급 |
+| **푸시 알림** | @react-native-firebase/app · messaging (FCM · iOS도 FCM 토큰) |
 | **이미지** | expo-image · expo-image-picker |
 | **툴링** | pnpm · TypeScript 6 · ESLint **v9 고정** · Prettier |
 | **빌드 / 배포** | EAS Build & Submit |

@@ -9,12 +9,13 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { AddRecipeMenu } from '@/components/add-recipe-menu';
 import { RecipeFilterSheet, RecipeSortSheet } from '@/components/recipe-filter-sheet';
 import { TabBar } from '@/components/tab-bar';
-import { AppText, PressableScale, SearchBar } from '@/components/ui';
+import { AppRefreshControl, AppText, PressableScale, SearchBar } from '@/components/ui';
 import { staggerDelay } from '@/constants/animation';
 import { RECIPE_CATEGORY_LABEL } from '@/constants/labels';
 import { palette } from '@/constants/tokens';
 import { useMyIngredients, useProfile, useRecipes } from '@/hooks/use-api';
 import { useEnteringOnce } from '@/hooks/use-entering-once';
+import { useRefresh } from '@/hooks/use-refresh';
 import type { RecipeCategory, RecipeListItem, RecipeListSort } from '@/lib/api/types';
 import { remainingSlots } from '@/lib/slots';
 
@@ -123,6 +124,7 @@ export default function RecipesScreen() {
   // 남은 별 = 슬롯 한도 − 등록 레시피 수(홈·마이와 동일 기준).
   const { data: me } = useProfile();
   const isFull = me != null && remainingSlots(me, total) <= 0;
+  const refresh = useRefresh();
   const animate = useEnteringOnce('recipes'); // 최초 진입에만 카드 순차 등장
 
   const sortLabel = sort === 'LATEST' ? '최신순' : '오래된순';
@@ -148,6 +150,7 @@ export default function RecipesScreen() {
         <ScrollView
           contentContainerClassName="gap-4 px-screen pb-[120px] pt-2"
           showsVerticalScrollIndicator={false}
+          refreshControl={<AppRefreshControl {...refresh} />}
         >
           <AppText variant="title">나의 레시피</AppText>
           <SearchBar

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import Animated, {
@@ -16,9 +16,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { RecommendPopup } from '@/components/recommend-popup';
 import { SlotAddedPopup } from '@/components/slot-added-popup';
 import { TabBar } from '@/components/tab-bar';
+import { AppRefreshControl } from '@/components/ui';
 import { palette } from '@/constants/tokens';
 import { useIngredients, useProfile, useRecipes, useRecommendRecipe } from '@/hooks/use-api';
 import { useReduceMotion } from '@/hooks/use-reduce-motion';
+import { useRefresh } from '@/hooks/use-refresh';
 import { ApiError } from '@/lib/api';
 import type { RecipeListItem } from '@/lib/api/types';
 import { recommendationModeFor, recommendationToListItem } from '@/lib/recommend';
@@ -167,6 +169,7 @@ export default function HomeScreen() {
   // 남은 별 = 슬롯 한도 − 등록된 레시피 수(별 개수와 일치). 로드 전엔 0.
   const { data: me } = useProfile();
   const remainingStars = remainingSlots(me, data?.totalCount ?? recipes.length);
+  const refresh = useRefresh(); // 당겨서 새로고침 — 화면 활성 쿼리(레시피·프로필) refetch
 
   // 밤하늘 더블탭 → 별똥별 애니메이션(GIF)을 한 번만 재생하고 사라진다.
   // GIF는 loop=1로 패치돼(무한루프 X) 1회 재생 후 마지막 프레임에서 멈춘다. 그래서 넉넉히(2000ms)
@@ -224,122 +227,135 @@ export default function HomeScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      {/* 구름 배경 + 바닥 돔 + 캐릭터 */}
-      <View pointerEvents="none" className="absolute inset-0">
-        <Image
-          source={require('../assets/images/sky-bg.png')}
-          style={StyleSheet.absoluteFill}
-          contentFit="cover"
-        />
-        {/* 바닥 돔 — 하단 전체 */}
-        <Image
-          source={require('../assets/images/notify-bottom.png')}
-          style={{
-            position: 'absolute',
-            left: 0,
-            right: 0,
-            bottom: 0,
-            width: '100%',
-            aspectRatio: 402 / 257,
-          }}
-          contentFit="cover"
-        />
-        {/* 캐릭터 — 바닥 위 왼쪽(추천 드롭다운과 겹치지 않게) */}
-        <Image
-          source={require('../assets/images/mascot-blob.png')}
-          style={{ position: 'absolute', left: '14%', bottom: 138, width: 110, height: 110 }}
-          contentFit="contain"
-        />
-      </View>
-
-      {/* 밤하늘 더블탭 감지 (빈 하늘). 별·칩·드롭다운·탭바는 위 레이어라 그대로 동작 */}
-      <Pressable className="absolute inset-0" onPress={onSkyTap} accessibilityLabel="밤하늘" />
-
-      {/* 레시피 별 — 탭하면 그 레시피가 팝업으로 */}
-      <StarField recipes={recipes} reduceMotion={reduceMotion} onPick={setRecommend} />
-
-      {/* 별똥별 애니메이션 — 더블탭 시 하늘을 가로질러 재생(터치 통과) */}
-      {shootingStar ? (
-        <Image
-          source={require('../assets/images/shooting-star.gif')}
-          // contain이라 세로 중앙에 오는 GIF를 위로 올려 더 높은 데서 떨어지게 한다.
-          style={[StyleSheet.absoluteFill, { transform: [{ translateY: -140 }] }]}
-          contentFit="contain"
-          pointerEvents="none"
-          accessibilityLabel="별똥별"
-          onDisplay={onShootingStarDisplay}
-        />
-      ) : null}
-
-      <SafeAreaView className="flex-1" edges={['top', 'bottom']} pointerEvents="box-none">
-        {/* 상단: 별따먹자 + 별 진행도 */}
-        <View
-          className="flex-row items-center justify-between px-screen pt-2"
-          pointerEvents="box-none"
-        >
+      {/* 밤하늘 전체를 bounce 스크롤로 감싸 위에서 당기면 새로고침(refetch). 별 탭·더블탭·드롭다운은
+          탭이라 자식으로 통과하고, 수직 드래그만 새로고침 제스처로 잡힌다. 배경까지 함께 감싸
+          당길 때 씬 전체가 따라 내려오고 상단엔 배경색이 드러난다. */}
+      <ScrollView
+        className="flex-1"
+        contentContainerStyle={{ flexGrow: 1 }}
+        showsVerticalScrollIndicator={false}
+        alwaysBounceVertical
+        refreshControl={<AppRefreshControl {...refresh} />}
+      >
+        {/* 구름 배경 + 바닥 돔 + 캐릭터 */}
+        <View pointerEvents="none" className="absolute inset-0">
           <Image
-            source={require('../assets/images/home-title.png')}
-            style={{ width: 84, height: 24 }}
-            contentFit="contain"
-            accessibilityLabel="별따먹자"
+            source={require('../assets/images/sky-bg.png')}
+            style={StyleSheet.absoluteFill}
+            contentFit="cover"
           />
-          {/* 남은 별 칩 — Figma: 골드 테두리 pill(#1E1E20) + 별 아이콘 15 + '남은 별' + 개수 */}
-          <View className="h-[38px] flex-row items-center gap-1 rounded-pill border border-primary bg-star-chip px-4">
-            <Image
-              source={require('../assets/images/star-chip.png')}
-              style={{ width: 15, height: 15 }}
-              contentFit="contain"
-            />
-            <Text className="text-[14px] font-medium leading-[18px] text-foreground">남은 별</Text>
-            <Text className="text-[14px] font-medium leading-[18px] text-foreground">
-              {remainingStars}
-            </Text>
-          </View>
+          {/* 바닥 돔 — 하단 전체 */}
+          <Image
+            source={require('../assets/images/notify-bottom.png')}
+            style={{
+              position: 'absolute',
+              left: 0,
+              right: 0,
+              bottom: 0,
+              width: '100%',
+              aspectRatio: 402 / 257,
+            }}
+            contentFit="cover"
+          />
+          {/* 캐릭터 — 바닥 위 왼쪽(추천 드롭다운과 겹치지 않게) */}
+          <Image
+            source={require('../assets/images/mascot-blob.png')}
+            style={{ position: 'absolute', left: '14%', bottom: 138, width: 110, height: 110 }}
+            contentFit="contain"
+          />
         </View>
 
-        {/* 중앙 여백 — 헤더와 하단 추천 사이 (예전 중앙 별 자리) */}
-        <View className="flex-1" pointerEvents="none" />
+        {/* 밤하늘 더블탭 감지 (빈 하늘). 별·칩·드롭다운·탭바는 위 레이어라 그대로 동작 */}
+        <Pressable className="absolute inset-0" onPress={onSkyTap} accessibilityLabel="밤하늘" />
 
-        {/* 하단: 추천 드롭다운 (캐릭터는 배경 오버레이로 이동) */}
-        <View className="px-screen pb-3" pointerEvents="box-none">
-          <View className="flex-row items-end justify-end" pointerEvents="box-none">
-            <View className="mb-10 items-end gap-2" pointerEvents="box-none">
-              {open ? (
-                <View className="w-[173px] gap-[10px] rounded-[20px] bg-reco-panel px-1 py-2">
-                  {RECO.map((r) => (
-                    <Pressable
-                      key={r}
-                      onPress={() => onRecommend(r)}
-                      className="h-[47px] items-center justify-center active:opacity-80"
-                    >
-                      <Text className="text-[16px] leading-[19px] text-foreground">{r}</Text>
-                    </Pressable>
-                  ))}
-                </View>
-              ) : null}
-              <Pressable
-                onPress={() => setOpen((o) => !o)}
-                className="h-[50px] w-[173px] flex-row items-center justify-center gap-1.5 rounded-[99px] border border-disabled bg-reco-button active:opacity-80"
-              >
-                <Text className="text-[16px] leading-[19px] text-foreground">{reco}</Text>
-                <Image
-                  source={require('../assets/images/ic-chevron-down.png')}
-                  style={{
-                    width: 24,
-                    height: 24,
-                    transform: [{ rotate: open ? '180deg' : '0deg' }],
-                  }}
-                  tintColor={open ? palette.disabled : palette.foreground}
-                  contentFit="contain"
-                />
-              </Pressable>
+        {/* 레시피 별 — 탭하면 그 레시피가 팝업으로 */}
+        <StarField recipes={recipes} reduceMotion={reduceMotion} onPick={setRecommend} />
+
+        {/* 별똥별 애니메이션 — 더블탭 시 하늘을 가로질러 재생(터치 통과) */}
+        {shootingStar ? (
+          <Image
+            source={require('../assets/images/shooting-star.gif')}
+            // contain이라 세로 중앙에 오는 GIF를 위로 올려 더 높은 데서 떨어지게 한다.
+            style={[StyleSheet.absoluteFill, { transform: [{ translateY: -140 }] }]}
+            contentFit="contain"
+            pointerEvents="none"
+            accessibilityLabel="별똥별"
+            onDisplay={onShootingStarDisplay}
+          />
+        ) : null}
+
+        <SafeAreaView className="flex-1" edges={['top', 'bottom']} pointerEvents="box-none">
+          {/* 상단: 별따먹자 + 별 진행도 */}
+          <View
+            className="flex-row items-center justify-between px-screen pt-2"
+            pointerEvents="box-none"
+          >
+            <Image
+              source={require('../assets/images/home-title.png')}
+              style={{ width: 84, height: 24 }}
+              contentFit="contain"
+              accessibilityLabel="별따먹자"
+            />
+            {/* 남은 별 칩 — Figma: 골드 테두리 pill(#1E1E20) + 별 아이콘 15 + '남은 별' + 개수 */}
+            <View className="h-[38px] flex-row items-center gap-1 rounded-pill border border-primary bg-star-chip px-4">
+              <Image
+                source={require('../assets/images/star-chip.png')}
+                style={{ width: 15, height: 15 }}
+                contentFit="contain"
+              />
+              <Text className="text-[14px] font-medium leading-[18px] text-foreground">
+                남은 별
+              </Text>
+              <Text className="text-[14px] font-medium leading-[18px] text-foreground">
+                {remainingStars}
+              </Text>
             </View>
           </View>
-        </View>
 
-        {/* 떠 있는 탭바 */}
-        <TabBar active="home" />
-      </SafeAreaView>
+          {/* 중앙 여백 — 헤더와 하단 추천 사이 (예전 중앙 별 자리) */}
+          <View className="flex-1" pointerEvents="none" />
+
+          {/* 하단: 추천 드롭다운 (캐릭터는 배경 오버레이로 이동) */}
+          <View className="px-screen pb-3" pointerEvents="box-none">
+            <View className="flex-row items-end justify-end" pointerEvents="box-none">
+              <View className="mb-10 items-end gap-2" pointerEvents="box-none">
+                {open ? (
+                  <View className="w-[173px] gap-[10px] rounded-[20px] bg-reco-panel px-1 py-2">
+                    {RECO.map((r) => (
+                      <Pressable
+                        key={r}
+                        onPress={() => onRecommend(r)}
+                        className="h-[47px] items-center justify-center active:opacity-80"
+                      >
+                        <Text className="text-[16px] leading-[19px] text-foreground">{r}</Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                ) : null}
+                <Pressable
+                  onPress={() => setOpen((o) => !o)}
+                  className="h-[50px] w-[173px] flex-row items-center justify-center gap-1.5 rounded-[99px] border border-disabled bg-reco-button active:opacity-80"
+                >
+                  <Text className="text-[16px] leading-[19px] text-foreground">{reco}</Text>
+                  <Image
+                    source={require('../assets/images/ic-chevron-down.png')}
+                    style={{
+                      width: 24,
+                      height: 24,
+                      transform: [{ rotate: open ? '180deg' : '0deg' }],
+                    }}
+                    tintColor={open ? palette.disabled : palette.foreground}
+                    contentFit="contain"
+                  />
+                </Pressable>
+              </View>
+            </View>
+          </View>
+
+          {/* 떠 있는 탭바 */}
+          <TabBar active="home" />
+        </SafeAreaView>
+      </ScrollView>
 
       {/* 메뉴 추천 결과 팝업 */}
       {recommend ? (

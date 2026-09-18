@@ -242,32 +242,10 @@ export default function OnboardingScreen() {
             <View className="flex-1" pointerEvents="none" />
             {/* 강조 추천 카드 — primary 테두리 + 글로우 (6·7단계 공용) */}
             <RecoCard onSelect={finish} />
-
-            {/* 코치 텍스트 — 상하 페이드 선 사이 */}
-            <View className="mt-8 gap-5">
-              <Image
-                source={require('../assets/images/line-fade.png')}
-                style={{ width: '100%', height: 1.5 }}
-                contentFit="fill"
-              />
-              <View className="items-center gap-3">
-                <AppText variant="subheading" className="text-center text-primary-subtle">
-                  오늘은 이거 어때요?
-                </AppText>
-                <AppText variant="body" className="text-center text-muted">
-                  레시피가 늘어날수록 뭐 먹을지 고민도 줄어들어요
-                </AppText>
-              </View>
-              <Image
-                source={require('../assets/images/line-fade.png')}
-                style={{ width: '100%', height: 1.5 }}
-                contentFit="fill"
-              />
-            </View>
           </View>
 
-          {/* 시작하기 */}
-          <View className="px-screen pb-8 pt-4">
+          {/* 시작하기 — 카드(사진)와 134px 간격 */}
+          <View className="px-screen pb-8 pt-[134px]">
             <Button label="시작하기" onPress={finish} />
           </View>
         </SafeAreaView>

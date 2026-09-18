@@ -238,7 +238,12 @@ export default function AddRecipeManualScreen() {
           // 분석 경로면 job id를 실어 서버가 URL/IMAGE 출처로 저장(없으면 직접입력).
           ingestionJobId: jobId ? Number(jobId) : undefined,
         });
-        router.replace({ pathname: '/recipe-view', params: { id: String(res.recipeId) } });
+        // 순수 직접 입력은 완료 후 재료관리로, 분석 확인(URL·이미지)은 레시피 상세로.
+        if (jobId || draftParam) {
+          router.replace({ pathname: '/recipe-view', params: { id: String(res.recipeId) } });
+        } else {
+          router.replace('/ingredients');
+        }
       }
     } catch (e) {
       Alert.alert('저장 실패', e instanceof ApiError ? e.message : '잠시 후 다시 시도해주세요.');
@@ -284,7 +289,7 @@ export default function AddRecipeManualScreen() {
     <Screen
       title={isEdit ? '레시피 수정' : '레시피 직접 입력'}
       close
-      onClose={() => (isEdit ? router.back() : router.replace('/home'))}
+      onClose={() => (isEdit ? router.back() : router.replace('/recipes'))}
       scroll
       scrollRef={scrollRef}
       footer={

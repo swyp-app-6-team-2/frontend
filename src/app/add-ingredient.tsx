@@ -45,7 +45,7 @@ export default function AddIngredientScreen() {
       (it) => it.name.toLowerCase() === typed || it.aliases.some((a) => a.toLowerCase() === typed),
     );
     const handlers = {
-      onSuccess: () => router.back(),
+      onSuccess: () => router.replace('/ingredients'),
       onError: (e: unknown) =>
         setError(e instanceof ApiError ? e.message : '등록에 실패했어요. 다시 시도해주세요.'),
     };

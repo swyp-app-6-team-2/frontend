@@ -257,10 +257,19 @@ export default function HomeScreen() {
             }}
             contentFit="cover"
           />
-          {/* 캐릭터 — 바닥 위 왼쪽(추천 드롭다운과 겹치지 않게) */}
+          {/* 캐릭터 — 하단 왼쪽(30%) 글로우 스필 위, 돔 능선에 앉은 느낌(탭바 바로 위).
+              translateX -55는 110폭 정렬 보정이라 실제 중심 = 30%. bottom 120은 노치 safe-area 기준
+              탭바 상단(~110) 바로 위라 안 가림. 추천 버튼은 우측이라 무관. */}
           <Image
             source={require('../assets/images/mascot-blob.png')}
-            style={{ position: 'absolute', left: '14%', bottom: 138, width: 110, height: 110 }}
+            style={{
+              position: 'absolute',
+              left: '30%',
+              bottom: 120,
+              width: 110,
+              height: 110,
+              transform: [{ translateX: -55 }],
+            }}
             contentFit="contain"
           />
         </View>

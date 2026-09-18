@@ -197,7 +197,13 @@ export default function RecipeViewScreen() {
                 accessibilityLabel="원본 보기"
                 onPress={() => Linking.openURL(originalUrl)}
               >
-                <Feather name="share" size={22} color={palette.muted} />
+                {/* ios_share 아이콘 (디자인 에셋) — 인분/시간과 톤 맞춰 muted 틴트 */}
+                <Image
+                  source={require('../assets/images/ic-share.png')}
+                  style={{ width: 22, height: 22 }}
+                  tintColor={palette.muted}
+                  contentFit="contain"
+                />
                 <Text className="text-[16px] leading-[19px] text-foreground">원본 보기</Text>
               </Pressable>
             ) : null}

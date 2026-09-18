@@ -208,6 +208,8 @@ export default function OnboardingScreen() {
   if (isCard) {
     return (
       <View className="flex-1 bg-background">
+        {/* 뒷배경 — 홈과 동일한 밤하늘(1~6단계 '별따먹자' 배경과 통일) */}
+        <NightSky />
         {/* 화면 아무 곳이나 탭해도 완료(홈으로) — 버튼은 위 레이어에서 각자 처리 */}
         <Pressable className="absolute inset-0" onPress={finish} accessibilityLabel="다음" />
         <SafeAreaView className="flex-1" edges={['top', 'bottom']} pointerEvents="box-none">

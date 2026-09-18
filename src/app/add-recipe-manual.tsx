@@ -238,11 +238,11 @@ export default function AddRecipeManualScreen() {
           // 분석 경로면 job id를 실어 서버가 URL/IMAGE 출처로 저장(없으면 직접입력).
           ingestionJobId: jobId ? Number(jobId) : undefined,
         });
-        // 순수 직접 입력은 완료 후 재료관리로, 분석 확인(URL·이미지)은 레시피 상세로.
+        // 순수 직접 입력은 완료 후 나의 레시피로, 분석 확인(URL·이미지)은 레시피 상세로.
         if (jobId || draftParam) {
           router.replace({ pathname: '/recipe-view', params: { id: String(res.recipeId) } });
         } else {
-          router.replace('/ingredients');
+          router.replace('/recipes');
         }
       }
     } catch (e) {

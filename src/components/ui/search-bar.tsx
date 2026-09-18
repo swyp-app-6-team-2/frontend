@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { ReactNode, Ref } from 'react';
 import { TextInput, View, type TextInputProps } from 'react-native';
 import { Image } from 'expo-image';
 
@@ -8,6 +8,8 @@ export type SearchBarProps = TextInputProps & {
   /** Leading icon element. Defaults to the 돋보기 icon; pass `null` to hide it. */
   leftIcon?: ReactNode;
   containerClassName?: string;
+  /** 내부 TextInput 참조 — 프로그램적 focus() 등에 사용. */
+  inputRef?: Ref<TextInput>;
 };
 
 // Figma: 검색바 — field bg #1E2230, pill, px16 py10, icon gap10, placeholder
@@ -25,6 +27,7 @@ const defaultIcon = (
 export function SearchBar({
   leftIcon = defaultIcon,
   containerClassName,
+  inputRef,
   placeholder = '재료명을 검색해보세요',
   ...rest
 }: SearchBarProps) {
@@ -36,6 +39,7 @@ export function SearchBar({
     >
       {leftIcon}
       <TextInput
+        ref={inputRef}
         className="flex-1 text-foreground"
         // Figma: 16px / 130% (21px). Kept ≤24 so text never outgrows the icon frame.
         // Android: includeFontPadding·textAlignVertical 로 고정높이 컨테이너에서 글자 클리핑 방지(iOS 무시).

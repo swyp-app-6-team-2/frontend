@@ -53,6 +53,8 @@ function DashedAddButton({
 export default function AddRecipeManualScreen() {
   const router = useRouter();
   const scrollRef = useRef<ScreenScrollRef>(null);
+  // 재료 행별 수량 입력 참조 — 재료 추가 직후 수량 칸으로 포커스 이동하는 데 쓴다.
+  const qtyRefs = useRef<(TextInput | null)[]>([]);
   const create = useCreateRecipe();
   // id 파라미터가 있으면 '수정' 모드 — 기존 레시피를 불러와 프리필하고 PATCH로 저장.
   // draft 파라미터(레시피 분석 결과)가 있으면 '내용 확인' 모드 — AI 초안을 프리필하고 신규 생성.
@@ -252,8 +254,12 @@ export default function AddRecipeManualScreen() {
           : ing,
       ),
     );
-  const addIngredient = (name = '', ingredientId: number | null = null) =>
+  const addIngredient = (name = '', ingredientId: number | null = null) => {
+    const newIndex = ingredients.length; // append이므로 새 행은 마지막 인덱스
     setIngredients((prev) => [...prev, { name, qty: '', ingredientId }]);
+    // 새 재료 행이 마운트된 다음 프레임에 수량 입력으로 포커스 이동
+    requestAnimationFrame(() => qtyRefs.current[newIndex]?.focus());
+  };
   const removeIngredient = (i: number) =>
     setIngredients((prev) => (prev.length > 1 ? prev.filter((_, idx) => idx !== i) : prev));
 
@@ -481,6 +487,9 @@ export default function AddRecipeManualScreen() {
               leftIcon={null}
               placeholder="수량"
               containerClassName="w-[122px]"
+              inputRef={(el) => {
+                qtyRefs.current[i] = el;
+              }}
               value={ing.qty}
               onChangeText={(t) => setIngredient(i, 'qty', t)}
             />

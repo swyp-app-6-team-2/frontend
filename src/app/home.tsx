@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import Animated, {
@@ -294,9 +294,9 @@ export default function HomeScreen() {
         ) : null}
 
         <SafeAreaView className="flex-1" edges={['top', 'bottom']} pointerEvents="box-none">
-          {/* 상단: 별따먹자 + 별 진행도 */}
+          {/* 상단: 별따먹자 + 별 진행도. 안드로이드는 상태바 인셋이 얇아 상단 여백 보강. */}
           <View
-            className="flex-row items-center justify-between px-screen pt-2"
+            className={`flex-row items-center justify-between px-screen ${Platform.OS === 'android' ? 'pt-7' : 'pt-2'}`}
             pointerEvents="box-none"
           >
             <Image

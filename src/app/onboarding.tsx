@@ -12,8 +12,8 @@ import { useCompleteOnboarding } from '@/hooks/use-api';
 
 const TABS = [
   { key: 'home', icon: require('../assets/images/ic-tab-home.png'), label: '홈' },
-  { key: 'fridge', icon: require('../assets/images/ic-tab-fridge.png'), label: '재료관리' },
   { key: 'recipes', icon: require('../assets/images/ic-tab-recipes.png'), label: '나의 레시피' },
+  { key: 'fridge', icon: require('../assets/images/ic-tab-fridge.png'), label: '재료관리' },
   { key: 'my', icon: require('../assets/images/ic-tab-my.png'), label: '마이' },
 ];
 
@@ -130,10 +130,17 @@ function NightSky() {
           contentFit="cover"
         />
       </View>
-      {/* 캐릭터 — 홈과 동일 좌표/크기 */}
+      {/* 캐릭터 — 홈과 동일 좌표/크기(중앙 44%, translateX -55로 실제 중심 정렬) */}
       <Image
         source={require('../assets/images/mascot-blob.png')}
-        style={{ position: 'absolute', left: '14%', bottom: 138, width: 110, height: 110 }}
+        style={{
+          position: 'absolute',
+          left: '30%',
+          bottom: 120,
+          width: 110,
+          height: 110,
+          transform: [{ translateX: -55 }],
+        }}
         contentFit="contain"
       />
     </View>

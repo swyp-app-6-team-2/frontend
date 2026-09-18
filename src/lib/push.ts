@@ -6,9 +6,22 @@
 //
 // iOS도 FCM 토큰을 쓴다(백엔드 계약). getToken 전에 APNs 등록이 선행돼야 한다.
 
-import { Platform } from 'react-native';
+import { Alert, Platform } from 'react-native';
 
 import { notificationApi } from '@/lib/api';
+
+// [임시:FCM토큰확인] dev에서 발급된 FCM 토큰을 클립보드 복사 + Alert 노출. 확인 후 이 블록 제거.
+function devRevealToken(token: string): void {
+  if (!__DEV__) return;
+  console.log('[FCM] token =', token);
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports -- 임시 dev 노출용 지연 로드
+    (require('expo-clipboard') as typeof import('expo-clipboard')).setStringAsync(token);
+  } catch {
+    // 클립보드 모듈 없으면 Alert만.
+  }
+  Alert.alert('FCM 토큰 (복사됨)', token);
+}
 
 type MessagingApi = typeof import('@react-native-firebase/messaging');
 // undefined=미시도 / null=사용 불가(네이티브 모듈 없음) / 객체=사용 가능
@@ -54,7 +67,10 @@ export async function registerPushToken(): Promise<void> {
     // iOS: APNs 등록이 선행돼야 getToken이 성공한다.
     if (Platform.OS === 'ios') await m.registerDeviceForRemoteMessages(messaging);
     const token = await m.getToken(messaging);
-    if (token) await sendToken(token);
+    if (token) {
+      devRevealToken(token); // [임시:FCM토큰확인] 확인 후 이 줄 제거
+      await sendToken(token);
+    }
   } catch {
     // 조용히 폴백.
   }

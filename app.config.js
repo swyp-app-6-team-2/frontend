@@ -7,5 +7,10 @@ module.exports = ({ config }) => {
   if (plist) {
     config.ios = { ...config.ios, googleServicesFile: plist };
   }
+  // Android도 동일 — google-services.json은 레포 미커밋, EAS file env var로 주입.
+  const gjson = process.env.GOOGLE_SERVICES_JSON;
+  if (gjson) {
+    config.android = { ...config.android, googleServicesFile: gjson };
+  }
   return config;
 };

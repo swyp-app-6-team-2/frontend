@@ -1,5 +1,14 @@
 import { useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  Text,
+  View,
+} from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
@@ -209,7 +218,7 @@ export default function IngredientsScreen() {
     <View className="flex-1 bg-background">
       <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
         <ScrollView
-          contentContainerClassName="gap-6 px-screen pb-[120px] pt-2"
+          contentContainerClassName={`gap-6 px-screen pb-[120px] ${Platform.OS === 'android' ? 'pt-7' : 'pt-2'}`}
           showsVerticalScrollIndicator={false}
           refreshControl={<AppRefreshControl {...refresh} />}
         >

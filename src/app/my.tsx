@@ -1,4 +1,4 @@
-import { Pressable, ScrollView, View } from 'react-native';
+import { Platform, Pressable, ScrollView, View } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter, type Href } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -49,7 +49,7 @@ export default function MyScreen() {
     <View className="flex-1 bg-background">
       <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
         <ScrollView
-          contentContainerClassName="gap-4 px-screen pb-[120px] pt-2"
+          contentContainerClassName={`gap-4 px-screen pb-[120px] ${Platform.OS === 'android' ? 'pt-7' : 'pt-2'}`}
           showsVerticalScrollIndicator={false}
           refreshControl={<AppRefreshControl {...refresh} />}
         >

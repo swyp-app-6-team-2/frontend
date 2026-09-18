@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Pressable, View } from 'react-native';
+import { Platform, Pressable, View } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 
@@ -27,7 +27,11 @@ export function ScreenHeader({ title, back, close, onClose, right }: ScreenHeade
   const dismiss = onClose ?? (() => (router.canGoBack() ? router.back() : router.replace('/')));
 
   return (
-    <View className="h-[72px] flex-row items-center gap-2 px-screen">
+    // 안드로이드는 상태바 인셋이 iOS 노치보다 얇아 헤더가 위에 붙어 보인다 → 상단 여백 보강(iOS 무변경).
+    <View
+      className="h-[72px] flex-row items-center gap-2 px-screen"
+      style={Platform.OS === 'android' ? { marginTop: 20 } : undefined}
+    >
       {back ? (
         <Pressable
           onPress={dismiss}

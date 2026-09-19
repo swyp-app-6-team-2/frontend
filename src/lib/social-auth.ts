@@ -62,7 +62,7 @@ async function getNaverAccessToken(): Promise<string> {
     appName: '별따먹자',
     consumerKey: process.env.EXPO_PUBLIC_NAVER_CLIENT_ID ?? '',
     consumerSecret: process.env.EXPO_PUBLIC_NAVER_CLIENT_SECRET ?? '',
-    serviceUrlSchemeIOS: 'naverlogin',
+    serviceUrlSchemeIOS: 'starpicknaver',
     // false = 네이버 앱 설치 시 app-to-app. Info.plist LSApplicationQueriesSchemes 필요.
     disableNaverAppAuthIOS: false,
   });
@@ -81,7 +81,7 @@ async function getGoogleIdToken(): Promise<string> {
   GoogleSignin.configure({
     iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
     // webClientId를 주면 idToken aud가 웹 client id로 찍힌다. dev 백엔드 GOOGLE_CLIENT_ID가
-    // 웹 client id(...-48639...)라, webClientId를 넣어야 aud가 맞아 검증 통과(200)한다.
+    // 웹 client id(...-a9pkan161...)라, webClientId를 넣어야 aud가 맞아 검증 통과(200)한다.
     webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
   });
   const res = await GoogleSignin.signIn();

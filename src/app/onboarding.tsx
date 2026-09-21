@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
@@ -95,11 +95,12 @@ function NightSky() {
   const insets = useSafeAreaInsets();
   return (
     <View pointerEvents="none" className="absolute inset-0">
-      {/* 구름 배경 (홈과 동일) */}
+      {/* 구름 배경 (홈과 동일) — 바닥 고정 + 위로 확대, bottom:20. 화면 비율 무관하게 하단 앵커. */}
       <Image
         source={require('../assets/images/sky-bg.png')}
-        style={StyleSheet.absoluteFill}
+        style={{ position: 'absolute', left: 0, right: 0, bottom: 20, height: '122%' }}
         contentFit="cover"
+        contentPosition="bottom"
       />
       {/* 홈 헤더 (배경) — 홈과 동일: 별따먹자 로고 이미지 + '남은 별' 칩 */}
       <View
@@ -217,6 +218,8 @@ export default function OnboardingScreen() {
       <View className="flex-1 bg-background">
         {/* 뒷배경 — 홈과 동일한 밤하늘(1~6단계 '별따먹자' 배경과 통일) */}
         <NightSky />
+        {/* 딤 — 배경을 어둡게 깔아 추천 카드가 도드라지게(코치마크 단계와 통일) */}
+        <View pointerEvents="none" className="absolute inset-0 bg-black/60" />
         {/* 화면 아무 곳이나 탭해도 완료(홈으로) — 버튼은 위 레이어에서 각자 처리 */}
         <Pressable className="absolute inset-0" onPress={finish} accessibilityLabel="다음" />
         <SafeAreaView className="flex-1" edges={['top', 'bottom']} pointerEvents="box-none">
@@ -443,7 +446,7 @@ export default function OnboardingScreen() {
           >
             <Image
               source={require('../assets/images/ic-close.png')}
-              style={{ width: 24, height: 24 }}
+              style={{ width: 18, height: 18 }}
               tintColor={palette.foreground}
               contentFit="contain"
             />

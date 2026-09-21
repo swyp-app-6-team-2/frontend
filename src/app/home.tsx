@@ -239,10 +239,13 @@ export default function HomeScreen() {
       >
         {/* 구름 배경 + 바닥 돔 + 캐릭터 */}
         <View pointerEvents="none" className="absolute inset-0">
+          {/* 바닥 고정 + 위로 확대 — 구름을 더 위로 올리되 하단에 틈이 안 생기게.
+              bottom:50 으로 구름을 50 더 올린다(생기는 하단 틈은 바닥 돔이 덮는다). 비율 무관. */}
           <Image
             source={require('../assets/images/sky-bg.png')}
-            style={StyleSheet.absoluteFill}
+            style={{ position: 'absolute', left: 0, right: 0, bottom: 20, height: '122%' }}
             contentFit="cover"
+            contentPosition="bottom"
           />
           {/* 바닥 돔 — 하단 전체 */}
           <Image

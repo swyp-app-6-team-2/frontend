@@ -241,7 +241,7 @@ export default function FridgeScreen() {
         >
           <Text className="text-[14px] leading-[18px] text-muted">
             재료가 없어요,{' '}
-            <Text className="font-medium text-foreground underline">직접 입력할게요</Text>
+            <Text className="font-medium text-muted underline">직접 입력할게요</Text>
           </Text>
         </PressableScale>
       </View>

@@ -2,7 +2,13 @@ import { useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, ScrollView, Text, useWindowDimensions, View } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, {
+  FadeInDown,
+  useAnimatedScrollHandler,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 
 import { Button, PressableScale, Screen, SearchBar } from '@/components/ui';
 import { staggerDelay } from '@/constants/animation';
@@ -100,55 +106,55 @@ export default function FridgeScreen() {
       });
   };
 
+  // Collapsing header — 검색바+필터를 스크롤 방향에 따라 접는다.
+  // 내리면(리스트 더 보기) 위로 숨고, 올리면 위치와 무관하게 다시 내려온다. 최상단은 항상 보임.
+  const [headerHeight, setHeaderHeight] = useState(0); // 측정값(리스트 상단 여백용)
+  const headerH = useSharedValue(0); // 워크릿에서 쓰는 높이
+  const translateY = useSharedValue(0); // 0=보임 / -headerH=숨김
+  const shown = useSharedValue(1); // 현재 상태(중복 애니메이션 방지)
+  const lastY = useSharedValue(0);
+  const accum = useSharedValue(0); // 한 방향 누적 스크롤량(관성 끝 미세 반동 무시용)
+  const onHeaderLayout = (h: number) => {
+    headerH.value = h;
+    setHeaderHeight(h);
+  };
+  const scrollHandler = useAnimatedScrollHandler((e) => {
+    const y = e.contentOffset.y;
+    const dy = y - lastY.value;
+    lastY.value = y;
+    // 최상단: 항상 보임
+    if (y <= 0) {
+      accum.value = 0;
+      if (shown.value !== 1) {
+        shown.value = 1;
+        translateY.value = withTiming(0, { duration: 220 });
+      }
+      return;
+    }
+    // 방향이 유지되면 누적, 바뀌면 리셋 → 24px 이상 이어질 때만 토글(작은 반동 무시)
+    accum.value = accum.value > 0 === dy > 0 ? accum.value + dy : dy;
+    if (accum.value > 24 && y > headerH.value && shown.value !== 0) {
+      shown.value = 0;
+      translateY.value = withTiming(-headerH.value, { duration: 220 });
+    } else if (accum.value < -24 && shown.value !== 1) {
+      shown.value = 1;
+      translateY.value = withTiming(0, { duration: 220 });
+    }
+  });
+  const headerStyle = useAnimatedStyle(() => ({ transform: [{ translateY: translateY.value }] }));
+
   return (
     <Screen title="재료 추가하기" close>
-      <View className="flex-1">
-        <ScrollView
+      {/* overflow-hidden: 위로 접힌 헤더가 콘텐츠 영역 상단에서 잘려 사라지게 */}
+      <View className="flex-1 overflow-hidden">
+        {/* 리스트 — 스크롤 방향으로 위 헤더를 접는다. 상단 여백은 헤더 높이만큼. */}
+        <Animated.ScrollView
+          onScroll={scrollHandler}
+          scrollEventThrottle={16}
           showsVerticalScrollIndicator={false}
-          contentContainerClassName="gap-4 pb-4 pt-2"
+          contentContainerStyle={{ paddingTop: headerHeight || 8, paddingBottom: 16 }}
+          contentContainerClassName="gap-4"
         >
-          <SearchBar
-            placeholder="재료명을 검색해보세요"
-            value={q}
-            onChangeText={setQ}
-            returnKeyType="search"
-          />
-
-          {/* 카테고리 칩 — 가로 스크롤, 선택=골드 */}
-          <ScrollView
-            ref={chipScrollRef}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerClassName="gap-2"
-          >
-            {chips.map((c, i) => {
-              const on = i === active;
-              return (
-                <PressableScale
-                  key={c.label}
-                  onPress={() => selectChip(i)}
-                  onLayout={(e) => {
-                    chipLayouts.current[i] = {
-                      x: e.nativeEvent.layout.x,
-                      w: e.nativeEvent.layout.width,
-                    };
-                  }}
-                  accessibilityRole="button"
-                  haptic="selection"
-                  className={`h-9 items-center justify-center rounded-pill border border-field px-4 ${
-                    on ? 'bg-primary' : ''
-                  }`}
-                >
-                  <Text
-                    className={`text-[14px] leading-[17px] ${on ? 'text-ink' : 'text-foreground'}`}
-                  >
-                    {c.label} ({c.count})
-                  </Text>
-                </PressableScale>
-              );
-            })}
-          </ScrollView>
-
           {/* 재료 그리드 — 로딩/에러/빈 상태 후 3열 청킹 */}
           {isLoading ? (
             <View className="items-center py-20">
@@ -217,7 +223,55 @@ export default function FridgeScreen() {
               ))}
             </View>
           )}
-        </ScrollView>
+        </Animated.ScrollView>
+
+        {/* 애니메이션 헤더 — 검색바 + 카테고리 칩. 스크롤 방향으로 접힘/펼침 */}
+        <Animated.View
+          onLayout={(e) => onHeaderLayout(e.nativeEvent.layout.height)}
+          style={[{ position: 'absolute', left: 0, right: 0, top: 0 }, headerStyle]}
+          className="gap-4 bg-background pb-4 pt-2"
+        >
+          <SearchBar
+            placeholder="재료명을 검색해보세요"
+            value={q}
+            onChangeText={setQ}
+            returnKeyType="search"
+          />
+          {/* 카테고리 칩 — 가로 스크롤, 선택=골드 */}
+          <ScrollView
+            ref={chipScrollRef}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerClassName="gap-2"
+          >
+            {chips.map((c, i) => {
+              const on = i === active;
+              return (
+                <PressableScale
+                  key={c.label}
+                  onPress={() => selectChip(i)}
+                  onLayout={(e) => {
+                    chipLayouts.current[i] = {
+                      x: e.nativeEvent.layout.x,
+                      w: e.nativeEvent.layout.width,
+                    };
+                  }}
+                  accessibilityRole="button"
+                  haptic="selection"
+                  className={`h-9 items-center justify-center rounded-pill border border-field px-4 ${
+                    on ? 'bg-primary' : ''
+                  }`}
+                >
+                  <Text
+                    className={`text-[14px] leading-[17px] ${on ? 'text-ink' : 'text-foreground'}`}
+                  >
+                    {c.label} ({c.count})
+                  </Text>
+                </PressableScale>
+              );
+            })}
+          </ScrollView>
+        </Animated.View>
       </View>
 
       <View className="gap-1 pb-6">
@@ -236,13 +290,10 @@ export default function FridgeScreen() {
           onPress={() => router.push('/add-ingredient')}
           haptic="light"
           accessibilityRole="button"
-          accessibilityLabel="재료가 없어요, 직접 입력할게요"
+          accessibilityLabel="직접입력할게요"
           className="items-center py-3"
         >
-          <Text className="text-[14px] leading-[18px] text-muted">
-            재료가 없어요,{' '}
-            <Text className="font-medium text-muted underline">직접 입력할게요</Text>
-          </Text>
+          <Text className="text-[14px] font-medium leading-[18px] text-muted">직접입력할게요</Text>
         </PressableScale>
       </View>
     </Screen>

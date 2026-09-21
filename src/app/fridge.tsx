@@ -274,7 +274,8 @@ export default function FridgeScreen() {
         </Animated.View>
       </View>
 
-      <View className="gap-1 pb-6">
+      {/* 하단 버튼 — 등록하기(primary) + 직접 입력할게요(직접입력 화면 이동). bg Primary2, 상단 여백 16. */}
+      <View className="gap-1 bg-background pb-6 pt-4">
         <Button
           label={
             addMutation.isPending
@@ -290,10 +291,13 @@ export default function FridgeScreen() {
           onPress={() => router.push('/add-ingredient')}
           haptic="light"
           accessibilityRole="button"
-          accessibilityLabel="직접입력할게요"
-          className="items-center py-3"
+          accessibilityLabel="재료가 없어요, 직접 입력할게요"
+          className="items-center pb-2 pt-3"
         >
-          <Text className="text-[14px] font-medium leading-[18px] text-muted">직접입력할게요</Text>
+          <Text className="text-[14px] leading-[18px] text-muted">
+            재료가 없어요,{' '}
+            <Text className="font-medium text-muted underline">직접 입력할게요</Text>
+          </Text>
         </PressableScale>
       </View>
     </Screen>

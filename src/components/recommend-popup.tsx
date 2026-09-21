@@ -23,7 +23,7 @@ export function RecommendPopup({
     <Modal transparent visible animationType="none" statusBarTranslucent onRequestClose={onClose}>
       <Animated.View
         entering={FadeIn.duration(260).easing(Easing.out(Easing.quad))}
-        className="flex-1 items-center justify-center bg-background/85 px-5"
+        className="flex-1 items-center justify-end bg-background/85 px-5 pb-[265px]"
       >
         <Pressable className="absolute inset-0" onPress={onClose} accessibilityLabel="닫기" />
         <Animated.View

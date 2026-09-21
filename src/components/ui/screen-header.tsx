@@ -52,6 +52,8 @@ export function ScreenHeader({ title, back, close, onClose, right }: ScreenHeade
           hitSlop={8}
           accessibilityRole="button"
           accessibilityLabel="닫기"
+          // X와 제목 사이 16px (헤더 gap 8 + 여기 8).
+          style={{ marginRight: 8 }}
         >
           <Image
             source={require('../../assets/images/ic-close.png')}

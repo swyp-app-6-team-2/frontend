@@ -19,6 +19,8 @@ export function RecommendPopup({
   onView: () => void;
   onClose: () => void;
 }) {
+  // 표시 규칙은 목록 화면과 동일: 커버 없으면 분석 원본 썸네일로 폴백.
+  const imageUri = recipe.coverImageUrl ?? recipe.thumbnailUrl;
   return (
     <Modal transparent visible animationType="none" statusBarTranslucent onRequestClose={onClose}>
       <Animated.View
@@ -30,10 +32,11 @@ export function RecommendPopup({
           entering={FadeIn.duration(420).easing(Easing.out(Easing.cubic))}
           className="w-full max-w-[362px] overflow-hidden rounded-[20px]"
         >
-          {/* 추천 레시피 이미지 — 없으면 중립 플레이스홀더 */}
-          {recipe.coverImageUrl ? (
+          {/* 추천 레시피 이미지 — 분석 레시피는 커버 대신 썸네일만 오므로 폴백(목록 화면과 동일 규칙).
+              둘 다 없을 때만 중립 플레이스홀더. */}
+          {imageUri ? (
             <Image
-              source={{ uri: recipe.coverImageUrl }}
+              source={{ uri: imageUri }}
               style={{ width: '100%', height: 216 }}
               contentFit="cover"
             />

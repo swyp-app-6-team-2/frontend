@@ -1,22 +1,32 @@
-import { type ComponentProps } from 'react';
 import { Pressable, Text, View } from 'react-native';
+import { Image } from 'expo-image';
 import { type Href } from 'expo-router';
-import { Feather } from '@expo/vector-icons';
 
 import { palette } from '@/constants/tokens';
 
-type FeatherName = ComponentProps<typeof Feather>['name'];
+export type AddRecipeItem = { icon: number; label: string; href: Href };
 
-export type AddRecipeItem = { icon: FeatherName; label: string; href: Href };
-
-// 레시피 등록 3종 — Figma 아이콘명(link/image/edit-3)이 곧 Feather 아이콘.
+// 레시피 등록 3종 — 링크/이미지/연필 아이콘(흰색 PNG, tintColor로 골드 적용).
 export const ADD_RECIPE_ITEMS: AddRecipeItem[] = [
-  { icon: 'link', label: 'URL로 등록', href: '/add-recipe-url' },
-  { icon: 'image', label: '이미지로 등록', href: '/add-recipe-image' },
-  { icon: 'edit-3', label: '직접 등록', href: '/add-recipe-manual' },
+  {
+    icon: require('../assets/images/ic-link.png'),
+    label: 'URL로 등록하기',
+    href: '/add-recipe-url',
+  },
+  {
+    icon: require('../assets/images/ic-image.png'),
+    label: '이미지로 등록하기',
+    href: '/add-recipe-image',
+  },
+  {
+    icon: require('../assets/images/ic-edit.png'),
+    label: '직접 등록하기',
+    href: '/add-recipe-manual',
+  },
 ];
 
-// FAB 등록 팝오버 카드 (Figma 619:9650) — 203×170, r20, bg-background.
+// FAB 등록 팝오버 카드 (Figma 619:9650) — r20, bg-background.
+// 폭 224(Figma 203에서 확장) — "…등록하기" 라벨이 한 줄에 들어가게.
 // 각 행: 36×36 아이콘칩(bg-field, r8, 16px 골드 아이콘) + 16px 흰색 라벨.
 // highlighted=false: 1px disabled 테두리(기본). highlighted=true: 1px primary
 // 테두리 + 흰색 글로우(온보딩 강조).
@@ -29,7 +39,7 @@ export function AddRecipeMenu({
 }) {
   return (
     <View
-      className={`w-[203px] gap-[15px] rounded-[20px] border bg-background p-4 ${
+      className={`w-[224px] gap-[15px] rounded-[20px] border bg-background p-4 ${
         highlighted ? 'border-primary' : 'border-disabled'
       }`}
       style={
@@ -52,7 +62,12 @@ export function AddRecipeMenu({
           accessibilityLabel={item.label}
         >
           <View className="h-9 w-9 items-center justify-center rounded-[8px] bg-field">
-            <Feather name={item.icon} size={16} color={palette.primary} />
+            <Image
+              source={item.icon}
+              style={{ width: 18, height: 18 }}
+              tintColor={palette.primary}
+              contentFit="contain"
+            />
           </View>
           <Text className="text-[16px] leading-[21px] text-foreground">{item.label}</Text>
         </Pressable>

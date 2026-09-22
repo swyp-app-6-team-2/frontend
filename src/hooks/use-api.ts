@@ -32,7 +32,7 @@ import type {
   SignupRequest,
   SocialLoginRequest,
 } from '@/lib/api/types';
-import { unregisterPushToken } from '@/lib/push';
+import { registerPushToken, unregisterPushToken } from '@/lib/push';
 
 // queryKey 컨벤션 — 무효화 대상을 예측 가능하게 한 곳에서 관리.
 export const queryKeys = {
@@ -214,6 +214,8 @@ export function useSignup() {
     mutationFn: (body: SignupRequest) => authApi.signup(body),
     onSuccess: (res) => {
       setTokens({ accessToken: res.accessToken, refreshToken: res.refreshToken });
+      // 신규 가입 완료(accessToken 확보) → FCM 토큰 등록. login.tsx는 기존 회원만 등록한다.
+      void registerPushToken();
     },
   });
 }

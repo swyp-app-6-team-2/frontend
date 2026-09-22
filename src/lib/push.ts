@@ -8,7 +8,7 @@
 
 import { Platform } from 'react-native';
 
-import { notificationApi } from '@/lib/api';
+import { getAccessToken, notificationApi } from '@/lib/api';
 
 type MessagingApi = typeof import('@react-native-firebase/messaging');
 // undefined=미시도 / null=사용 불가(네이티브 모듈 없음) / 객체=사용 가능
@@ -28,6 +28,10 @@ function getApi(): MessagingApi | null {
 const PLATFORM = Platform.OS === 'ios' ? 'IOS' : 'ANDROID';
 
 async function sendToken(token: string): Promise<void> {
+  // accessToken이 없으면(신규 가입 전, 세션 만료 등) 등록을 시도하지 않는다.
+  // 401 → refreshToken 없음 → clearTokens()+emitAuthExpired()가 provider 배지를 지우고
+  // 로그인 화면으로 보내는 부작용을 원천 차단. 토큰이 생긴 시점(가입/로그인 완료)에 다시 호출된다.
+  if (!getAccessToken()) return;
   try {
     await notificationApi.registerPushToken({ token, platform: PLATFORM });
   } catch {

@@ -297,7 +297,9 @@ export function useLogout() {
 export function useWithdraw() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: () => userApi.withdraw(),
+    // 네이버 사용자는 연동 해제용 소셜 토큰을 함께 넘긴다(login-manage에서 재인증 후 전달).
+    mutationFn: (socialAccessToken?: string) =>
+      userApi.withdraw(socialAccessToken ? { socialAccessToken } : undefined),
     onSuccess: () => {
       clearTokens();
       qc.clear();

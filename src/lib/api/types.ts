@@ -78,6 +78,10 @@ export type OnboardingResponse = {
   onboardingCompletedAt: string | null; // ISO8601 UTC
 };
 
+// 회원 탈퇴 요청 바디. socialAccessToken = 소셜 연결 해제용 access token —
+// 네이버 로그인 사용자는 백엔드가 연동 해제에 쓰므로 필수(다른 provider는 서버가 자체 처리).
+export type UserWithdrawalRequest = { socialAccessToken?: string };
+
 // ── Upload ────────────────────────────────────────────────────
 export type UploadUrlIssueRequest = { purpose: UploadPurpose; contentType: ImageContentType };
 export type UploadUrlIssueResponse = {

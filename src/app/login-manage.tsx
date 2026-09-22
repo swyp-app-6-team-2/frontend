@@ -6,7 +6,8 @@ import { useRouter } from 'expo-router';
 import { AlertDialog, ListRow, Screen } from '@/components/ui';
 import { palette } from '@/constants/tokens';
 import { useLogout, useWithdraw } from '@/hooks/use-api';
-import { ApiError } from '@/lib/api';
+import { ApiError, getLoginProvider } from '@/lib/api';
+import { API_PROVIDER, getSocialAuthToken } from '@/lib/social-auth';
 
 // 로그인 관리 — 로그아웃 / 회원 탈퇴(파괴적).
 export default function LoginManageScreen() {
@@ -27,8 +28,21 @@ export default function LoginManageScreen() {
   };
 
   // 회원 탈퇴 — 성공 시 훅이 토큰·캐시를 비운다. 실패하면 안내만.
-  const onWithdraw = () => {
-    withdraw.mutate(undefined, {
+  // 네이버 사용자는 백엔드가 연동 해제에 쓸 access token을 요구하므로, 탈퇴 직전
+  // 네이버 재인증으로 새 토큰을 받아 함께 넘긴다. (다른 provider는 서버가 자체 처리.)
+  const onWithdraw = async () => {
+    let socialAccessToken: string | undefined;
+    if (getLoginProvider() === API_PROVIDER.naver) {
+      try {
+        const { authToken } = await getSocialAuthToken('naver');
+        socialAccessToken = authToken;
+      } catch {
+        setConfirmLeave(false);
+        Alert.alert('탈퇴 실패', '네이버 인증에 실패했어요. 다시 시도해주세요.');
+        return;
+      }
+    }
+    withdraw.mutate(socialAccessToken, {
       onSuccess: () => {
         setConfirmLeave(false);
         router.replace('/login');

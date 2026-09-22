@@ -440,7 +440,8 @@ Response = { userId; nickname: string|null; profileImageUrl: string|null }
 둘 다 `{ onboardingRequired: boolean; onboardingCompletedAt: string|null }`.
 
 ### `DELETE /api/v1/users/me` — 회원 탈퇴 → **200** `data: null`
-- 계정·사용자 데이터를 삭제한다(복구 불가). 중간 실패는 서버가 자동 복구. 외부 소셜 연결 해제는 안 함.
+- Request(옵션) = `{ socialAccessToken?: string }` — **네이버 로그인 사용자는 필수**(백엔드가 네이버 연동 해제에 사용). 프론트는 탈퇴 직전 네이버 재인증으로 발급해 전달. 그 외 provider는 서버가 자체 처리하므로 생략.
+- 계정·사용자 데이터를 삭제한다(복구 불가). 중간 실패는 서버가 자동 복구.
 - 성공 후 프론트는 로컬 토큰 삭제·캐시 비움 → 로그인 화면으로.
 
 ---

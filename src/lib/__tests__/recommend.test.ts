@@ -29,6 +29,7 @@ describe('recommendationToListItem (추천 응답 → 팝업 목록아이템)', 
       title: '대파라면',
       categoryCode: 'KOREAN',
       coverImageUrl: 'https://cdn/x.jpg',
+      thumbnailUrl: null,
       ingredientNames: ['라면', '계란', '대파'],
     });
   });

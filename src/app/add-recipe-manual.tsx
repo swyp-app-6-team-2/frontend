@@ -126,7 +126,8 @@ export default function AddRecipeManualScreen() {
         : [{ name: '', qty: '' }],
     );
     setSteps(existing.steps.length ? existing.steps.map((s) => s.content) : ['']);
-    setCoverUrl(existing.coverImageUrl);
+    // 분석 레시피는 커버가 source.thumbnailUrl에만 있을 수 있어 폴백(상세 화면과 동일 규칙).
+    setCoverUrl(existing.coverImageUrl ?? existing.source?.thumbnailUrl ?? null);
   }
 
   // 내용 확인 모드: 분석 초안(draft)을 폼에 한 번 프리필. AI가 못 채운 필드는 빈 값 유지.

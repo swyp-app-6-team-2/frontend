@@ -11,6 +11,40 @@ export type SocialProvider = 'kakao' | 'naver' | 'google' | 'apple';
 // 백엔드에 넘길 결과. nonce는 애플만 채운다(identityToken의 nonce 클레임과 원문 비교).
 export type SocialAuthResult = { authToken: string; nonce?: string };
 
+// 소셜 SDK 초기화 설정 — 프리워밍과 로그인 시점에서 공유(값 드리프트 방지).
+const GOOGLE_CONFIG = {
+  iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
+  // webClientId를 주면 idToken aud가 웹 client id로 찍혀 백엔드 검증과 맞는다.
+  webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+};
+const NAVER_CONFIG = {
+  appName: '별따먹자',
+  consumerKey: process.env.EXPO_PUBLIC_NAVER_CLIENT_ID ?? '',
+  consumerSecret: process.env.EXPO_PUBLIC_NAVER_CLIENT_SECRET ?? '',
+  serviceUrlSchemeIOS: 'starpicknaver',
+  disableNaverAppAuthIOS: false, // 네이버 앱 설치 시 app-to-app
+};
+
+/**
+ * 앱 시작 시 1회 호출 — 소셜 SDK를 미리 로드·초기화해 "첫 탭 깜빡"을 없앤다.
+ * 네이티브 모듈이 없거나(리빌드 전) 실패해도 조용히 무시한다. 로그인은 탭 시점에 다시
+ * configure/initialize를 호출하므로(멱등) 프리워밍이 실패해도 안전하다.
+ */
+export async function prewarmSocialAuth(): Promise<void> {
+  try {
+    const { GoogleSignin } = await import('@react-native-google-signin/google-signin');
+    GoogleSignin.configure(GOOGLE_CONFIG);
+  } catch {
+    // 네이티브 모듈 없음/실패 — 무시(탭 시점에 재설정).
+  }
+  try {
+    const NaverLogin = (await import('@react-native-seoul/naver-login')).default;
+    NaverLogin.initialize(NAVER_CONFIG);
+  } catch {
+    // 무시.
+  }
+}
+
 // 백엔드 provider 문자열. KAKAO·NAVER는 백엔드 확인됨, APPLE·GOOGLE은 백엔드 값 확인 필요.
 export const API_PROVIDER: Record<SocialProvider, string> = {
   kakao: 'KAKAO',
@@ -58,14 +92,7 @@ async function getKakaoAccessToken(): Promise<string> {
 // 네이버 네이티브 SDK — initialize 후 login. successResponse.accessToken 반환.
 async function getNaverAccessToken(): Promise<string> {
   const NaverLogin = (await import('@react-native-seoul/naver-login')).default;
-  NaverLogin.initialize({
-    appName: '별따먹자',
-    consumerKey: process.env.EXPO_PUBLIC_NAVER_CLIENT_ID ?? '',
-    consumerSecret: process.env.EXPO_PUBLIC_NAVER_CLIENT_SECRET ?? '',
-    serviceUrlSchemeIOS: 'starpicknaver',
-    // false = 네이버 앱 설치 시 app-to-app. Info.plist LSApplicationQueriesSchemes 필요.
-    disableNaverAppAuthIOS: false,
-  });
+  NaverLogin.initialize(NAVER_CONFIG); // 프리워밍과 동일 설정(멱등)
   const res = await NaverLogin.login();
   if (res.failureResponse?.isCancel) throw new SocialAuthCanceledError('naver');
   if (!res.isSuccess || !res.successResponse?.accessToken) {
@@ -78,12 +105,7 @@ async function getNaverAccessToken(): Promise<string> {
 // webClientId를 주면 idToken의 aud가 웹 클라이언트 ID로 찍혀 백엔드 검증과 맞는다.
 async function getGoogleIdToken(): Promise<string> {
   const { GoogleSignin } = await import('@react-native-google-signin/google-signin');
-  GoogleSignin.configure({
-    iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
-    // webClientId를 주면 idToken aud가 웹 client id로 찍힌다. dev 백엔드 GOOGLE_CLIENT_ID가
-    // 웹 client id(...-a9pkan161...)라, webClientId를 넣어야 aud가 맞아 검증 통과(200)한다.
-    webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
-  });
+  GoogleSignin.configure(GOOGLE_CONFIG); // 프리워밍과 동일 설정(멱등)
   const res = await GoogleSignin.signIn();
   if (res.type === 'cancelled') throw new SocialAuthCanceledError('google');
   if (res.type !== 'success' || !res.data.idToken) {

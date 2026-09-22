@@ -10,6 +10,7 @@ import { QueryProvider } from '@/components/query-provider';
 import { useReduceMotion } from '@/hooks/use-reduce-motion';
 import { getAccessToken, hydrateTokens, notificationApi, setOnAuthExpired } from '@/lib/api';
 import { registerPushToken, subscribeNotificationOpen, subscribeTokenRefresh } from '@/lib/push';
+import { prewarmSocialAuth } from '@/lib/social-auth';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -44,6 +45,8 @@ export default function RootLayout() {
   // FCM 푸시 — 이미 로그인된 세션이면 앱 시작 시 토큰 등록, 갱신 시 재등록, 알림 탭 시 홈으로.
   // (신규 로그인은 login.tsx가 별도로 registerPushToken 호출)
   useEffect(() => {
+    // 소셜 SDK 프리워밍 — 첫 로그인 탭 깜빡 방지(실패해도 조용히 무시).
+    void prewarmSocialAuth();
     if (getAccessToken()) void registerPushToken();
     const unsubRefresh = subscribeTokenRefresh();
     const unsubOpen = subscribeNotificationOpen((data) => {

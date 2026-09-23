@@ -6,7 +6,7 @@ import Animated, { Easing, Keyframe } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
 const INITIAL_SCALE_FACTOR = Dimensions.get('screen').height / 90;
-const DURATION = 600;
+const DURATION = 1400;
 
 export function AnimatedSplashOverlay() {
   const [animate, setAnimate] = useState(false);
@@ -27,22 +27,22 @@ export function AnimatedSplashOverlay() {
 
   if (!visible) return null;
 
+  // 풀스크린 스플래시를 충분히 오래 불투명 유지(55%)한 뒤 페이드 → "크게" 확실히 보이게.
   const splashKeyframe = new Keyframe({
     0: {
       transform: [{ scale: 1 }],
       opacity: 1,
     },
-    20: {
+    55: {
       opacity: 1,
     },
-    70: {
+    90: {
       opacity: 0,
-      easing: Easing.elastic(0.7),
+      easing: Easing.out(Easing.quad),
     },
     100: {
       opacity: 0,
       transform: [{ scale: 1 }],
-      easing: Easing.elastic(0.7),
     },
   });
 
@@ -147,8 +147,10 @@ const styles = StyleSheet.create({
     height: 71,
   },
   splashImage: {
-    width: '100%',
-    height: '100%',
+    // 화면 픽셀을 명시적으로 지정해 확실히 풀스크린. 퍼센트('100%')는 Android에서 부모가
+    // position만으로 크기를 가질 때 해석이 안 돼 이미지가 작게 떨어지던 문제를 회피한다.
+    width: Dimensions.get('screen').width,
+    height: Dimensions.get('screen').height,
   },
   background: {
     borderRadius: 40,

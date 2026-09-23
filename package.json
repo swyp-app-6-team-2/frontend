@@ -79,5 +79,31 @@
   "engines": {
     "node": ">=20"
   },
-  "private": true
+  "private": true,
+  "expo": {
+    "install": {
+      "exclude": [
+        "@expo/ui",
+        "expo",
+        "expo-auth-session",
+        "expo-constants",
+        "expo-crypto",
+        "expo-device",
+        "expo-font",
+        "expo-glass-effect",
+        "expo-haptics",
+        "expo-image",
+        "expo-image-picker",
+        "expo-linking",
+        "expo-router",
+        "expo-splash-screen",
+        "expo-symbols",
+        "expo-system-ui",
+        "expo-updates",
+        "expo-web-browser",
+        "react-native",
+        "eslint-config-expo"
+      ]
+    }
+  }
 }

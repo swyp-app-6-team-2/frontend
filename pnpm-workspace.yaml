@@ -11,3 +11,6 @@ nodeLinker: hoisted
 overrides:
   expo-constants: 57.0.10
   '@expo/env': 2.4.2
+  # expo-auth-session가 expo-linking@~57.0.9를 끌어와 루트 57.0.5와 중복 → 네이티브 모듈 중복.
+  # 단일 버전으로 dedupe (expo-doctor 중복 체크 통과, EAS 로컬 빌드 setup 실패 방지).
+  expo-linking: 57.0.9

@@ -1,7 +1,9 @@
+import { Pressable, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
-import { AlertDialog } from '@/components/ui';
+import { AppText, Screen } from '@/components/ui';
+import { palette } from '@/constants/tokens';
 import type { IngestionFailureCode } from '@/lib/api';
 
 // 실패 원인(failureCode)별 안내 문구. 로딩 화면이 job.failureCode를 `code`로 넘긴다.
@@ -30,28 +32,54 @@ const NETWORK_FALLBACK = {
   message: '통신 상태를 확인하고\n다시 시도하거나 직접 입력해주세요',
 };
 
-// 19-2 이미지(OCR) 등록 실패 — failureCode에 따라 원인별 안내.
+// 19-2 이미지(OCR) 등록 실패 — failureCode별 원인 안내.
+// ad-failed·login-failed와 동일한 풀스크린 패턴(다크 배경 + 마스코트 + 하단 버튼)으로,
+// 콘텐츠 없는 빈 라우트에 dim 모달만 떠 "무색"으로 보이던 문제를 해소한다.
 export default function OcrFailedScreen() {
   const router = useRouter();
   const { code } = useLocalSearchParams<{ code?: string }>();
   const copy = (code && COPY[code as IngestionFailureCode]) || NETWORK_FALLBACK;
 
   return (
-    <AlertDialog
-      mascot={
-        <Image
-          source={require('../assets/images/mascot-confused.png')}
-          style={{ width: 132, height: 116 }}
-          contentFit="contain"
-        />
-      }
-      title={copy.title}
-      // 진단용: 실제 실패 코드를 노출해 원인을 화면에서 바로 확인한다(원인 확정 후 제거 가능).
-      message={code ? `${copy.message}\n\n오류 코드: ${code}` : copy.message}
-      actions={[
-        { label: '직접 입력', onPress: () => router.replace('/add-recipe-manual') },
-        { label: '다시 시도', tone: 'danger', onPress: () => router.back() },
-      ]}
-    />
+    <Screen title="" back>
+      {/* 마스코트 + 문구 (중앙) */}
+      <View className="flex-1 items-center justify-center">
+        <View className="items-center gap-[34px]">
+          <Image
+            source={require('../assets/images/mascot-confused.png')}
+            style={{ width: 135, height: 119 }}
+            contentFit="contain"
+          />
+          <View className="items-center gap-3">
+            <AppText variant="subheading" className="text-center">
+              {copy.title}
+            </AppText>
+            <AppText variant="body" className="text-center" style={{ color: palette.bodyMuted }}>
+              {copy.message}
+            </AppText>
+          </View>
+        </View>
+      </View>
+
+      {/* 하단 두 버튼 — 직접 입력(회색) / 다시 시도(골드) */}
+      <View className="flex-row gap-3 pb-8 pt-4">
+        <Pressable
+          onPress={() => router.replace('/add-recipe-manual')}
+          accessibilityRole="button"
+          className="h-[52px] flex-1 items-center justify-center rounded-[30px] bg-popup-button active:opacity-80"
+        >
+          <Text className="text-[16px] font-semibold leading-[21px] text-popup-button-text">
+            직접 입력
+          </Text>
+        </Pressable>
+        <Pressable
+          onPress={() => router.back()}
+          accessibilityRole="button"
+          className="h-[52px] flex-1 items-center justify-center rounded-[30px] bg-primary active:opacity-90"
+        >
+          <Text className="text-[16px] font-semibold leading-[21px] text-ink">다시 시도</Text>
+        </Pressable>
+      </View>
+    </Screen>
   );
 }

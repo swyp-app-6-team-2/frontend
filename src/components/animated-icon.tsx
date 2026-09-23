@@ -12,28 +12,18 @@ export function AnimatedSplashOverlay() {
   const [animate, setAnimate] = useState(false);
   const [visible, setVisible] = useState(true);
 
-  // 네이티브 스플래시 숨김 + 페이드 시작을 마운트 직후 확정 실행 — View onLayout 타이밍에 의존하지
-  // 않는다(home처럼 무거운 화면이 초기 레이아웃을 막으면 onLayout이 지연·누락돼 스플래시가 안 꺼졌다).
+  // 스플래시 해제를 어떤 조건에도 걸리지 않게 처리 — 마운트 직후 확정 실행.
+  // 1) 네이티브 스플래시 숨김은 fire-and-forget: hideAsync가 안드로이드에서 행잉해도(안 끝나도)
+  //    다음 단계가 막히지 않게 결과를 기다리지 않는다.
+  // 2) 페이드를 즉시 시작(onLayout·hideAsync 결과에 의존하지 않음).
+  // 3) 최종 안전장치: 애니메이션 콜백이 안 불려도(릴리스·reduce-motion) 일정 시간 뒤 무조건
+  //    언마운트 — 전체화면 오버레이(zIndex 1000)가 남아 남색 화면/터치 차단되던 버그 방지.
   useEffect(() => {
-    let alive = true;
-    SplashScreen.hideAsync()
-      .catch(() => {})
-      .finally(() => {
-        if (alive) setAnimate(true);
-      });
-    return () => {
-      alive = false;
-    };
-  }, []);
-
-  // 안전장치: 페이드 애니메이션의 withCallback(finished)이 릴리스 빌드·reduce-motion에서
-  // 안 불려 오버레이가 남아(전체화면·zIndex 1000) 앱 전체를 가리거나 터치를 삼키던 버그 방지.
-  // 페이드 시작 후 일정 시간이 지나면 콜백과 무관하게 강제 언마운트한다.
-  useEffect(() => {
-    if (!animate) return;
-    const t = setTimeout(() => setVisible(false), DURATION + 500);
+    SplashScreen.hideAsync().catch(() => {});
+    setAnimate(true);
+    const t = setTimeout(() => setVisible(false), DURATION + 600);
     return () => clearTimeout(t);
-  }, [animate]);
+  }, []);
 
   if (!visible) return null;
 

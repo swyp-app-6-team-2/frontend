@@ -5,7 +5,6 @@ import * as SplashScreen from 'expo-splash-screen';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 
-import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { QueryProvider } from '@/components/query-provider';
 import { useReduceMotion } from '@/hooks/use-reduce-motion';
 import { getAccessToken, hydrateTokens, notificationApi, setOnAuthExpired } from '@/lib/api';
@@ -41,6 +40,12 @@ export default function RootLayout() {
     return () => setOnAuthExpired(null);
   }, [router]);
 
+  // 인앱 풀스크린 스플래시(AnimatedSplashOverlay) 제거 — OS 시스템 스플래시만 보여주고
+  // 첫 프레임 마운트 직후 네이티브 스플래시를 해제해 바로 로그인/홈으로 직행한다.
+  useEffect(() => {
+    SplashScreen.hideAsync().catch(() => {});
+  }, []);
+
   // FCM 푸시 — 이미 로그인된 세션이면 앱 시작 시 토큰 등록, 갱신 시 재등록, 알림 탭 시 홈으로.
   // (신규 로그인은 login.tsx가 별도로 registerPushToken 호출)
   useEffect(() => {
@@ -72,7 +77,6 @@ export default function RootLayout() {
           {/* 다크 전용 앱(CLAUDE.md): 시스템 라이트 모드에서도 항상 DarkTheme로 고정해
               네비게이터 배경이 흰색으로 새는 것을 막는다. */}
           <ThemeProvider value={DarkTheme}>
-            <AnimatedSplashOverlay />
             <Stack screenOptions={{ headerShown: false, animation }}>
               <Stack.Screen name="(tabs)" options={{ animation: 'none' }} />
               <Stack.Screen name="home" options={{ animation: 'none' }} />

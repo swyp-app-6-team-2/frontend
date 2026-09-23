@@ -1,10 +1,14 @@
-import { Pressable, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Alert, Pressable, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { AppText, Screen } from '@/components/ui';
 import { palette } from '@/constants/tokens';
+import { useCreateIngestionJob } from '@/hooks/use-api';
+import { ApiError, uploadImage } from '@/lib/api';
 import type { IngestionFailureCode } from '@/lib/api';
+import { ImagePickerUnavailableError, pickImage } from '@/lib/pick-image';
 
 // 실패 원인(failureCode)별 안내 문구. 로딩 화면이 job.failureCode를 `code`로 넘긴다.
 // code가 비어 있으면 폴링 GET 자체가 실패한 것(네트워크/통신 오류)이다.
@@ -15,7 +19,8 @@ const COPY: Record<IngestionFailureCode, { title: string; message: string }> = {
   },
   MULTIPLE_RECIPES: {
     title: '레시피가 여러 개 감지됐어요',
-    message: '한 번에 하나의 레시피만 등록할 수 있어요.\n하나만 담긴 이미지를 올려주세요',
+    message:
+      '한 번에 하나의 레시피만 등록할 수 있어요.\n이미지를 잘라 레시피 하나만 담아 다시 올려주세요',
   },
   PROCESSING_FAILED: {
     title: '분석 중 오류가 발생했어요',
@@ -40,6 +45,43 @@ export default function OcrFailedScreen() {
   const { code } = useLocalSearchParams<{ code?: string }>();
   const copy = (code && COPY[code as IngestionFailureCode]) || NETWORK_FALLBACK;
 
+  // 여러 레시피가 한 이미지에 담겨 실패한 경우: 백엔드는 하나만 받으므로,
+  // 사용자가 이미지를 잘라 레시피 하나만 남겨 다시 올리도록 크롭 재시도를 제공한다.
+  const isMultiple = code === 'MULTIPLE_RECIPES';
+  const createJob = useCreateIngestionJob();
+  const [busy, setBusy] = useState(false);
+
+  // 크롭(1장) → 업로드 → 분석 요청 → 로딩(폴링)으로. add-recipe-image의 제출 흐름과 동일하되
+  // 잘라낸 단일 이미지를 쓴다. 크롭 UI는 실기기에서만 뜬다(pickImage 내부 처리).
+  const cropAndRetry = async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const img = await pickImage({ allowsEditing: true });
+      if (!img) return; // 사용자가 취소
+      const key = await uploadImage('INGESTION_INPUT', img);
+      const { ingestionJobId } = await createJob.mutateAsync({
+        inputType: 'IMAGE',
+        inputImageKeys: [key],
+      });
+      router.replace({
+        pathname: '/add-recipe-loading',
+        params: { jobId: String(ingestionJobId), inputType: 'IMAGE' },
+      });
+    } catch (e) {
+      if (e instanceof ImagePickerUnavailableError) {
+        Alert.alert('사진 기능 준비 중', '앱을 다시 빌드하면 사진 자르기를 사용할 수 있어요.');
+        return;
+      }
+      Alert.alert(
+        '요청 실패',
+        e instanceof ApiError ? e.message : '사진 업로드 또는 요청에 실패했어요.',
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <Screen title="" back>
       {/* 마스코트 + 문구 (중앙) */}
@@ -61,11 +103,12 @@ export default function OcrFailedScreen() {
         </View>
       </View>
 
-      {/* 하단 두 버튼 — 직접 입력(회색) / 다시 시도(골드) */}
+      {/* 하단 두 버튼 — 직접 입력(회색) / (다중 레시피)이미지 자르기·(그 외)다시 시도(골드) */}
       <View className="flex-row gap-3 pb-8 pt-4">
         <Pressable
           onPress={() => router.replace('/add-recipe-manual')}
           accessibilityRole="button"
+          disabled={busy}
           className="h-[52px] flex-1 items-center justify-center rounded-[30px] bg-popup-button active:opacity-80"
         >
           <Text className="text-[16px] font-semibold leading-[21px] text-popup-button-text">
@@ -73,11 +116,14 @@ export default function OcrFailedScreen() {
           </Text>
         </Pressable>
         <Pressable
-          onPress={() => router.back()}
+          onPress={isMultiple ? cropAndRetry : () => router.back()}
           accessibilityRole="button"
+          disabled={busy}
           className="h-[52px] flex-1 items-center justify-center rounded-[30px] bg-primary active:opacity-90"
         >
-          <Text className="text-[16px] font-semibold leading-[21px] text-ink">다시 시도</Text>
+          <Text className="text-[16px] font-semibold leading-[21px] text-ink">
+            {isMultiple ? (busy ? '처리 중…' : '이미지 자르기') : '다시 시도'}
+          </Text>
         </Pressable>
       </View>
     </Screen>

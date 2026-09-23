@@ -1,11 +1,11 @@
-import { useColorScheme } from 'react-native';
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
 
 import { Colors } from '@/constants/theme';
 
 export default function AppTabs() {
-  const scheme = useColorScheme();
-  const colors = Colors[scheme === 'unspecified' ? 'light' : scheme];
+  // 다크 전용 앱(CLAUDE.md): 시스템 라이트 모드에서도 항상 다크 팔레트로 고정해
+  // 탭바가 흰색으로 보이는 것을 막는다.
+  const colors = Colors.dark;
 
   return (
     <NativeTabs

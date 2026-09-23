@@ -1,3 +1,4 @@
+import { View } from 'react-native';
 import { Redirect } from 'expo-router';
 
 import { useOnboarding } from '@/hooks/use-api';
@@ -11,6 +12,8 @@ export default function Index() {
   const { data, isLoading, isError } = useOnboarding(hasToken);
 
   if (!hasToken) return <Redirect href="/login" />;
-  if (isLoading) return null; // 스플래시가 덮는 동안 대기(라우팅 결정 전)
+  // 라우팅 결정(온보딩 조회) 전 대기. null을 그리면 라이트 모드 기기에서 네비게이터 흰 배경이
+  // 노출되므로, 다크 배경 플레이스홀더로 덮어 흰 화면 플래시를 막는다.
+  if (isLoading) return <View className="flex-1 bg-background" />;
   return <Redirect href={!isError && data?.onboardingRequired ? '/onboarding' : '/home'} />;
 }

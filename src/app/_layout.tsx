@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
-import { LogBox, Platform, useColorScheme } from 'react-native';
-import { DarkTheme, DefaultTheme, Stack, ThemeProvider, useRouter } from 'expo-router';
+import { LogBox, Platform } from 'react-native';
+import { DarkTheme, Stack, ThemeProvider, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
@@ -28,7 +28,6 @@ if (__DEV__) {
 // cook-complete, …) push on top. Each page renders its own header via <Screen>, so
 // the native stack header is hidden.
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
   // 상세 화면 push는 부드러운 fade. reduce-motion이면 전환 없음('none').
   // 탭 4개 루트는 TabBar가 Link push라 fade를 걸면 탭 전환마다 페이드가 껴서
   // 어색하므로 개별로 'none' 유지(전환 없이 즉시 교체).
@@ -70,7 +69,9 @@ export default function RootLayout() {
           Expo가 켜둔 edge-to-edge는 그대로 둔다. iOS는 기본값(enabled) 유지→키보드 회피 동작 무변경. */}
       <KeyboardProvider enabled={Platform.OS !== 'android'} preserveEdgeToEdge>
         <QueryProvider>
-          <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+          {/* 다크 전용 앱(CLAUDE.md): 시스템 라이트 모드에서도 항상 DarkTheme로 고정해
+              네비게이터 배경이 흰색으로 새는 것을 막는다. */}
+          <ThemeProvider value={DarkTheme}>
             <AnimatedSplashOverlay />
             <Stack screenOptions={{ headerShown: false, animation }}>
               <Stack.Screen name="(tabs)" options={{ animation: 'none' }} />

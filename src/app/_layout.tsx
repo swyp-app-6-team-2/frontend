@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { LogBox, Platform } from 'react-native';
+import { LogBox } from 'react-native';
 import { DarkTheme, Stack, ThemeProvider, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -68,11 +68,10 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      {/* Android: keyboard-controller의 네이티브 edge-to-edge 레이어가 Expo 57 기본 edge-to-edge와
-          이중 충돌해 앱 전체 터치를 삼켰다(iOS 정상). enabled=false로 Android에선 네이티브 모듈만 끄고
-          (provider는 마운트 유지→Screen의 KeyboardAware* 컴포넌트 context 보존), preserveEdgeToEdge로
-          Expo가 켜둔 edge-to-edge는 그대로 둔다. iOS는 기본값(enabled) 유지→키보드 회피 동작 무변경. */}
-      <KeyboardProvider enabled={Platform.OS !== 'android'} preserveEdgeToEdge>
+      {/* 키보드 처리 일원화(iOS·Android). Screen의 KeyboardAwareScrollView/AvoidingView가 이 provider의
+          네이티브 키보드 트래킹을 써서 포커스 입력창을 키보드 위로 올린다(작은 화면 가림 방지).
+          preserveEdgeToEdge: Expo 57 edge-to-edge와 조화(react-native-edge-to-edge 사용 시 자동 처리). */}
+      <KeyboardProvider enabled preserveEdgeToEdge>
         <QueryProvider>
           {/* 다크 전용 앱(CLAUDE.md): 시스템 라이트 모드에서도 항상 DarkTheme로 고정해
               네비게이터 배경이 흰색으로 새는 것을 막는다. */}

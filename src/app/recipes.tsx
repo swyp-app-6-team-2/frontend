@@ -17,6 +17,7 @@ import { useMyIngredients, useProfile, useRecipes } from '@/hooks/use-api';
 import { useEnteringOnce } from '@/hooks/use-entering-once';
 import { useRefresh } from '@/hooks/use-refresh';
 import type { RecipeCategory, RecipeListItem, RecipeListSort } from '@/lib/api/types';
+import { isGuest, listGuestRecipes, promptGuestLogin } from '@/lib/guest';
 import { remainingSlots } from '@/lib/slots';
 
 // Figma 필터칩 — h36, pill, 투명 bg + 1px border #1E2230(field), gap4, px16.
@@ -107,19 +108,41 @@ export default function RecipesScreen() {
 
   // 서버 검색·필터. 페이지네이션 UI가 없어 슬롯 상한 내 전체를 한 번에 받는다(size=100=백엔드 최대).
   // category·ingredientName 은 반복 파라미터로 전달되고, 재료명은 모두 포함(AND) 매칭이다.
-  const { data, isLoading, isError } = useRecipes({
-    sort,
-    size: 100,
-    searchQuery: debouncedQuery || undefined,
-    category: selectedCats.size > 0 ? [...selectedCats] : undefined,
-    ingredientName: selectedIngs.size > 0 ? [...selectedIngs] : undefined,
-  });
+  const guest = isGuest();
+  const {
+    data,
+    isLoading: remoteLoading,
+    isError: remoteError,
+  } = useRecipes(
+    {
+      sort,
+      size: 100,
+      searchQuery: debouncedQuery || undefined,
+      category: selectedCats.size > 0 ? [...selectedCats] : undefined,
+      ingredientName: selectedIngs.size > 0 ? [...selectedIngs] : undefined,
+    },
+    !guest, // 게스트는 백엔드 호출 안 함 — 로컬 목록만 사용
+  );
   // 필터의 재료 리스트는 마스터 전체가 아니라 내가 등록한 '보유 재료'만.
-  // GET /users/me/ingredients (재료관리 화면과 동일 소스).
+  // GET /users/me/ingredients (재료관리 화면과 동일 소스). 게스트는 보유 재료 없음.
   const { data: myIngredientData } = useMyIngredients();
-  const myIngredients = myIngredientData?.ingredients ?? [];
-  const recipes = data?.recipes ?? [];
-  const total = data?.totalCount ?? 0;
+  const myIngredients = guest ? [] : (myIngredientData?.ingredients ?? []);
+
+  // 게스트: 로컬 레시피를 검색어·카테고리·재료로 클라이언트 필터.
+  const guestRecipes = guest
+    ? listGuestRecipes().filter((r) => {
+        if (debouncedQuery && !r.title.toLowerCase().includes(debouncedQuery.toLowerCase()))
+          return false;
+        if (selectedCats.size > 0 && !selectedCats.has(r.categoryCode)) return false;
+        if (selectedIngs.size > 0 && !r.ingredientNames.some((n) => selectedIngs.has(n)))
+          return false;
+        return true;
+      })
+    : [];
+  const recipes = guest ? guestRecipes : (data?.recipes ?? []);
+  const total = guest ? guestRecipes.length : (data?.totalCount ?? 0);
+  const isLoading = guest ? false : remoteLoading;
+  const isError = guest ? false : remoteError;
   // 남은 별(레시피 저장 슬롯)이 0이면 생성 불가 → slot-full 팝업. 로딩 중(me 없음)엔 막지 않는다.
   // 남은 별 = 슬롯 한도 − 등록 레시피 수(홈·마이와 동일 기준).
   const { data: me } = useProfile();
@@ -262,6 +285,14 @@ export default function RecipesScreen() {
             <AddRecipeMenu
               onSelect={(m) => {
                 setMenuOpen(false);
+                // 게스트: AI 자동 등록(URL·이미지)은 로그인 필요. 직접 등록만 로컬 저장 허용.
+                if (guest && m.href !== '/add-recipe-manual') {
+                  promptGuestLogin(
+                    () => router.push('/login'),
+                    'AI 자동 등록은 로그인 후 이용할 수 있어요.',
+                  );
+                  return;
+                }
                 router.push(m.href);
               }}
             />

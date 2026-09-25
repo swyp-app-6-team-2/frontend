@@ -8,6 +8,7 @@ import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { QueryProvider } from '@/components/query-provider';
 import { useReduceMotion } from '@/hooks/use-reduce-motion';
 import { getAccessToken, hydrateTokens, notificationApi, setOnAuthExpired } from '@/lib/api';
+import { hydrateGuest } from '@/lib/guest';
 import { registerPushToken, subscribeNotificationOpen, subscribeTokenRefresh } from '@/lib/push';
 import { prewarmSocialAuth } from '@/lib/social-auth';
 
@@ -16,6 +17,8 @@ SplashScreen.preventAutoHideAsync();
 // 저장소(SecureStore) → 인메모리 토큰 복원. 모듈 로드(=렌더/쿼리보다 먼저) 시 1회 실행해
 // 인증 요청 전에 세션을 채운다. (렌더 중 실행하면 React Compiler 규칙 위반)
 hydrateTokens();
+// 게스트 세션 플래그도 함께 복원(로그인 없이 둘러보기 상태 유지).
+hydrateGuest();
 
 // 개발 빌드에서만 뜨는 화면 하단 LogBox 경고 알림 배지를 숨긴다.
 // (라이브러리에서 나는 경고는 Metro 터미널에는 그대로 찍힌다. 배포 빌드엔 원래 없음.)

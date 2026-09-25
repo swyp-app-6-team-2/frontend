@@ -26,6 +26,7 @@ import {
 } from '@/hooks/use-api';
 import { useRefresh } from '@/hooks/use-refresh';
 import { ApiError } from '@/lib/api';
+import { deleteGuestRecipe, getGuestRecipe, isGuestRecipeId, promptGuestLogin } from '@/lib/guest';
 
 // 요리 기록 날짜 표기 — 서버는 UTC ISO만 주고 로컬 포맷·상대시간은 클라가 계산(api-spec).
 const WEEKDAY = ['일', '월', '화', '수', '목', '금', '토'];
@@ -57,10 +58,18 @@ export default function RecipeViewScreen() {
   const { width: winW, height: winH } = useWindowDimensions();
   const { id } = useLocalSearchParams<{ id: string }>();
   const recipeId = Number(id);
-  const { data, isLoading, isError } = useRecipe(Number.isFinite(recipeId) ? recipeId : null);
-  const { data: cookData } = useCookHistories(Number.isFinite(recipeId) ? recipeId : null);
+  // 게스트(로컬) 레시피는 음수 id — 백엔드 호출 없이 로컬에서 읽는다.
+  const guest = Number.isFinite(recipeId) && isGuestRecipeId(recipeId);
+  const guestData = guest ? getGuestRecipe(recipeId) : null;
+  const remote = useRecipe(!guest && Number.isFinite(recipeId) ? recipeId : null);
+  const data = guest ? guestData : remote.data;
+  const isLoading = guest ? false : remote.isLoading;
+  const isError = guest ? !guestData : remote.isError;
+  const { data: cookData } = useCookHistories(
+    !guest && Number.isFinite(recipeId) ? recipeId : null,
+  );
   const refresh = useRefresh();
-  const cookHistories = cookData ?? [];
+  const cookHistories = guest ? [] : (cookData ?? []);
   const createCook = useCreateCookHistory(recipeId);
   const deleteRecipe = useDeleteRecipe();
   // 헤더 ⋯ 메뉴(수정/삭제) 팝오버 열림 여부.
@@ -80,17 +89,32 @@ export default function RecipeViewScreen() {
       {
         text: '삭제',
         style: 'destructive',
-        onPress: () =>
+        onPress: () => {
+          // 게스트 레시피는 로컬에서 바로 삭제.
+          if (guest) {
+            deleteGuestRecipe(recipeId);
+            router.back();
+            return;
+          }
           deleteRecipe.mutate(recipeId, {
             onSuccess: () => router.back(),
             onError: (e) =>
               Alert.alert('삭제 실패', e instanceof ApiError ? e.message : '다시 시도해주세요.'),
-          }),
+          });
+        },
       },
     ]);
   };
 
   const onComplete = async () => {
+    // 요리 완료(별 점등)는 계정 진척도라 로그인이 필요하다. 게스트는 로그인 유도.
+    if (guest) {
+      promptGuestLogin(
+        () => router.push('/login'),
+        '요리 완료 기록과 별 모으기는 로그인 후 이용할 수 있어요.',
+      );
+      return;
+    }
     try {
       await createCook.mutateAsync({});
       setShowComplete(true); // 기록 성공 → 완료 축하 팝업. 확인 시 별 점등 화면으로.

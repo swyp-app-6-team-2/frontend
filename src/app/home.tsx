@@ -23,6 +23,7 @@ import { useReduceMotion } from '@/hooks/use-reduce-motion';
 import { useRefresh } from '@/hooks/use-refresh';
 import { ApiError } from '@/lib/api';
 import type { RecipeListItem } from '@/lib/api/types';
+import { isGuest, listGuestRecipes, promptGuestLogin } from '@/lib/guest';
 import { recommendationModeFor, recommendationToListItem } from '@/lib/recommend';
 import { dismissSlotAdded, useSlotJustAdded } from '@/lib/slot-ads';
 import { remainingSlots } from '@/lib/slots';
@@ -156,9 +157,11 @@ export default function HomeScreen() {
   const router = useRouter();
   // 별 = 내 레시피(1개당 1개, 최대 MAX_STARS). '나의 레시피' 화면과 같은 쿼리(size:100)를 써서
   // 캐시를 공유 → 별 개수가 목록의 '총 N개'와 항상 일치. recipes[i] 로 각 별이 레시피에 매핑된다.
-  const { data } = useRecipes({ sort: 'LATEST', size: 100 });
-  const recipes = data?.recipes ?? [];
-  useIngredients(); // 재료관리 탭 워밍업(staleTime Infinity라 세션당 1회만 fetch)
+  const guest = isGuest();
+  const { data } = useRecipes({ sort: 'LATEST', size: 100 }, !guest);
+  // 게스트는 로컬 레시피를 별로 표시(백엔드 미사용). 정식 세션은 서버 목록.
+  const recipes = guest ? listGuestRecipes() : (data?.recipes ?? []);
+  useIngredients(!guest); // 재료관리 탭 워밍업(게스트는 스킵)
   const reduceMotion = useReduceMotion(); // 밤하늘 별 = 내 레시피 수(1개당 1개, 탭 시 팝업)
   const slotAdded = useSlotJustAdded(); // 슬롯 확장에서 광고 시청 후 복귀 → 성공 팝업
   const [reco, setReco] = useState(RECO[0]);
@@ -187,6 +190,8 @@ export default function HomeScreen() {
     hideTimer.current = setTimeout(() => {
       setShootingStar(false);
       hideTimer.current = null; // 다음 더블탭에 다시 재생되도록 초기화
+      // 별똥별이 다 떨어지면 랜덤으로 메뉴 추천 팝업을 띄운다. (게스트는 추천이 계정 기능이라 제외)
+      if (!guest) void onRecommend(RECO[0]);
     }, SHOOTING_STAR_MS);
   };
   const onSkyTap = () => {
@@ -197,6 +202,11 @@ export default function HomeScreen() {
 
   // 추천 옵션 선택 → 백엔드 추천 API 호출 → 결과 팝업. previousRecipeId로 직전과 다르게.
   const onRecommend = async (label: string) => {
+    // 추천은 백엔드(내 레시피 기반) 계정 기능 → 게스트는 로그인 유도.
+    if (guest) {
+      promptGuestLogin(() => router.push('/login'), '메뉴 추천은 로그인 후 이용할 수 있어요.');
+      return;
+    }
     setReco(label);
     setOpen(false);
     const recommendationMode = recommendationModeFor(label, RECO);

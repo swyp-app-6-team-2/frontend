@@ -52,8 +52,12 @@ export const queryKeys = {
 };
 
 // ── Queries ───────────────────────────────────────────────────
-export function useRecipes(params: RecipeListParams = {}) {
-  return useQuery({ queryKey: queryKeys.recipes(params), queryFn: () => recipeApi.list(params) });
+export function useRecipes(params: RecipeListParams = {}, enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.recipes(params),
+    queryFn: () => recipeApi.list(params),
+    enabled,
+  });
 }
 
 // 현재 로그인 유저 프로필. 백엔드 GET /users/me 미구현 시 404 → 화면은 폴백 처리.
@@ -82,12 +86,13 @@ export function useCookHistories(recipeId: number | null | undefined) {
   });
 }
 
-export function useIngredients() {
+export function useIngredients(enabled = true) {
   // 마스터는 거의 불변 → 재요청하지 않도록 staleTime 무한.
   return useQuery({
     queryKey: queryKeys.ingredients(),
     queryFn: ingredientApi.list,
     staleTime: Infinity,
+    enabled,
   });
 }
 

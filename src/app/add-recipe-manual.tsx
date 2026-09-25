@@ -10,6 +10,7 @@ import { palette } from '@/constants/tokens';
 import { useCreateRecipe, useMyIngredients, useRecipe, useUpdateRecipe } from '@/hooks/use-api';
 import { ApiError, uploadImage } from '@/lib/api';
 import type { RecipeCategory, RecipeDraft } from '@/lib/api/types';
+import { addGuestRecipe, isGuest, updateGuestRecipe } from '@/lib/guest';
 import { fireHaptic } from '@/lib/haptics';
 import { ImagePickerUnavailableError, pickSquareImage, type PickedImage } from '@/lib/pick-image';
 
@@ -178,6 +179,33 @@ export default function AddRecipeManualScreen() {
   const onSave = async () => {
     if (!title.trim()) {
       Alert.alert('알림', '레시피명을 입력해주세요.');
+      return;
+    }
+
+    // 게스트(로그인 없음): 백엔드 없이 기기 로컬에 저장한다. 대표 사진은 업로드하지 않고
+    // 로컬 file:// URI를 그대로 보관한다. 저장 후 상세로 이동해 바로 확인 가능.
+    if (isGuest()) {
+      const guestPayload = {
+        title: title.trim(),
+        categoryCode: category,
+        coverImageUrl: cover?.uri ?? coverUrl ?? null,
+        cookTimeMinutes: cookMinutes > 0 ? cookMinutes : null,
+        servings: servings ? Number(servings) : 1,
+        memo: null,
+        ingredients: ingredients
+          .filter((i) => i.name.trim())
+          .map((i) => ({
+            ingredientId: i.ingredientId ?? null,
+            name: i.name.trim(),
+            amountText: i.qty.trim() || null,
+          })),
+        steps: steps.filter((s) => s.trim()).map((s) => ({ content: s.trim() })),
+      };
+      const gid =
+        isEdit && editId != null
+          ? (updateGuestRecipe(editId, guestPayload), editId)
+          : addGuestRecipe(guestPayload);
+      router.replace({ pathname: '/recipe-view', params: { id: String(gid) } });
       return;
     }
 

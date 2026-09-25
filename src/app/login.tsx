@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import { AppText } from '@/components/ui';
 import { useSocialLogin } from '@/hooks/use-api';
 import { ApiError, setLoginProvider } from '@/lib/api';
+import { setGuest } from '@/lib/guest';
 import { registerPushToken } from '@/lib/push';
 import {
   API_PROVIDER,
@@ -40,6 +41,7 @@ export default function LoginScreen() {
   const finishLogin = async (provider: string, authToken: string, nonce?: string) => {
     try {
       const res = await socialLogin.mutateAsync({ provider, authToken, nonce });
+      setGuest(false); // 게스트 → 정식 세션으로 승격(둘러보기에서 로그인한 경우).
       // 마이페이지 배지용 — 선택한 provider(KAKAO/…)를 세션 저장소에 기록. 서버 /users/me가
       // provider를 안 내려주므로 이 값이 배지 소스. 로그아웃 시 clearTokens가 함께 지운다.
       setLoginProvider(provider);
@@ -122,6 +124,24 @@ export default function LoginScreen() {
             </Pressable>
           ))}
         </View>
+      </View>
+
+      {/* 로그인 없이 둘러보기 — 계정 없이 앱을 사용하고 레시피를 직접 입력·로컬 저장한다.
+          (App Store 심사 5.1.1(v): 계정 기반이 아닌 기능은 로그인 없이 접근 가능해야 함) */}
+      <View style={rowStyle(800)}>
+        <Pressable
+          onPress={() => {
+            setGuest(true);
+            router.replace('/home');
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="로그인 없이 둘러보기"
+          className="px-4 py-2 active:opacity-70"
+        >
+          <AppText variant="body" className="text-center font-medium text-muted underline">
+            로그인 없이 둘러보기
+          </AppText>
+        </Pressable>
       </View>
     </View>
   );

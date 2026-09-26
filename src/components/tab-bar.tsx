@@ -9,19 +9,27 @@ import { isGuest, promptGuestLogin } from '@/lib/guest';
 export type TabKey = 'home' | 'fridge' | 'recipes' | 'my';
 
 // guestGated: 계정 기능이라 게스트는 로그인 유도(재료관리·마이). 홈·나의 레시피는 로컬로 동작.
-const TABS: { key: TabKey; icon: ImageSource; label: string; href: Href; guestGated?: boolean }[] =
-  [
-    { key: 'home', icon: require('../assets/images/ic-tab-home.png'), label: '홈', href: '/home' },
-    { key: 'recipes', icon: require('../assets/images/ic-tab-recipes.png'), label: '나의 레시피', href: '/recipes' }, // prettier-ignore
-    { key: 'fridge', icon: require('../assets/images/ic-tab-fridge.png'), label: '재료관리', href: '/ingredients', guestGated: true }, // prettier-ignore
-    {
-      key: 'my',
-      icon: require('../assets/images/ic-tab-my.png'),
-      label: '마이',
-      href: '/my',
-      guestGated: true,
-    },
-  ];
+// guestMessage: 게스트 로그인 유도 팝업 문구(탭별로 지정).
+const TABS: {
+  key: TabKey;
+  icon: ImageSource;
+  label: string;
+  href: Href;
+  guestGated?: boolean;
+  guestMessage?: string;
+}[] = [
+  { key: 'home', icon: require('../assets/images/ic-tab-home.png'), label: '홈', href: '/home' },
+  { key: 'recipes', icon: require('../assets/images/ic-tab-recipes.png'), label: '나의 레시피', href: '/recipes' }, // prettier-ignore
+  { key: 'fridge', icon: require('../assets/images/ic-tab-fridge.png'), label: '재료관리', href: '/ingredients', guestGated: true, guestMessage: '재료관리 페이지는 로그인 후 이용할 수 있어요.' }, // prettier-ignore
+  {
+    key: 'my',
+    icon: require('../assets/images/ic-tab-my.png'),
+    label: '마이',
+    href: '/my',
+    guestGated: true,
+    guestMessage: '마이페이지는 로그인 후 이용할 수 있어요.',
+  },
+];
 
 // 떠 있는 pill 탭바 (Figma 619:9650 공통 푸터, 362×68). 아이콘은 tintColor로
 // 색 입힘 — 활성=골드(primary), 비활성=tab-inactive(#505050). 라벨도 동일 색.
@@ -64,7 +72,7 @@ export function TabBar({ active }: { active: TabKey }) {
               onPress={() =>
                 promptGuestLogin(
                   () => router.push('/login'),
-                  `${t.label}은(는) 로그인 후 이용할 수 있어요.`,
+                  t.guestMessage ?? `${t.label}은(는) 로그인 후 이용할 수 있어요.`,
                 )
               }
               className="flex-1 items-center gap-1"

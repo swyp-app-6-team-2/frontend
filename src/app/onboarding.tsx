@@ -311,10 +311,12 @@ export default function OnboardingScreen() {
         </View>
       ) : null}
 
-      {/* 딤 — reco-card는 카드까지 함께 덮어야 하므로 더 진하게 (Figma Rectangle 625) */}
+      {/* 딤 — reco-card는 카드까지 함께 덮어야 하므로 더 진하게 (Figma Rectangle 625).
+          배경(밤하늘)이 남색이라 bg-background(남색) 딤은 남색 위 남색이라 거의 안 어두워짐 →
+          다른 단계처럼 검정 기반으로, 값은 더 높여(60%) 온보딩 5(black/45)보다 확실히 진하게. */}
       <View
         pointerEvents="none"
-        className={`absolute inset-0 ${s.spot === 'reco-card' ? 'bg-background/60' : 'bg-black/45'}`}
+        className={`absolute inset-0 ${s.spot === 'reco-card' ? 'bg-black/60' : 'bg-black/45'}`}
       />
 
       {/* 아무 데나 탭해도 다음 (강조 요소·헤더 버튼은 각자 처리) */}

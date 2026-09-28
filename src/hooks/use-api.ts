@@ -271,6 +271,9 @@ export function useOnboarding(enabled = true) {
     queryKey: queryKeys.onboarding(),
     queryFn: () => userApi.getOnboarding(),
     enabled,
+    // 진입점(app/(tabs)/index)이 이 결과를 기다린다. 백엔드가 느리거나 다운이면 기본 재시도(3회+백오프)로
+    // isLoading이 수십 초 지속돼 로그인 직후 빈 화면에 갇힌다 → 재시도 1회로 캡(진입점 타임아웃 폴백과 함께).
+    retry: 1,
   });
 }
 export function useCompleteOnboarding() {

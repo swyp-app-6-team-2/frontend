@@ -25,6 +25,7 @@ import { ApiError } from '@/lib/api';
 import type { RecipeListItem } from '@/lib/api/types';
 import { isGuest, listGuestRecipes, promptGuestLogin } from '@/lib/guest';
 import { recommendationModeFor, recommendationToListItem } from '@/lib/recommend';
+import { getRecommendMode, setRecommendMode } from '@/lib/recommend-mode';
 import { dismissSlotAdded, useSlotJustAdded } from '@/lib/slot-ads';
 import { remainingSlots } from '@/lib/slots';
 
@@ -164,7 +165,8 @@ export default function HomeScreen() {
   useIngredients(!guest); // 재료관리 탭 워밍업(게스트는 스킵)
   const reduceMotion = useReduceMotion(); // 밤하늘 별 = 내 레시피 수(1개당 1개, 탭 시 팝업)
   const slotAdded = useSlotJustAdded(); // 슬롯 확장에서 광고 시청 후 복귀 → 성공 팝업
-  const [reco, setReco] = useState(RECO[0]);
+  // 탭 전환 후 재진입해도 마지막 선택 유지 — 마운트 시 세션 스토어에서 초기값 복원.
+  const [reco, setReco] = useState(() => getRecommendMode(RECO[0]));
   const [open, setOpen] = useState(false);
   const [recommend, setRecommend] = useState<RecipeListItem | null>(null);
   const recommendRecipe = useRecommendRecipe();
@@ -182,6 +184,9 @@ export default function HomeScreen() {
   const [shootingStar, setShootingStar] = useState(false);
   const lastTap = useRef(0);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // 별똥별이 다 떨어진 뒤 실행할 추천 모드. 드롭다운 선택·더블탭이 각각 지정 →
+  // 애니메이션 종료 시점에 이 값으로 추천한다(경로 무관하게 항상 리액션+현재 모드).
+  const pendingReco = useRef(getRecommendMode(RECO[0]));
   useEffect(() => () => void (hideTimer.current && clearTimeout(hideTimer.current)), []);
   // GIF가 실제로 표시된 순간 호출 → 한 사이클 뒤 숨김(두 번째 루프 전에).
   // onDisplay가 중복 호출돼도 타이머를 연장하지 않도록 이미 예약됐으면 무시.
@@ -189,26 +194,37 @@ export default function HomeScreen() {
     if (hideTimer.current) return;
     hideTimer.current = setTimeout(() => {
       setShootingStar(false);
-      hideTimer.current = null; // 다음 더블탭에 다시 재생되도록 초기화
-      // 별똥별이 다 떨어지면 랜덤으로 메뉴 추천 팝업을 띄운다. (게스트는 추천이 계정 기능이라 제외)
-      if (!guest) void onRecommend(RECO[0]);
+      hideTimer.current = null; // 다음 재생에 다시 뜨도록 초기화
+      // 별똥별이 다 떨어지면 그때의 추천 모드로 메뉴 추천 팝업. (게스트는 계정 기능이라 제외)
+      if (!guest) void onRecommend(pendingReco.current);
     }, SHOOTING_STAR_MS);
   };
   const onSkyTap = () => {
     const now = Date.now();
-    if (now - lastTap.current < 300) setShootingStar(true);
+    // 더블탭 = 현재 선택된 모드로 별똥별→추천. 항상 랜덤으로 되돌리지 않는다.
+    if (now - lastTap.current < 300) {
+      pendingReco.current = reco;
+      setShootingStar(true);
+    }
     lastTap.current = now;
   };
 
-  // 추천 옵션 선택 → 백엔드 추천 API 호출 → 결과 팝업. previousRecipeId로 직전과 다르게.
-  const onRecommend = async (label: string) => {
+  // 드롭다운에서 추천 선택 → 별똥별 리액션을 먼저 재생하고, onShootingStarDisplay가 실제 추천을 호출.
+  const requestRecommend = (label: string) => {
     // 추천은 백엔드(내 레시피 기반) 계정 기능 → 게스트는 로그인 유도.
     if (guest) {
       promptGuestLogin(() => router.push('/login'), '메뉴 추천은 로그인 후 이용할 수 있어요.');
       return;
     }
     setReco(label);
+    setRecommendMode(label); // 세션 유지 — 탭 전환 후 재진입해도 이 선택을 복원
     setOpen(false);
+    pendingReco.current = label;
+    setShootingStar(true);
+  };
+
+  // 실제 추천 API 호출 → 결과 팝업. previousRecipeId로 직전과 다르게. (호출 시점엔 별똥별 재생 완료)
+  const onRecommend = async (label: string) => {
     const recommendationMode = recommendationModeFor(label, RECO);
     try {
       const r = await recommendRecipe.mutateAsync({
@@ -346,7 +362,7 @@ export default function HomeScreen() {
                     {RECO.map((r) => (
                       <Pressable
                         key={r}
-                        onPress={() => onRecommend(r)}
+                        onPress={() => requestRecommend(r)}
                         className="h-[47px] items-center justify-center active:opacity-80"
                       >
                         <Text className="text-[16px] leading-[19px] text-foreground">{r}</Text>

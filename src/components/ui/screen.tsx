@@ -1,5 +1,5 @@
 import type { ComponentRef, ReactNode, Ref } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { Image, type ImageSource } from 'expo-image';
 import { KeyboardAvoidingView, KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -98,27 +98,46 @@ export function Screen({
           />
         ) : null}
         {scroll ? (
-          // 스크롤 화면: KeyboardAwareScrollView가 키보드가 뜨면 포커스 입력창을 키보드 위로
-          // (bottomOffset만큼 여유 두고) 올린다. footer는 떠 있는 오버레이가 아니라 스크롤 콘텐츠의
-          // 마지막 요소로 흐름에 넣어 콘텐츠와 함께 스크롤·이동하고 절대 겹치지 않는다.
-          <KeyboardAwareScrollView
-            ref={scrollRef}
-            className="flex-1"
-            refreshControl={pullToRefresh ? <AppRefreshControl {...refresh} /> : undefined}
-            // 포커스된 입력란을 키보드 위로 넉넉히(입력 박스+주변 버튼까지) 띄운다. 값이 작으면
-            // 입력란이 키보드 경계에 딱 붙어 박스 아랫부분이 가린다.
-            bottomOffset={140}
-            keyboardShouldPersistTaps="handled"
-            keyboardDismissMode="interactive"
-            contentContainerClassName={`gap-4 px-screen py-4 ${contentClassName ?? ''}`}
-          >
-            {children}
-            {footer ? <View className="pt-2">{footer}</View> : null}
-          </KeyboardAwareScrollView>
+          // 스크롤 화면: iOS는 KeyboardAwareScrollView가 포커스 입력창을 키보드 위로 올린다.
+          // ⚠️ Android는 keyboard-controller가 edge-to-edge와 충돌해 검은화면(_layout 참고)이라
+          //    RN 기본 ScrollView로 폴백한다(키보드 회피는 RN 기본 동작으로 degrade).
+          //    footer는 스크롤 콘텐츠 마지막 요소로 흐름에 넣어 콘텐츠와 함께 이동한다.
+          Platform.OS === 'android' ? (
+            <ScrollView
+              ref={scrollRef as never}
+              className="flex-1"
+              refreshControl={pullToRefresh ? <AppRefreshControl {...refresh} /> : undefined}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="interactive"
+              contentContainerClassName={`gap-4 px-screen py-4 ${contentClassName ?? ''}`}
+            >
+              {children}
+              {footer ? <View className="pt-2">{footer}</View> : null}
+            </ScrollView>
+          ) : (
+            <KeyboardAwareScrollView
+              ref={scrollRef}
+              className="flex-1"
+              refreshControl={pullToRefresh ? <AppRefreshControl {...refresh} /> : undefined}
+              // 포커스된 입력란을 키보드 위로 넉넉히(입력 박스+주변 버튼까지) 띄운다. 값이 작으면
+              // 입력란이 키보드 경계에 딱 붙어 박스 아랫부분이 가린다.
+              bottomOffset={140}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="interactive"
+              contentContainerClassName={`gap-4 px-screen py-4 ${contentClassName ?? ''}`}
+            >
+              {children}
+              {footer ? <View className="pt-2">{footer}</View> : null}
+            </KeyboardAwareScrollView>
+          )
+        ) : // 비스크롤 화면: iOS는 keyboard-controller KeyboardAvoidingView로 부드럽게 밀어 올린다.
+        // Android는 위와 같은 이유로 keyboard-controller를 안 쓰고 평범한 View로 렌더(검은화면 방지 우선).
+        Platform.OS === 'android' ? (
+          <View className="flex-1">
+            <View className={`flex-1 px-screen ${contentClassName ?? ''}`}>{children}</View>
+            {footer ? <View className="px-screen pb-4 pt-3">{footer}</View> : null}
+          </View>
         ) : (
-          // 비스크롤 화면: 키보드가 올라오면 본문+푸터를 키보드 높이만큼 위로 밀어 올린다.
-          // keyboard-controller의 KeyboardAvoidingView는 실제 키보드 애니메이션에 맞춰 부드럽게
-          // 따라 올라가고 안드로이드에서도 동작한다(RN 기본 padding은 사실상 iOS 전용).
           <KeyboardAvoidingView className="flex-1" behavior="padding">
             <View className={`flex-1 px-screen ${contentClassName ?? ''}`}>{children}</View>
             {footer ? <View className="px-screen pb-4 pt-3">{footer}</View> : null}

@@ -1,3 +1,5 @@
+import '@/global.css'; // NativeWind 스타일 주입 — 반드시 루트에서 import(제거 시 앱 전역 무스타일)
+
 import { useEffect } from 'react';
 import { LogBox, Platform } from 'react-native';
 import { DarkTheme, Stack, ThemeProvider, useRouter } from 'expo-router';
@@ -69,29 +71,31 @@ export default function RootLayout() {
     };
   }, [router]);
 
+  // 다크 전용 앱(CLAUDE.md): 시스템 라이트 모드에서도 항상 DarkTheme로 고정해
+  // 네비게이터 배경이 흰색으로 새는 것을 막는다.
+  const app = (
+    <QueryProvider>
+      <ThemeProvider value={DarkTheme}>
+        <Stack screenOptions={{ headerShown: false, animation }}>
+          <Stack.Screen name="(tabs)" options={{ animation: 'none' }} />
+          <Stack.Screen name="home" options={{ animation: 'none' }} />
+          <Stack.Screen name="fridge" options={{ animation: 'none' }} />
+          <Stack.Screen name="ingredients" options={{ animation: 'none' }} />
+          <Stack.Screen name="recipes" options={{ animation: 'none' }} />
+          <Stack.Screen name="my" options={{ animation: 'none' }} />
+        </Stack>
+      </ThemeProvider>
+    </QueryProvider>
+  );
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      {/* Android에서 keyboard-controller 네이티브 레이어가 Expo 57 edge-to-edge와 충돌해 실기기에서
-          전체 화면이 검게(렌더 실패) 나오는 회귀가 있었다 → Android는 enabled=false로 네이티브 모듈만
-          끄고 provider는 마운트만 유지(Screen의 KeyboardAware* context 보존). iOS는 정상 동작 유지.
-          ⚠️ 트레이드오프: Android 작은 화면에서 키보드가 하단 입력창을 가림(전체 검은화면보다 경미).
-          추후 안전한 키보드 회피 방식은 실기기 검증 후 재도입할 것. */}
-      <KeyboardProvider enabled={Platform.OS !== 'android'} preserveEdgeToEdge>
-        <QueryProvider>
-          {/* 다크 전용 앱(CLAUDE.md): 시스템 라이트 모드에서도 항상 DarkTheme로 고정해
-              네비게이터 배경이 흰색으로 새는 것을 막는다. */}
-          <ThemeProvider value={DarkTheme}>
-            <Stack screenOptions={{ headerShown: false, animation }}>
-              <Stack.Screen name="(tabs)" options={{ animation: 'none' }} />
-              <Stack.Screen name="home" options={{ animation: 'none' }} />
-              <Stack.Screen name="fridge" options={{ animation: 'none' }} />
-              <Stack.Screen name="ingredients" options={{ animation: 'none' }} />
-              <Stack.Screen name="recipes" options={{ animation: 'none' }} />
-              <Stack.Screen name="my" options={{ animation: 'none' }} />
-            </Stack>
-          </ThemeProvider>
-        </QueryProvider>
-      </KeyboardProvider>
+      {/* keyboard-controller 네이티브 레이어가 Android 15+에서 강제되는 Expo 57 edge-to-edge와 충돌해
+          실기기 전체 화면이 검게(렌더 실패) 나온다(에뮬 14에선 강제 없어 안 보임). enabled=false로도
+          provider가 마운트되면 충돌이 남아 → Android는 KeyboardProvider를 아예 올리지 않는다.
+          Screen/inquiry는 Android에서 RN 기본 스크롤/뷰로 폴백(각 파일 참고). iOS는 그대로 유지.
+          ⚠️ 트레이드오프: Android 작은 화면에서 키보드가 하단 입력창을 가림(전체 검은화면보다 경미). */}
+      {Platform.OS === 'android' ? app : <KeyboardProvider>{app}</KeyboardProvider>}
     </GestureHandlerRootView>
   );
 }

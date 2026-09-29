@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -28,6 +29,12 @@ import { useCreateInquiry, useInquiries } from '@/hooks/use-api';
 import { ApiError, uploadImage } from '@/lib/api';
 import { fireHaptic } from '@/lib/haptics';
 import { ImagePickerUnavailableError, pickImage, type PickedImage } from '@/lib/pick-image';
+
+// Android는 keyboard-controller가 edge-to-edge와 충돌해 검은화면(_layout 참고)이라 RN ScrollView로 폴백.
+// iOS는 KeyboardAwareScrollView 유지. (bottomOffset은 Android RN ScrollView에서 무시됨 — 무해)
+const AwareScroll = (
+  Platform.OS === 'android' ? ScrollView : KeyboardAwareScrollView
+) as typeof KeyboardAwareScrollView;
 
 // 접수 시각 표기 — 서버 UTC ISO → 로컬 "YYYY.MM.DD HH:mm".
 function formatInquiryDate(iso: string) {
@@ -159,7 +166,7 @@ export default function InquiryScreen() {
               입력란을 키보드 위로 넉넉히(bottomOffset) 올리고, 문의접수 버튼은 흐름 안 마지막
               요소(mt-auto: 짧으면 바닥 고정)로 콘텐츠와 함께 올라간다. */}
           <View style={{ width }} className="flex-1">
-            <KeyboardAwareScrollView
+            <AwareScroll
               className="flex-1"
               bottomOffset={140}
               keyboardShouldPersistTaps="handled"
@@ -291,7 +298,7 @@ export default function InquiryScreen() {
                   </Text>
                 </Pressable>
               </View>
-            </KeyboardAwareScrollView>
+            </AwareScroll>
           </View>
 
           {/* 페이지 1 — 문의내역 확인 */}

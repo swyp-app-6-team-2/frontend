@@ -167,6 +167,7 @@ export default function RecipeViewScreen() {
     >
       <View className="flex-1">
         <ScrollView
+          style={{ flex: 1 }}
           contentContainerClassName="pb-4"
           showsVerticalScrollIndicator={false}
           refreshControl={<AppRefreshControl {...refresh} />}

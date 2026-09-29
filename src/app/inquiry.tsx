@@ -167,7 +167,7 @@ export default function InquiryScreen() {
               요소(mt-auto: 짧으면 바닥 고정)로 콘텐츠와 함께 올라간다. */}
           <View style={{ width }} className="flex-1">
             <AwareScroll
-              className="flex-1"
+              style={{ flex: 1 }}
               bottomOffset={140}
               keyboardShouldPersistTaps="handled"
               keyboardDismissMode="interactive"
@@ -304,6 +304,7 @@ export default function InquiryScreen() {
           {/* 페이지 1 — 문의내역 확인 */}
           <View style={{ width }} className="flex-1">
             <ScrollView
+              style={{ flex: 1 }}
               contentContainerClassName="gap-3 px-screen pb-6 pt-6"
               showsVerticalScrollIndicator={false}
             >

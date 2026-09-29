@@ -105,7 +105,8 @@ export function Screen({
           Platform.OS === 'android' ? (
             <ScrollView
               ref={scrollRef as never}
-              className="flex-1"
+              // Android ScrollView는 className flex-1이 불안정 → inline style로 확실히 채운다.
+              style={{ flex: 1 }}
               refreshControl={pullToRefresh ? <AppRefreshControl {...refresh} /> : undefined}
               keyboardShouldPersistTaps="handled"
               keyboardDismissMode="interactive"

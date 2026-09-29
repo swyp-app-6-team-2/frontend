@@ -60,7 +60,11 @@ export default function AddRecipeImageScreen() {
   return (
     <Screen title="이미지로 등록" back>
       <View className="flex-1">
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName="pb-4 pt-2">
+        <ScrollView
+          style={{ flex: 1 }}
+          showsVerticalScrollIndicator={false}
+          contentContainerClassName="pb-4 pt-2"
+        >
           {/* 제목 + 부제 (title top126 / subtitle top165 → 간격 8) */}
           <View className="gap-2">
             <AppText variant="title">레시피 이미지를 올려주세요</AppText>

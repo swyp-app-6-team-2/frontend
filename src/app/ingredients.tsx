@@ -218,6 +218,8 @@ export default function IngredientsScreen() {
     <View className="flex-1 bg-background">
       <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
         <ScrollView
+          // Android에서 flex 없는 ScrollView가 0-높이로 접히던 문제 → flex:1로 공간을 채운다.
+          style={{ flex: 1 }}
           contentContainerClassName={`gap-6 px-screen pb-[120px] ${Platform.OS === 'android' ? 'pt-7' : 'pt-2'}`}
           showsVerticalScrollIndicator={false}
           refreshControl={<AppRefreshControl {...refresh} />}

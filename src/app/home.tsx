@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import Animated, {
@@ -16,11 +16,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { RecommendPopup } from '@/components/recommend-popup';
 import { SlotAddedPopup } from '@/components/slot-added-popup';
 import { TabBar } from '@/components/tab-bar';
-import { AppRefreshControl } from '@/components/ui';
 import { palette } from '@/constants/tokens';
 import { useIngredients, useProfile, useRecipes, useRecommendRecipe } from '@/hooks/use-api';
 import { useReduceMotion } from '@/hooks/use-reduce-motion';
-import { useRefresh } from '@/hooks/use-refresh';
 import { ApiError } from '@/lib/api';
 import type { RecipeListItem } from '@/lib/api/types';
 import { isGuest, listGuestRecipes, promptGuestLogin } from '@/lib/guest';
@@ -174,7 +172,6 @@ export default function HomeScreen() {
   // 남은 별 = 슬롯 한도 − 등록된 레시피 수(별 개수와 일치). 로드 전엔 0.
   const { data: me } = useProfile();
   const remainingStars = remainingSlots(me, data?.totalCount ?? recipes.length);
-  const refresh = useRefresh(); // 당겨서 새로고침 — 화면 활성 쿼리(레시피·프로필) refetch
 
   // 밤하늘 더블탭 → 별똥별 애니메이션(GIF)을 한 번만 재생하고 사라진다.
   // GIF는 loop=1로 패치돼(무한루프 X) 1회 재생 후 마지막 프레임에서 멈춘다. 그래서 넉넉히(2000ms)
@@ -253,16 +250,11 @@ export default function HomeScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      {/* 밤하늘 전체를 bounce 스크롤로 감싸 위에서 당기면 새로고침(refetch). 별 탭·더블탭·드롭다운은
-          탭이라 자식으로 통과하고, 수직 드래그만 새로고침 제스처로 잡힌다. 배경까지 함께 감싸
-          당길 때 씬 전체가 따라 내려오고 상단엔 배경색이 드러난다. */}
-      <ScrollView
-        className="flex-1"
-        contentContainerStyle={{ flexGrow: 1 }}
-        showsVerticalScrollIndicator={false}
-        alwaysBounceVertical
-        refreshControl={<AppRefreshControl {...refresh} />}
-      >
+      {/* ⚠️ Android에서 ScrollView가 0-높이로 접혀 밤하늘 전체가 검게 렌더되던 문제(iOS는 정상,
+          실기기는 토큰이 있어 /home 진입 시 검정) → ScrollView를 제거하고 콘텐츠를 root View에
+          직접 렌더한다(정상 동작하는 login과 동일: View + 절대배치 + flex 콘텐츠).
+          트레이드오프: 당겨서 새로고침(pull-to-refresh) 제스처는 이 구조에선 빠진다. */}
+      <>
         {/* 구름 배경 + 바닥 돔 + 캐릭터 */}
         <View pointerEvents="none" className="absolute inset-0">
           {/* 바닥 고정 + 위로 확대 — 구름을 더 위로 올리되 하단에 틈이 안 생기게.
@@ -393,7 +385,7 @@ export default function HomeScreen() {
           {/* 떠 있는 탭바 */}
           <TabBar active="home" />
         </SafeAreaView>
-      </ScrollView>
+      </>
 
       {/* 메뉴 추천 결과 팝업 */}
       {recommend ? (

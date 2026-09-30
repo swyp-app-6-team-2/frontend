@@ -21,7 +21,13 @@ export function canWatchAd(): boolean {
   return watchedToday < DAILY_LIMIT;
 }
 
-/** 광고 1회 시청 완료 → 슬롯 +2, 성공 팝업 예약. */
+/** 서버 SSV로 슬롯 지급(GRANTED)이 확인됐을 때 호출 — 홈 복귀 시 성공 팝업 노출용 플래그. */
+export function markSlotAdded() {
+  justAdded = true;
+  emit();
+}
+
+/** @deprecated 스텁 — 서버 SSV 흐름(slot-expand)으로 대체됨. 잔존 참조 방지용으로만 유지. */
 export function watchAd() {
   if (watchedToday >= DAILY_LIMIT) return;
   watchedToday += 1;

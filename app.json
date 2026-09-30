@@ -99,6 +99,19 @@
             ]
           }
         }
+      ],
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-3919694536797443~5694763469",
+          "iosAppId": "ca-app-pub-3919694536797443~2430607193"
+        }
+      ],
+      [
+        "expo-tracking-transparency",
+        {
+          "userTrackingPermission": "맞춤 광고를 표시하기 위해 기기 식별자 사용을 허용해주세요. 허용하지 않아도 앱은 정상 이용할 수 있어요."
+        }
       ]
     ],
     "experiments": {
@@ -118,5 +131,9 @@
     "runtimeVersion": {
       "policy": "appVersion"
     }
+  },
+  "react-native-google-mobile-ads": {
+    "android_app_id": "ca-app-pub-3919694536797443~5694763469",
+    "ios_app_id": "ca-app-pub-3919694536797443~2430607193"
   }
 }

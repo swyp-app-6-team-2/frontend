@@ -53,7 +53,11 @@ export default function MyScreen() {
           style={{ flex: 1 }}
           contentContainerClassName={`gap-4 px-screen pb-[120px] ${Platform.OS === 'android' ? 'pt-7' : 'pt-2'}`}
           showsVerticalScrollIndicator={false}
-          refreshControl={<AppRefreshControl {...refresh} />}
+          // Android(RN 0.86 Fabric): refreshControl이 ScrollView 콘텐츠 렌더링을 깨뜨려 본문이
+          //   사라진다 → Android는 당겨서 새로고침 비활성(마운트·포커스 시 자동 갱신). iOS는 정상.
+          refreshControl={
+            Platform.OS === 'android' ? undefined : <AppRefreshControl {...refresh} />
+          }
         >
           {/* 헤더 (Figma 원본은 "나의 거래" — 마이 탭에 맞춰 "마이페이지") */}
           <AppText variant="title">마이페이지</AppText>

@@ -4,6 +4,7 @@ import {
   Alert,
   Linking,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   Text,
@@ -170,7 +171,11 @@ export default function RecipeViewScreen() {
           style={{ flex: 1 }}
           contentContainerClassName="pb-4"
           showsVerticalScrollIndicator={false}
-          refreshControl={<AppRefreshControl {...refresh} />}
+          // Android(RN 0.86 Fabric): refreshControl이 ScrollView 콘텐츠 렌더링을 깨뜨려 본문이
+          //   사라진다 → Android는 당겨서 새로고침 비활성(마운트·포커스 시 자동 갱신). iOS는 정상.
+          refreshControl={
+            Platform.OS === 'android' ? undefined : <AppRefreshControl {...refresh} />
+          }
         >
           {/* 대표 이미지 362x362 — 없으면 중립 플레이스홀더(샘플 사진 대신) */}
           {coverUrl ? (

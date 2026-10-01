@@ -171,12 +171,15 @@ export default function RecipesScreen() {
     <View className="flex-1 bg-background">
       <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
         <ScrollView
-          // Android에서 flex 없는 ScrollView가 0-높이로 접혀 검색바·목록이 안 보이고 TabBar가
-          // 위로 올라오던 문제 → flex:1로 SafeAreaView 공간을 채운다(iOS도 동일하게 정상).
           style={{ flex: 1 }}
           contentContainerClassName={`gap-4 px-screen pb-[120px] ${Platform.OS === 'android' ? 'pt-7' : 'pt-2'}`}
           showsVerticalScrollIndicator={false}
-          refreshControl={<AppRefreshControl {...refresh} />}
+          // ⚠️ RN 0.86 Fabric Android: ScrollView에 refreshControl을 주면 콘텐츠 측정이 깨져
+          //   본문 전체가 렌더되지 않고(검정) TabBar가 상단으로 밀린다. → Android는 당겨서
+          //   새로고침을 비활성(쿼리는 마운트·포커스 시 자동 갱신으로 degrade). iOS는 정상 동작.
+          refreshControl={
+            Platform.OS === 'android' ? undefined : <AppRefreshControl {...refresh} />
+          }
         >
           {/* 제목 행 높이를 재료관리(h-[26px])와 통일 → 검색바 위치 일치 */}
           <View className="h-[26px] flex-row items-center">

@@ -107,7 +107,9 @@ export function Screen({
               ref={scrollRef as never}
               // Android ScrollView는 className flex-1이 불안정 → inline style로 확실히 채운다.
               style={{ flex: 1 }}
-              refreshControl={pullToRefresh ? <AppRefreshControl {...refresh} /> : undefined}
+              // ⚠️ RN 0.86 Fabric Android: refreshControl을 주면 ScrollView 콘텐츠 측정이 깨져
+              //   본문 전체가 렌더되지 않는다(검정) → Android는 당겨서 새로고침 비활성. iOS는 정상.
+              refreshControl={undefined}
               keyboardShouldPersistTaps="handled"
               keyboardDismissMode="interactive"
               contentContainerClassName={`gap-4 px-screen py-4 ${contentClassName ?? ''}`}

@@ -6,7 +6,7 @@ import { SlotAddedPopup } from '@/components/slot-added-popup';
 import { Button, Screen } from '@/components/ui';
 import { palette } from '@/constants/tokens';
 import { useAdRewardStatus, useCreateAdRewardSession } from '@/hooks/use-api';
-import { adPlatform, initAds, showRewardedAd } from '@/lib/ads';
+import { adPlatform, fallbackRewardedUnitId, initAds, showRewardedAd } from '@/lib/ads';
 import { adRewardApi, ApiError, type AdRewardCancelReason } from '@/lib/api';
 import { AD_DAILY_LIMIT, dismissSlotAdded, markSlotAdded } from '@/lib/slot-ads';
 
@@ -69,7 +69,9 @@ export default function SlotExpandScreen() {
       const session = await createSession.mutateAsync({ platform: adPlatform(), requestId });
       sessionId = session.sessionId;
       await initAds();
-      const outcome = await showRewardedAd(session.adUnitId, session.customData);
+      // 광고 단위는 서버가 내려준 값 우선, 없으면 실제 단위 폴백(백엔드 미반영 대비).
+      const adUnitId = session.adUnitId || fallbackRewardedUnitId();
+      const outcome = await showRewardedAd(adUnitId, session.customData);
       if (outcome !== 'earned') {
         // 보상 없이 닫음 — 예약 세션 해제(다음 시청 한도 확보) 후 상태 갱신.
         await cancelSessionSafely(session.sessionId, 'USER_DISMISSED');

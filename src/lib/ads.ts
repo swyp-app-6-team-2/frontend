@@ -88,3 +88,11 @@ export function showRewardedAd(adUnitId: string, customData: string): Promise<Sh
 
 // 플랫폼 문자열 — createSession 요청 body의 platform 필드.
 export const adPlatform = (): 'ANDROID' | 'IOS' => (Platform.OS === 'ios' ? 'IOS' : 'ANDROID');
+
+// 실제 보상형 광고 단위(플랫폼별). 원칙상 createSession이 adUnitId를 내려주지만, 백엔드 반영 전에도
+// 광고가 뜨도록 쓰는 폴백. ⚠️ AdMob 콘솔에서 이 단위에 SSV 콜백 URL이 등록돼 있어야 지급이 확정된다.
+const FALLBACK_REWARDED_UNIT: Record<'ANDROID' | 'IOS', string> = {
+  ANDROID: 'ca-app-pub-3919694536797443/5449853907',
+  IOS: 'ca-app-pub-3919694536797443/1546357209',
+};
+export const fallbackRewardedUnitId = (): string => FALLBACK_REWARDED_UNIT[adPlatform()];

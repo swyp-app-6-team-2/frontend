@@ -19,6 +19,7 @@ type AmpEvent = {
 };
 
 let deviceId: string | null = null;
+let userId: string | null = null;
 let sessionId = 0;
 let started = false;
 let queue: AmpEvent[] = [];
@@ -70,6 +71,11 @@ export function trackScreen(name: string): void {
   trackEvent('Screen Viewed', { screen: name });
 }
 
+/** 로그인 사용자 식별 — 이후 이벤트에 user_id를 실어 기기 넘어 사용자 단위로 집계. 로그아웃 시 null. */
+export function setAnalyticsUser(id: string | null): void {
+  userId = id;
+}
+
 function scheduleFlush(): void {
   if (flushTimer || !deviceId) return; // device_id 준비 전엔 큐에만 쌓고 init이 flush
   flushTimer = setTimeout(() => {
@@ -84,6 +90,7 @@ async function flush(): Promise<void> {
   const events = batch.map((e) => ({
     ...e,
     device_id: deviceId,
+    user_id: userId ?? undefined, // 로그인 사용자면 동봉(없으면 익명 device_id만)
     platform: Platform.OS === 'ios' ? 'iOS' : 'Android',
     app_version: Constants.expoConfig?.version,
   }));

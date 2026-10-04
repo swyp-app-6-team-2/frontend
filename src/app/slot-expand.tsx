@@ -65,6 +65,7 @@ export default function SlotExpandScreen() {
     let sessionId: string | null = null; // 실패 시 취소 대상(생성 전이면 null)
     try {
       setPhase('watching');
+      trackEvent('Ad Watch Started', { platform: adPlatform() }); // 광고 퍼널 시작(시작→완주 이탈)
       // 멱등 키 — 버튼 재터치·재시도 시 동일 세션 재사용(서버가 (userId, requestId) UNIQUE 관리).
       const requestId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
       const session = await createSession.mutateAsync({ platform: adPlatform(), requestId });

@@ -8,6 +8,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 
 import { QueryProvider } from '@/components/query-provider';
+import { useAnalyticsIdentify } from '@/hooks/use-api';
 import { useReduceMotion } from '@/hooks/use-reduce-motion';
 import { initAnalytics, trackScreen } from '@/lib/analytics';
 import { getAccessToken, hydrateTokens, notificationApi, setOnAuthExpired } from '@/lib/api';
@@ -29,6 +30,12 @@ initAnalytics();
 // (라이브러리에서 나는 경고는 Metro 터미널에는 그대로 찍힌다. 배포 빌드엔 원래 없음.)
 if (__DEV__) {
   LogBox.ignoreAllLogs();
+}
+
+// QueryProvider 내부에서 user_id 식별 훅을 돌리는 전용 컴포넌트(useQuery 컨텍스트 필요).
+function AnalyticsIdentify() {
+  useAnalyticsIdentify();
+  return null;
 }
 
 // Root Stack: the (tabs) group is the base screen; detail pages (design-system,
@@ -84,6 +91,8 @@ export default function RootLayout() {
   // 네비게이터 배경이 흰색으로 새는 것을 막는다.
   const app = (
     <QueryProvider>
+      {/* useQuery(/users/me)를 쓰므로 반드시 QueryProvider 안에서 호출(user_id 식별). */}
+      <AnalyticsIdentify />
       <ThemeProvider value={DarkTheme}>
         <Stack screenOptions={{ headerShown: false, animation }}>
           <Stack.Screen name="(tabs)" options={{ animation: 'none' }} />

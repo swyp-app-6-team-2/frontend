@@ -1,6 +1,8 @@
+import { useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { clearTokens, setTokens } from '@/lib/api/auth-token';
+import { setAnalyticsUser, trackEvent } from '@/lib/analytics';
+import { clearTokens, getAccessToken, setTokens } from '@/lib/api/auth-token';
 import {
   adRewardApi,
   authApi,
@@ -68,6 +70,21 @@ export function useProfile() {
     retry: false, // 엔드포인트 없으면 재시도 무의미
     staleTime: 5 * 60 * 1000,
   });
+}
+
+// 로그인 사용자를 Amplitude에 식별(user_id). 토큰 있을 때만 /users/me를 관찰해 로그인 화면 401을
+// 피한다. me() 캐시를 useProfile과 공유하므로 추가 요청 없이 로그인 직후 식별된다. _layout에서 1회 호출.
+export function useAnalyticsIdentify() {
+  const { data } = useQuery({
+    queryKey: queryKeys.me(),
+    queryFn: () => userApi.me(),
+    enabled: !!getAccessToken(),
+    retry: false,
+    staleTime: 5 * 60 * 1000,
+  });
+  useEffect(() => {
+    setAnalyticsUser(data?.userId != null ? String(data.userId) : null);
+  }, [data?.userId]);
 }
 
 export function useRecipe(recipeId: number | null | undefined) {
@@ -149,6 +166,7 @@ export function useCreateRecipe() {
   return useMutation({
     mutationFn: (body: RecipeCreateRequest) => recipeApi.create(body),
     onSuccess: () => {
+      trackEvent('Recipe Created'); // 활성화 퍼널(첫 레시피까지 이탈 측정)
       qc.invalidateQueries({ queryKey: ['recipes'] });
       qc.invalidateQueries({ queryKey: queryKeys.me() }); // 남은 별(슬롯) 갱신
     },
@@ -190,7 +208,10 @@ export function useCreateCookHistory(recipeId: number) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (body: CookHistoryCreateRequest) => cookingApi.create(recipeId, body),
-    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.cookHistories(recipeId) }),
+    onSuccess: () => {
+      trackEvent('Cook Completed'); // 리텐션 핵심 행동(요리 완료 = 별 점등)
+      qc.invalidateQueries({ queryKey: queryKeys.cookHistories(recipeId) });
+    },
   });
 }
 
@@ -218,6 +239,7 @@ export function useSignup() {
   return useMutation({
     mutationFn: (body: SignupRequest) => authApi.signup(body),
     onSuccess: (res) => {
+      trackEvent('Signup Completed'); // 가입 퍼널 마지막 단계(약관 동의 → 가입 완료)
       setTokens({ accessToken: res.accessToken, refreshToken: res.refreshToken });
       // 신규 가입 완료(accessToken 확보) → FCM 토큰 등록. login.tsx는 기존 회원만 등록한다.
       void registerPushToken();

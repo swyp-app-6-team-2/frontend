@@ -2,13 +2,14 @@ import '@/global.css'; // NativeWind 스타일 주입 — 반드시 루트에서
 
 import { useEffect } from 'react';
 import { LogBox, Platform } from 'react-native';
-import { DarkTheme, Stack, ThemeProvider, useRouter } from 'expo-router';
+import { DarkTheme, Stack, ThemeProvider, usePathname, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 
 import { QueryProvider } from '@/components/query-provider';
 import { useReduceMotion } from '@/hooks/use-reduce-motion';
+import { initAnalytics, trackScreen } from '@/lib/analytics';
 import { getAccessToken, hydrateTokens, notificationApi, setOnAuthExpired } from '@/lib/api';
 import { hydrateGuest } from '@/lib/guest';
 import { registerPushToken, subscribeNotificationOpen, subscribeTokenRefresh } from '@/lib/push';
@@ -21,6 +22,8 @@ SplashScreen.preventAutoHideAsync();
 hydrateTokens();
 // 게스트 세션 플래그도 함께 복원(로그인 없이 둘러보기 상태 유지).
 hydrateGuest();
+// Amplitude 제품 분석 초기화(키 있을 때만). 세션은 SDK가 자동 추적, 화면 조회는 아래 라우트 훅에서.
+initAnalytics();
 
 // 개발 빌드에서만 뜨는 화면 하단 LogBox 경고 알림 배지를 숨긴다.
 // (라이브러리에서 나는 경고는 Metro 터미널에는 그대로 찍힌다. 배포 빌드엔 원래 없음.)
@@ -37,6 +40,12 @@ export default function RootLayout() {
   // 어색하므로 개별로 'none' 유지(전환 없이 즉시 교체).
   const reduceMotion = useReduceMotion();
   const animation = reduceMotion ? 'none' : 'fade';
+
+  // 화면 조회 추적 — 라우트 경로가 바뀔 때마다 기록(이탈율/퍼널의 핵심 신호).
+  const pathname = usePathname();
+  useEffect(() => {
+    trackScreen(pathname);
+  }, [pathname]);
 
   // 토큰 재발급까지 실패하면(세션 만료) 로그인 화면으로. client.ts가 이 콜백을 호출한다.
   const router = useRouter();

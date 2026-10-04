@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 
 import { AppText } from '@/components/ui';
 import { useSocialLogin } from '@/hooks/use-api';
+import { trackEvent } from '@/lib/analytics';
 import { ApiError, setLoginProvider } from '@/lib/api';
 import { setGuest } from '@/lib/guest';
 import { registerPushToken } from '@/lib/push';
@@ -41,6 +42,7 @@ export default function LoginScreen() {
   const finishLogin = async (provider: string, authToken: string, nonce?: string) => {
     try {
       const res = await socialLogin.mutateAsync({ provider, authToken, nonce });
+      trackEvent('Login', { provider, isNew: res.requiresTermsAgreement === true });
       setGuest(false); // 게스트 → 정식 세션으로 승격(둘러보기에서 로그인한 경우).
       // 마이페이지 배지용 — 선택한 provider(KAKAO/…)를 세션 저장소에 기록. 서버 /users/me가
       // provider를 안 내려주므로 이 값이 배지 소스. 로그아웃 시 clearTokens가 함께 지운다.
@@ -131,6 +133,7 @@ export default function LoginScreen() {
       <View style={rowStyle(800)}>
         <Pressable
           onPress={() => {
+            trackEvent('Guest Entered');
             setGuest(true);
             router.replace('/home');
           }}

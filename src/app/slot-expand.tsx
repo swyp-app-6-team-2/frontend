@@ -7,6 +7,7 @@ import { Button, Screen } from '@/components/ui';
 import { palette } from '@/constants/tokens';
 import { useAdRewardStatus, useCreateAdRewardSession } from '@/hooks/use-api';
 import { adPlatform, fallbackRewardedUnitId, initAds, showRewardedAd } from '@/lib/ads';
+import { trackEvent } from '@/lib/analytics';
 import { adRewardApi, ApiError, type AdRewardCancelReason } from '@/lib/api';
 import { AD_DAILY_LIMIT, dismissSlotAdded, markSlotAdded } from '@/lib/slot-ads';
 
@@ -85,6 +86,7 @@ export default function SlotExpandScreen() {
       setPhase('idle');
       await refetchStatus(); // 잔여 시청 한도·남은 슬롯 갱신
       if (granted) {
+        trackEvent('Ad Reward Granted', { platform: adPlatform() });
         setShowAdded(true);
         markSlotAdded(); // 홈 복귀 시에도 성공 팝업(서버 지급 확인됨)
       } else {

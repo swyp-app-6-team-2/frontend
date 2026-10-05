@@ -18,7 +18,7 @@ import { useEnteringOnce } from '@/hooks/use-entering-once';
 import { useRefresh } from '@/hooks/use-refresh';
 import type { RecipeCategory, RecipeListItem, RecipeListSort } from '@/lib/api/types';
 import { isGuest, listGuestRecipes, promptGuestLogin } from '@/lib/guest';
-import { remainingSlots } from '@/lib/slots';
+import { GUEST_SLOT_LIMIT, remainingSlots } from '@/lib/slots';
 
 // Figma 필터칩 — h36, pill, 투명 bg + 1px border #1E2230(field), gap4, px16.
 // 라벨 14px 흰색 + 우측 16px 드롭다운 아이콘. 화살표는 다크 배경에서 보이도록
@@ -143,10 +143,10 @@ export default function RecipesScreen() {
   const total = guest ? guestRecipes.length : (data?.totalCount ?? 0);
   const isLoading = guest ? false : remoteLoading;
   const isError = guest ? false : remoteError;
-  // 남은 별(레시피 저장 슬롯)이 0이면 생성 불가 → slot-full 팝업. 로딩 중(me 없음)엔 막지 않는다.
-  // 남은 별 = 슬롯 한도 − 등록 레시피 수(홈·마이와 동일 기준).
+  // 남은 별(레시피 저장 슬롯)이 0이면 생성 불가. 로딩 중(me 없음)엔 막지 않는다.
+  // 게스트는 로컬 5개 한도 → 가득 차면 로그인 유도. 회원은 백엔드 슬롯 한도 → slot-full 팝업.
   const { data: me } = useProfile();
-  const isFull = me != null && remainingSlots(me, total) <= 0;
+  const isFull = guest ? total >= GUEST_SLOT_LIMIT : me != null && remainingSlots(me, total) <= 0;
   const refresh = useRefresh();
   const animate = useEnteringOnce('recipes'); // 최초 진입에만 카드 순차 등장
 
@@ -164,8 +164,21 @@ export default function RecipesScreen() {
       return next;
     });
 
-  // + 탭 — 슬롯 가득 차면 안내 팝업, 아니면 등록 메뉴 토글
-  const onFabPress = () => (isFull ? router.push('/slot-full') : setMenuOpen((o) => !o));
+  // + 탭 — 가득 차면: 게스트는 로그인 유도, 회원은 slot-full 팝업. 아니면 등록 메뉴 토글.
+  const onFabPress = () => {
+    if (isFull) {
+      if (guest) {
+        promptGuestLogin(
+          () => router.push('/login'),
+          '레시피는 5개까지 저장할 수 있어요.\n더 저장하려면 로그인해 주세요.',
+        );
+      } else {
+        router.push('/slot-full');
+      }
+      return;
+    }
+    setMenuOpen((o) => !o);
+  };
 
   return (
     <View className="flex-1 bg-background">

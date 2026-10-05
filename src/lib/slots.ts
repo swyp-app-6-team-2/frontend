@@ -14,3 +14,14 @@ export function remainingSlots(me: MeResponse | undefined, recipeCount: number):
   if (!me) return 0;
   return Math.max(0, me.recipeSlotLimit - recipeCount);
 }
+
+/**
+ * 게스트(비로그인) 저장 한도. 5개 도달 시 로그인을 유도한다.
+ * 로그인하면 백엔드 `recipeSlotLimit`(광고로 확장 가능) 기준으로 전환된다.
+ */
+export const GUEST_SLOT_LIMIT = 5;
+
+/** 게스트 남은 슬롯 = 한도(5) − 로컬 레시피 수. 음수는 0으로 clamp. */
+export function guestRemainingSlots(recipeCount: number): number {
+  return Math.max(0, GUEST_SLOT_LIMIT - recipeCount);
+}

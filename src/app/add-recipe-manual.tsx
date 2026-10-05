@@ -10,9 +10,16 @@ import { palette } from '@/constants/tokens';
 import { useCreateRecipe, useMyIngredients, useRecipe, useUpdateRecipe } from '@/hooks/use-api';
 import { ApiError, uploadImage } from '@/lib/api';
 import type { RecipeCategory, RecipeDraft } from '@/lib/api/types';
-import { addGuestRecipe, isGuest, updateGuestRecipe } from '@/lib/guest';
+import {
+  addGuestRecipe,
+  isGuest,
+  listGuestRecipes,
+  promptGuestLogin,
+  updateGuestRecipe,
+} from '@/lib/guest';
 import { fireHaptic } from '@/lib/haptics';
 import { ImagePickerUnavailableError, pickSquareImage, type PickedImage } from '@/lib/pick-image';
+import { GUEST_SLOT_LIMIT } from '@/lib/slots';
 
 // 조리시간 프리셋 (분) — 단일 선택
 const COOK_TIMES = [
@@ -185,6 +192,14 @@ export default function AddRecipeManualScreen() {
     // 게스트(로그인 없음): 백엔드 없이 기기 로컬에 저장한다. 대표 사진은 업로드하지 않고
     // 로컬 file:// URI를 그대로 보관한다. 저장 후 상세로 이동해 바로 확인 가능.
     if (isGuest()) {
+      // 신규 추가만 한도 적용(편집은 슬롯 소비 X). 5개 도달 시 저장 대신 로그인 유도.
+      if (!isEdit && listGuestRecipes().length >= GUEST_SLOT_LIMIT) {
+        promptGuestLogin(
+          () => router.push('/login'),
+          '레시피는 5개까지 저장할 수 있어요.\n더 저장하려면 로그인해 주세요.',
+        );
+        return;
+      }
       const guestPayload = {
         title: title.trim(),
         categoryCode: category,

@@ -25,7 +25,7 @@ import { isGuest, listGuestRecipes, promptGuestLogin } from '@/lib/guest';
 import { recommendationModeFor, recommendationToListItem } from '@/lib/recommend';
 import { getRecommendMode, setRecommendMode } from '@/lib/recommend-mode';
 import { dismissSlotAdded, useSlotJustAdded } from '@/lib/slot-ads';
-import { remainingSlots } from '@/lib/slots';
+import { guestRemainingSlots, remainingSlots } from '@/lib/slots';
 
 const RECO = ['랜덤으로 골라줘', '내재료로 골라줘'];
 
@@ -170,8 +170,11 @@ export default function HomeScreen() {
   const recommendRecipe = useRecommendRecipe();
   const lastRecoId = useRef<number | undefined>(undefined); // 재추천 시 직전 제외용
   // 남은 별 = 슬롯 한도 − 등록된 레시피 수(별 개수와 일치). 로드 전엔 0.
+  // 게스트는 백엔드 프로필이 없으므로 로컬 레시피 수 기준 5개 한도로 카운트다운.
   const { data: me } = useProfile();
-  const remainingStars = remainingSlots(me, data?.totalCount ?? recipes.length);
+  const remainingStars = guest
+    ? guestRemainingSlots(recipes.length)
+    : remainingSlots(me, data?.totalCount ?? recipes.length);
 
   // 밤하늘 더블탭 → 별똥별 애니메이션(GIF)을 한 번만 재생하고 사라진다.
   // GIF는 loop=1로 패치돼(무한루프 X) 1회 재생 후 마지막 프레임에서 멈춘다. 그래서 넉넉히(2000ms)

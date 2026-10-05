@@ -1,0 +1,49 @@
+name: Amplitude metrics → Discord
+
+# 별따먹자 지표를 Discord 지표방으로 자동 전송.
+#  B) 일일 리포트: 매일 09:00 KST
+#  A) 지표 알림(DAU 급락/가입 급증): 하루 3번(15·21·03 KST)
+#
+# 사용 전 저장소 Secret 3개를 추가해야 한다 (Settings → Secrets and variables → Actions):
+#   AMPLITUDE_API_KEY       Amplitude API 키
+#   AMPLITUDE_SECRET_KEY    Amplitude Secret 키 (설정 → Projects → 기본 프로젝트)
+#   DISCORD_METRICS_WEBHOOK 지표방 Discord 웹훅 URL (끝에 /github 붙이지 말 것)
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # 00:00 UTC = 09:00 KST → 일일 리포트(daily)
+    - cron: '0 6,12,18 * * *' # 06/12/18 UTC = 15/21/03 KST → 알림(alert)
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'daily(리포트) 또는 alert(알림)'
+        default: daily
+        type: choice
+        options: [daily, alert]
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Run metrics → Discord
+        env:
+          AMPLITUDE_API_KEY: ${{ secrets.AMPLITUDE_API_KEY }}
+          AMPLITUDE_SECRET_KEY: ${{ secrets.AMPLITUDE_SECRET_KEY }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_METRICS_WEBHOOK }}
+          TRIGGER_SCHEDULE: ${{ github.event.schedule }}
+          INPUT_MODE: ${{ github.event.inputs.mode }}
+        run: |
+          if [ -z "${DISCORD_WEBHOOK_URL:-}" ] || [ -z "${AMPLITUDE_SECRET_KEY:-}" ]; then
+            echo "Secret 미설정(AMPLITUDE_SECRET_KEY/DISCORD_METRICS_WEBHOOK) — 생략"; exit 0
+          fi
+          # 수동 실행이면 입력값, 스케줄이면 00:00 UTC는 daily, 그 외는 alert.
+          MODE="${INPUT_MODE:-}"
+          if [ -z "$MODE" ]; then
+            if [ "$TRIGGER_SCHEDULE" = "0 0 * * *" ]; then MODE=daily; else MODE=alert; fi
+          fi
+          echo "실행 모드: $MODE"
+          node scripts/amplitude-discord.mjs "$MODE"

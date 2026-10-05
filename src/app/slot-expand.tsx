@@ -16,9 +16,10 @@ import { AD_DAILY_LIMIT, dismissSlotAdded, markSlotAdded } from '@/lib/slot-ads'
 //   getResult 폴링 → 서버가 Google SSV 콜백 검증 후 GRANTED → 성공 팝업. 지급은 오직 서버 결과.
 type Phase = 'idle' | 'watching' | 'verifying';
 
-// SSV 콜백은 광고 종료보다 늦게 올 수 있다. 2초 간격으로 최대 이 횟수만큼 결과를 폴링한다(≈40초).
+// SSV 콜백은 광고 종료보다 늦게 올 수 있다. 2초 간격으로 폴링(≈24초). 그 안에 안 오면 "지연"으로
+// 안내하고 막지 않는다 — 늦게 지급돼도 상태 새로고침으로 반영된다(아래 '새로고침' 버튼).
 const POLL_INTERVAL_MS = 2000;
-const POLL_MAX_TRIES = 20;
+const POLL_MAX_TRIES = 12;
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 export default function SlotExpandScreen() {
@@ -113,13 +114,32 @@ export default function SlotExpandScreen() {
     setShowAdded(false); // 팝업만 닫고 슬롯 확장 화면에 머묾
   };
 
+  // 보상 대기(REWARD_PENDING) — 광고는 봤으나 서버 지급 확정이 지연. 막지 말고 '새로고침'으로
+  // 늦은 지급을 재확인하게 한다(상태가 갱신되면 한도 차감·슬롯 반영이 드러난다).
+  const pending = !busy && !canWatch && reason === 'REWARD_PENDING';
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await refetchStatus();
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  const onButton = canWatch ? onWatch : pending ? onRefresh : () => {};
+  const buttonDisabled = busy || refreshing || (!canWatch && !pending);
   const buttonLabel = busy
     ? phase === 'verifying'
       ? '보상 확인 중…'
       : '광고 준비 중…'
-    : canWatch || isLoading
-      ? '광고 시청하기'
-      : '완료하기';
+    : refreshing
+      ? '확인 중…'
+      : canWatch || isLoading
+        ? '광고 시청하기'
+        : pending
+          ? '보상 확인 새로고침'
+          : '완료하기';
 
   return (
     <Screen title="슬롯 확장" back>
@@ -161,7 +181,7 @@ export default function SlotExpandScreen() {
           <View className="flex-1 items-center justify-center">
             <Text className="text-center text-[16px] font-medium leading-[21px] text-body-muted">
               {reason === 'REWARD_PENDING'
-                ? '이전 광고 보상을 확인하고 있어요.\n잠시 후 다시 시도해주세요'
+                ? '이전 광고 보상을 확인하고 있어요.\n아래 새로고침으로 다시 확인할 수 있어요'
                 : '오늘 시청 가능한 횟수를 모두 사용했어요!\n내일 다시 시청할 수 있어요'}
             </Text>
           </View>
@@ -198,8 +218,8 @@ export default function SlotExpandScreen() {
         {/* 광고 시청하기 (메인버튼) — primary·radius 30·h52. 진행 중/한도 소진 시 비활성 */}
         <Button
           label={buttonLabel}
-          onPress={onWatch}
-          disabled={!canWatch}
+          onPress={onButton}
+          disabled={buttonDisabled}
           className="rounded-[30px]"
         />
       </View>

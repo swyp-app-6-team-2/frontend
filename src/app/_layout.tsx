@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { LogBox, Platform } from 'react-native';
 import { DarkTheme, Stack, ThemeProvider, usePathname, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+import * as Sentry from '@sentry/react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 
@@ -26,6 +27,17 @@ hydrateGuest();
 // Amplitude 제품 분석 초기화(키 있을 때만). 세션은 SDK가 자동 추적, 화면 조회는 아래 라우트 훅에서.
 initAnalytics();
 
+// Sentry 에러·크래시 모니터링 — DSN 있을 때만(없으면 no-op). 네이티브 크래시+JS 에러 자동 수집.
+// ⚠️ 네이티브 모듈이라 적용하려면 dev client 리빌드 필요. 소스맵은 EAS 빌드 시 플러그인이 처리.
+const SENTRY_DSN = process.env.EXPO_PUBLIC_SENTRY_DSN;
+if (SENTRY_DSN) {
+  Sentry.init({
+    dsn: SENTRY_DSN,
+    environment: __DEV__ ? 'development' : 'production',
+    tracesSampleRate: __DEV__ ? 1.0 : 0.2, // 성능 트레이스 샘플링(운영은 20%)
+  });
+}
+
 // 개발 빌드에서만 뜨는 화면 하단 LogBox 경고 알림 배지를 숨긴다.
 // (라이브러리에서 나는 경고는 Metro 터미널에는 그대로 찍힌다. 배포 빌드엔 원래 없음.)
 if (__DEV__) {
@@ -41,7 +53,7 @@ function AnalyticsIdentify() {
 // Root Stack: the (tabs) group is the base screen; detail pages (design-system,
 // cook-complete, …) push on top. Each page renders its own header via <Screen>, so
 // the native stack header is hidden.
-export default function RootLayout() {
+function RootLayout() {
   // 상세 화면 push는 부드러운 fade. reduce-motion이면 전환 없음('none').
   // 탭 4개 루트는 TabBar가 Link push라 fade를 걸면 탭 전환마다 페이드가 껴서
   // 어색하므로 개별로 'none' 유지(전환 없이 즉시 교체).
@@ -117,3 +129,6 @@ export default function RootLayout() {
     </GestureHandlerRootView>
   );
 }
+
+// Sentry로 루트를 감싸 라우팅·렌더 에러를 자동 포착(DSN 없으면 init이 no-op이라 영향 없음).
+export default Sentry.wrap(RootLayout);

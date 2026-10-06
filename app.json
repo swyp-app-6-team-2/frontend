@@ -112,7 +112,8 @@
         {
           "userTrackingPermission": "맞춤 광고를 표시하기 위해 기기 식별자 사용을 허용해주세요. 허용하지 않아도 앱은 정상 이용할 수 있어요."
         }
-      ]
+      ],
+      "@sentry/react-native/expo"
     ],
     "experiments": {
       "typedRoutes": true,

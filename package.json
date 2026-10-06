@@ -109,10 +109,5 @@
         "eslint-config-expo"
       ]
     }
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "@sentry/cli"
-    ]
   }
 }

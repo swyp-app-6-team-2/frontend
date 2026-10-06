@@ -1,5 +1,6 @@
 allowBuilds:
   '@firebase/util': false
+  '@sentry/cli': false
   dooboolab-welcome: false
   protobufjs: false
   unrs-resolver: true

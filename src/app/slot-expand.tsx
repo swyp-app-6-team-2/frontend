@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { ActivityIndicator, Alert, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { useQueryClient } from '@tanstack/react-query';
 
 import { SlotAddedPopup } from '@/components/slot-added-popup';
 import { Button, Screen } from '@/components/ui';
 import { palette } from '@/constants/tokens';
-import { useAdRewardStatus, useCreateAdRewardSession } from '@/hooks/use-api';
+import { queryKeys, useAdRewardStatus, useCreateAdRewardSession } from '@/hooks/use-api';
 import { adPlatform, fallbackRewardedUnitId, initAds, showRewardedAd } from '@/lib/ads';
 import { trackEvent } from '@/lib/analytics';
 import { adRewardApi, ApiError, type AdRewardCancelReason } from '@/lib/api';
@@ -25,6 +26,7 @@ const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 export default function SlotExpandScreen() {
   const { data: status, isLoading, refetch: refetchStatus } = useAdRewardStatus();
   const createSession = useCreateAdRewardSession();
+  const qc = useQueryClient();
 
   const [phase, setPhase] = useState<Phase>('idle');
   const [showAdded, setShowAdded] = useState(false);
@@ -86,8 +88,11 @@ export default function SlotExpandScreen() {
       setPhase('verifying');
       const granted = await pollGranted(session.sessionId);
       setPhase('idle');
-      await refetchStatus(); // 잔여 시청 한도·남은 슬롯 갱신
+      await refetchStatus(); // 잔여 시청 한도 갱신(adRewardStatus)
       if (granted) {
+        // 서버가 슬롯 +2 지급 → 프로필(me) 캐시를 무효화해야 홈/마이의 '남은 별'이 즉시 반영된다.
+        // (남은 별 = 슬롯 한도 − 레시피 수, me()에서 계산 — 레시피 생성/삭제와 동일 패턴)
+        await qc.invalidateQueries({ queryKey: queryKeys.me() });
         trackEvent('Ad Reward Granted', { platform: adPlatform() });
         setShowAdded(true);
         markSlotAdded(); // 홈 복귀 시에도 성공 팝업(서버 지급 확인됨)
@@ -121,7 +126,8 @@ export default function SlotExpandScreen() {
   const onRefresh = async () => {
     setRefreshing(true);
     try {
-      await refetchStatus();
+      // 늦은 지급 재확인 — 잔여 한도(adRewardStatus)와 남은 별(me) 둘 다 갱신.
+      await Promise.all([refetchStatus(), qc.invalidateQueries({ queryKey: queryKeys.me() })]);
     } finally {
       setRefreshing(false);
     }

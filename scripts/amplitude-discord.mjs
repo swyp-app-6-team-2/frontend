@@ -49,25 +49,40 @@ async function amp(path, params, tries = 4) {
   for (let i = 0; i < tries; i++) {
     const res = await fetch(`${BASE}${path}?${qs}`, { headers: { Authorization: auth } });
     if (res.ok) return res.json();
-    if ((res.status === 429 || res.status === 400 || res.status >= 500) && i < tries - 1) {
+    const body = await res.text();
+    // 429·5xx(및 throttle성 400)만 재시도한다. 'Invalid chart definition' 400은 영구 오류
+    // (아직 한 번도 안 쌓인 이벤트를 차트에 넣을 때 남)라 즉시 throw → 호출부가 0으로 처리.
+    const retryable =
+      res.status === 429 || res.status >= 500 || (res.status === 400 && !/invalid/i.test(body));
+    if (retryable && i < tries - 1) {
       await sleep(2500 * (i + 1)); // 쓰로틀 — 점점 길게 기다렸다 재시도
       continue;
     }
-    throw new Error(`Amplitude ${path} → HTTP ${res.status}: ${await res.text()}`);
+    throw new Error(`Amplitude ${path} → HTTP ${res.status}: ${body}`);
   }
 }
 
 // 이벤트 하루 총합(totals). 데이터 없으면 0.
 async function eventTotal(eventType, start, end) {
-  const j = await amp('/events/segmentation', {
-    e: JSON.stringify({ event_type: eventType }),
-    start,
-    end,
-    m: 'totals',
-    i: 1,
-  });
-  const series = j?.data?.series?.[0] ?? [];
-  return series.reduce((a, b) => a + (b || 0), 0);
+  try {
+    const j = await amp('/events/segmentation', {
+      e: JSON.stringify({ event_type: eventType }),
+      start,
+      end,
+      m: 'totals',
+      i: 1,
+    });
+    const series = j?.data?.series?.[0] ?? [];
+    return series.reduce((a, b) => a + (b || 0), 0);
+  } catch (e) {
+    // 아직 한 번도 발생하지 않은 이벤트는 Amplitude가 'Invalid chart definition'(400)으로 거부한다.
+    // 그 이벤트 하나 때문에 리포트 전체를 실패시키지 말고 0으로 처리한다(미집계 = 0건).
+    if (/invalid chart definition|HTTP 400/i.test(e.message)) {
+      console.warn(`이벤트 '${eventType}' 미집계로 간주(0): ${e.message.slice(0, 100)}`);
+      return 0;
+    }
+    throw e;
+  }
 }
 
 // 활성 사용자(DAU) — 해당 날짜 배열의 마지막 값.

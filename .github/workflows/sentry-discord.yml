@@ -1,0 +1,49 @@
+name: Sentry errors → Discord
+
+# 새로 생긴 운영 에러(Sentry)를 Discord로 자동 알림.
+# Sentry 무료 플랜은 Discord 통합(유료 Team)이 막혀 있어, API로 읽어 웹훅으로 직접 쏜다.
+#
+# 사용 전 저장소 Secret 3개 추가 (Settings → Secrets and variables → Actions):
+#   SENTRY_AUTH_TOKEN      Sentry Auth Token (Settings → Auth Tokens, 스코프 event:read/project:read)
+#   SENTRY_ORG             조직 슬러그 (URL sentry.io/organizations/<여기>/)
+#   DISCORD_SENTRY_WEBHOOK 에러 알림 받을 Discord 웹훅
+# (SENTRY_PROJECT_ID는 기본값=별따먹자 프로젝트라 생략 가능)
+
+on:
+  schedule:
+    - cron: '*/15 * * * *' # 15분마다 새 에러 체크
+  workflow_dispatch: {}
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      # 이미 보낸 이슈 ID를 캐시로 영속 → 중복 알림 방지.
+      - name: Restore seen-issues cache
+        uses: actions/cache/restore@v4
+        with:
+          path: .sentry-seen.json
+          key: sentry-seen-${{ github.run_id }}
+          restore-keys: sentry-seen-
+      - name: Run Sentry → Discord
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT_ID: ${{ secrets.SENTRY_PROJECT_ID }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_SENTRY_WEBHOOK }}
+          SENTRY_STATE_FILE: .sentry-seen.json
+        run: |
+          if [ -z "${SENTRY_AUTH_TOKEN:-}" ] || [ -z "${DISCORD_WEBHOOK_URL:-}" ] || [ -z "${SENTRY_ORG:-}" ]; then
+            echo "Secret 미설정(SENTRY_AUTH_TOKEN/SENTRY_ORG/DISCORD_SENTRY_WEBHOOK) — 생략"; exit 0
+          fi
+          node scripts/sentry-discord.mjs
+      - name: Save seen-issues cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: .sentry-seen.json
+          key: sentry-seen-${{ github.run_id }}

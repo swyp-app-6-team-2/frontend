@@ -27,14 +27,20 @@ hydrateGuest();
 // Amplitude 제품 분석 초기화(키 있을 때만). 세션은 SDK가 자동 추적, 화면 조회는 아래 라우트 훅에서.
 initAnalytics();
 
-// Sentry 에러·크래시 모니터링 — DSN 있을 때만(없으면 no-op). 네이티브 크래시+JS 에러 자동 수집.
+// Sentry 에러·크래시 모니터링 — 운영 빌드에서만(!__DEV__) 작동. 개발 중 에러·핫리로드 노이즈와
+// 무료 쿼터 소모를 막는다(개발 에러는 Metro 콘솔/빨간화면으로 확인). 네이티브 크래시+JS 에러 자동 수집.
 // ⚠️ 네이티브 모듈이라 적용하려면 dev client 리빌드 필요. 소스맵은 EAS 빌드 시 플러그인이 처리.
 const SENTRY_DSN = process.env.EXPO_PUBLIC_SENTRY_DSN;
-if (SENTRY_DSN) {
+if (SENTRY_DSN && !__DEV__) {
   Sentry.init({
     dsn: SENTRY_DSN,
-    environment: __DEV__ ? 'development' : 'production',
-    tracesSampleRate: __DEV__ ? 1.0 : 0.2, // 성능 트레이스 샘플링(운영은 20%)
+    environment: 'production', // !__DEV__ 게이트 안이므로 항상 운영
+    tracesSampleRate: 0.2, // 성능 트레이스 샘플링(운영 20%)
+    // 세션 리플레이 — 에러 발생 시에만 "직전 ~1분 화면"을 녹화해 Sentry/Discord 링크로 재생.
+    // 일반 세션은 녹화 안 함(0) → 무료 쿼터(50개/월) 절약. 기본 마스킹 ON으로 텍스트·사진 가림.
+    replaysSessionSampleRate: 0,
+    replaysOnErrorSampleRate: 1.0,
+    integrations: [Sentry.mobileReplayIntegration()],
   });
 }
 
@@ -61,9 +67,12 @@ function RootLayout() {
   const animation = reduceMotion ? 'none' : 'fade';
 
   // 화면 조회 추적 — 라우트 경로가 바뀔 때마다 기록(이탈율/퍼널의 핵심 신호).
+  // Sentry에도 현재 화면을 태그로 남겨, 에러가 "어느 페이지"에서 났는지 알림에 실린다.
+  // (Sentry 미초기화 시 setTag는 no-op이라 dev 빌드에서도 안전.)
   const pathname = usePathname();
   useEffect(() => {
     trackScreen(pathname);
+    Sentry.setTag('screen', pathname);
   }, [pathname]);
 
   // 토큰 재발급까지 실패하면(세션 만료) 로그인 화면으로. client.ts가 이 콜백을 호출한다.

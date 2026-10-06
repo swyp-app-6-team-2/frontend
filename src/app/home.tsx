@@ -399,6 +399,9 @@ export default function HomeScreen() {
             setRecommend(null);
             router.push({ pathname: '/recipe-view', params: { id: String(id) } });
           }}
+          // 안 땡겨요 → 현재 모드로 재추천. onRecommend이 previousRecipeId(직전 레시피)를
+          // 실어 보내 백엔드가 다른 메뉴를 돌려주고, 팝업이 새 레시피로 교체된다.
+          onReroll={() => void onRecommend(reco)}
           onClose={() => setRecommend(null)}
         />
       ) : null}

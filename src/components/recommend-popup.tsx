@@ -8,15 +8,18 @@ import type { RecipeListItem } from '@/lib/api/types';
 
 import { AppText } from './ui';
 
-// 메뉴 추천 결과 팝업 — 이미지(216) + 이름 + 필수재료 + [안 땡겨요(닫기)][보기].
+// 메뉴 추천 결과 팝업 — 이미지(216) + 이름 + 필수재료 + [안 땡겨요(재추천)][좋아!].
+// '안 땡겨요'는 직전 레시피를 제외한 재추천(백엔드 previousRecipeId). 딤 탭/뒤로가기 = 닫기.
 // Figma: 딤 #060A19 85%, 카드 #1E2230 radius20, 버튼 150×52 radius30.
 export function RecommendPopup({
   recipe,
   onView,
+  onReroll,
   onClose,
 }: {
   recipe: RecipeListItem;
   onView: () => void;
+  onReroll: () => void;
   onClose: () => void;
 }) {
   // 표시 규칙은 목록 화면과 동일: 커버 없으면 분석 원본 썸네일로 폴백.
@@ -60,7 +63,7 @@ export function RecommendPopup({
             </View>
             <View className="w-full flex-row gap-3">
               <Pressable
-                onPress={onClose}
+                onPress={onReroll}
                 accessibilityRole="button"
                 className="h-[52px] flex-1 items-center justify-center rounded-[30px] bg-popup-button active:opacity-80"
               >

@@ -20,8 +20,8 @@ const TABS = [
 // 코치마크 6단계 — header: 오버레이 대상 화면 · spot: 강조 요소
 const STEPS = [
   {
-    title: '나의 레시피를 등록해보세요',
-    sub: '하단 "나의 레시피"를 통해 이동할 수 있습니다',
+    title: '나의 레시피를 모아보세요',
+    sub: '하단 "나의레시피"를 통해 이동할 수 있어요',
     header: '별따먹자',
     spot: 'recipes',
   },
@@ -218,8 +218,8 @@ export default function OnboardingScreen() {
       <View className="flex-1 bg-background">
         {/* 뒷배경 — 홈과 동일한 밤하늘(1~6단계 '별따먹자' 배경과 통일) */}
         <NightSky />
-        {/* 딤 — 배경을 어둡게 깔아 추천 카드가 도드라지게(코치마크 단계와 통일) */}
-        <View pointerEvents="none" className="absolute inset-0 bg-black/60" />
+        {/* 딤 — 밤하늘 단계(1·4·5·6)와 동일하게 #060A19 85% */}
+        <View pointerEvents="none" className="absolute inset-0 bg-background/85" />
         {/* 화면 아무 곳이나 탭해도 완료(홈으로) — 버튼은 위 레이어에서 각자 처리 */}
         <Pressable className="absolute inset-0" onPress={finish} accessibilityLabel="다음" />
         <SafeAreaView className="flex-1" edges={['top', 'bottom']} pointerEvents="box-none">
@@ -249,18 +249,49 @@ export default function OnboardingScreen() {
             </Pressable>
           </View>
 
-          <View className="flex-1 px-screen">
-            {/* 상단 여백 — 카드+코치문구를 버튼 위쪽으로 내림 (Figma: 헤더~카드 사이에 여백) */}
-            <View className="flex-1" pointerEvents="none" />
-            {/* 강조 추천 카드 — primary 테두리 + 글로우 (6·7단계 공용) */}
-            <RecoCard onSelect={finish} />
-          </View>
+          {/* 중앙 스페이서 — 시작하기를 하단에 고정(카드는 스텝6과 동일 위치로 아래 절대배치) */}
+          <View className="flex-1" pointerEvents="none" />
 
           {/* 시작하기 — 카드(사진)와 134px 간격 */}
           <View className="px-screen pb-8 pt-[134px]">
             <Button label="시작하기" onPress={finish} />
           </View>
         </SafeAreaView>
+
+        {/* 강조 추천 카드 — 스텝 6과 동일 위치(top insets.top+140)로 절대배치. 여기선 딤 위(강조). */}
+        <View
+          pointerEvents="box-none"
+          className="absolute inset-x-0 items-center px-screen"
+          style={{ top: insets.top + 140 }}
+        >
+          <View className="w-full max-w-[362px]">
+            <RecoCard onSelect={finish} />
+          </View>
+        </View>
+
+        {/* 홈의 추천 드롭다운(닫힘) — 스텝 6과 동일 위치(안전영역 하단 +128)로 절대배치해 배경 연속성 유지.
+            강조 대상이 아니므로 딤을 덮어 배경처럼 어둡게(다른 단계와 통일). */}
+        <View
+          pointerEvents="none"
+          className="absolute inset-x-0 flex-row items-end justify-end px-screen"
+          style={{ bottom: insets.bottom + 128 }}
+        >
+          <View>
+            <View className="h-[50px] w-[173px] flex-row items-center justify-center gap-1.5 rounded-[99px] border border-disabled bg-reco-button">
+              <Text className="text-[16px] leading-[19px] text-foreground">랜덤으로 골라줘</Text>
+              <Image
+                source={require('../assets/images/ic-chevron-down.png')}
+                style={{ width: 24, height: 24 }}
+                tintColor={palette.foreground}
+                contentFit="contain"
+              />
+            </View>
+            <View
+              className="absolute inset-0 rounded-[99px] bg-background/85"
+              pointerEvents="none"
+            />
+          </View>
+        </View>
       </View>
     );
   }
@@ -268,6 +299,9 @@ export default function OnboardingScreen() {
   // 튜토리얼 1~4 — 홈 위 코치마크 오버레이
   const s = STEPS[step];
   const next = () => setStep((v) => v + 1);
+  // 딤 오퍼시티(디자인 확정): 나의 레시피 배경(2·3)과 온보딩 1(step 0)은 #060A19 75%, 그 외(4·5·6)는 85%.
+  const dimClass =
+    s.header === '나의 레시피' || step === 0 ? 'bg-background/75' : 'bg-background/85';
 
   // 코치 문구 (상하 페이드 선 사이) — Figma Frame …044. 여러 위치에서 재사용.
   const coachText = (
@@ -311,13 +345,8 @@ export default function OnboardingScreen() {
         </View>
       ) : null}
 
-      {/* 딤 — reco-card는 카드까지 함께 덮어야 하므로 더 진하게 (Figma Rectangle 625).
-          배경(밤하늘)이 남색이라 bg-background(남색) 딤은 남색 위 남색이라 거의 안 어두워짐 →
-          다른 단계처럼 검정 기반으로, 값은 더 높여(60%) 온보딩 5(black/45)보다 확실히 진하게. */}
-      <View
-        pointerEvents="none"
-        className={`absolute inset-0 ${s.spot === 'reco-card' ? 'bg-black/60' : 'bg-black/45'}`}
-      />
+      {/* 딤 — 디자인 확정 오퍼시티(dimClass): 나의 레시피(2·3) 75% / 그 외(1·4·5·6) 85%. */}
+      <View pointerEvents="none" className={`absolute inset-0 ${dimClass}`} />
 
       {/* 아무 데나 탭해도 다음 (강조 요소·헤더 버튼은 각자 처리) */}
       <Pressable className="absolute inset-0" onPress={next} accessibilityLabel="다음" />
@@ -503,15 +532,21 @@ export default function OnboardingScreen() {
           </View>
         ) : s.spot === 'recipe-card' ? (
           <View className="items-end pb-3" pointerEvents="box-none">
-            {/* 플레인 FAB (글로우 없음) */}
-            <Pressable
-              onPress={next}
-              accessibilityRole="button"
-              accessibilityLabel="레시피 등록"
-              className="h-14 w-14 items-center justify-center rounded-full bg-primary active:opacity-90"
-            >
-              <Feather name="plus" size={24} color={palette.ink} />
-            </Pressable>
+            {/* 홈의 + FAB — 이 단계 강조 대상은 레시피 카드이므로 + 버튼은 딤 뒤로(배경처럼 어둡게) */}
+            <View>
+              <Pressable
+                onPress={next}
+                accessibilityRole="button"
+                accessibilityLabel="레시피 등록"
+                className="h-14 w-14 items-center justify-center rounded-full bg-primary active:opacity-90"
+              >
+                <Feather name="plus" size={24} color={palette.ink} />
+              </Pressable>
+              <View
+                className={`absolute inset-0 rounded-full ${dimClass}`}
+                pointerEvents="none"
+              />
+            </View>
           </View>
         ) : s.spot === 'dropdown' ? (
           // 뭐 먹을지 — 추천 드롭다운 펼침(강조 패널 + 토글 버튼)
@@ -566,12 +601,24 @@ export default function OnboardingScreen() {
             </View>
           </View>
         ) : (
-          // 밤하늘 — 드롭다운 dim 닫힘 (강조는 상단 별 스포트라이트)
+          // 밤하늘 — 실제 홈의 추천 드롭다운(닫힘)과 동일한 버튼. 강조 대상이 아니므로
+          // 네비바와 동일하게 그 위에 #060A19 75% 딤을 덮어 배경처럼 어둡게 통일.
           <View className="pb-3" pointerEvents="none">
             <View className="flex-row items-end justify-end">
-              <View className="mb-10 flex-row items-center gap-2 rounded-pill border border-foreground/15 bg-surface/50 px-4 py-3">
-                <Text className="font-medium text-foreground/50">랜덤으로 골라줘</Text>
-                <Text className="text-muted/50">▼</Text>
+              <View className="mb-10">
+                <View className="h-[50px] w-[173px] flex-row items-center justify-center gap-1.5 rounded-[99px] border border-disabled bg-reco-button">
+                  <Text className="text-[16px] leading-[19px] text-foreground">랜덤으로 골라줘</Text>
+                  <Image
+                    source={require('../assets/images/ic-chevron-down.png')}
+                    style={{ width: 24, height: 24 }}
+                    tintColor={palette.foreground}
+                    contentFit="contain"
+                  />
+                </View>
+                <View
+                  className={`absolute inset-0 rounded-[99px] ${dimClass}`}
+                  pointerEvents="none"
+                />
               </View>
             </View>
           </View>
@@ -594,6 +641,13 @@ export default function OnboardingScreen() {
               shadowOffset: { width: 0, height: 20 },
             }}
           >
+            {/* 탭이 강조 대상인 단계(1) — 필바 '배경'만 #060A19 75%로 어둡게(탭은 아래 map에서 위로 올라와 그대로 강조) */}
+            {TABS.some((t) => t.key === s.spot) ? (
+              <View
+                className={`absolute inset-0 rounded-pill ${dimClass}`}
+                pointerEvents="none"
+              />
+            ) : null}
             {TABS.map((t) => {
               // 현재 화면 탭만 골드. 나의 레시피 단계=레시피, 그 외=홈.
               const currentKey = s.header === '나의 레시피' ? 'recipes' : 'home';
@@ -647,9 +701,9 @@ export default function OnboardingScreen() {
               );
             })}
           </View>
-          {/* spot이 네비 탭이 아니면(2~5챕터) 네비바도 딤 아래로 — Figma Rectangle 625(딤 0.75) */}
+          {/* spot이 네비 탭이 아니면(2~5챕터) 네비바도 딤 아래로 — #060A19 75%로 통일(Figma 0.75) */}
           {!TABS.some((t) => t.key === s.spot) ? (
-            <View className="absolute inset-0 rounded-pill bg-background/65" pointerEvents="none" />
+            <View className={`absolute inset-0 rounded-pill ${dimClass}`} pointerEvents="none" />
           ) : null}
         </View>
       </SafeAreaView>
